@@ -147,9 +147,12 @@ export function IncidentsCard() {
 
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {incident.type} • {incident.assignedTo}
-                  </Badge>
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="text-xs bg-champagne-gold text-palace-navy">
+                      {incident.avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-palace-navy">{incident.assignedTo}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-soft-pewter" />
