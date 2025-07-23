@@ -57,7 +57,7 @@ const clientRequests = [
 export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'À préparer': return 'bg-success-green text-white';
+      case 'À préparer': return 'bg-green-100 text-green-800 hover:bg-yellow-100 hover:text-yellow-800 transition-colors duration-200';
       case 'En cours': return 'bg-muted text-palace-navy border-border';
       case 'Préparé': return 'bg-muted text-palace-navy border-border';
       default: return 'bg-muted text-soft-pewter border-border';
@@ -106,9 +106,9 @@ export function ClientRequestsCard() {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="border-palace-navy/30 text-palace-navy">
+        <span className="text-sm text-soft-pewter font-medium">
           {clientRequests.length} demandes
-        </Badge>
+        </span>
       </div>
 
       <div className="space-y-4">
@@ -145,17 +145,9 @@ export function ClientRequestsCard() {
 
             <div className="flex items-center justify-between pt-3 border-t border-border/20">
               <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-soft-pewter" />
                 <span className="text-sm text-soft-pewter">Assigné à:</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-xs bg-palace-navy text-warm-cream">
-                    {request.avatar}
-                  </AvatarFallback>
-                </Avatar>
                 <span className="text-sm font-medium text-palace-navy">
-                  {request.gouvernante}
+                  Gouvernante • {request.gouvernante}
                 </span>
               </div>
             </div>
@@ -166,20 +158,20 @@ export function ClientRequestsCard() {
       <div className="mt-6 pt-4 border-t border-border/20">
         <div className="flex items-center justify-between text-sm">
           <span className="text-soft-pewter">Statuts aujourd'hui:</span>
-          <div className="flex space-x-4">
-            <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-success-green" />
-              <span className="text-xs">2 à préparer</span>
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-1">
+                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <span className="text-xs">2 à préparer</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="h-2 w-2 rounded-full bg-soft-pewter" />
+                <span className="text-xs">1 en cours</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <span className="text-xs">1 préparé</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-              <span className="text-xs">1 en cours</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-palace-navy" />
-              <span className="text-xs">1 préparé</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

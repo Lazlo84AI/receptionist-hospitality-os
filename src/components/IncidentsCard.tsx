@@ -62,7 +62,7 @@ export function IncidentsCard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Ouvert': return 'bg-success-green text-white';
+      case 'Ouvert': return 'bg-green-100 text-green-800 hover:bg-yellow-100 hover:text-yellow-800 transition-colors duration-200';
       case 'En cours': return 'default';
       case 'Résolu': return 'secondary';
       default: return 'outline';
@@ -99,9 +99,9 @@ export function IncidentsCard() {
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="border-navy/30 text-navy">
+          <span className="text-sm text-soft-pewter font-medium">
             {incidents.length} incidents
-          </Badge>
+          </span>
         </div>
 
         <div className="space-y-4">
@@ -126,18 +126,11 @@ export function IncidentsCard() {
                           {incident.status}
                         </Badge>
                       )}
-                      <span className="text-xs text-soft-pewter">
-                        {incident.type}
-                      </span>
-                     {incident.priority === 'URGENCE' ? (
+                      {incident.priority === 'URGENCE' && (
                        <Badge className={getPriorityColor(incident.priority)}>
                          {incident.priority}
                        </Badge>
-                     ) : (
-                       <span className={getPriorityColor(incident.priority)}>
-                         {incident.priority}
-                       </span>
-                     )}
+                      )}
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" className="shrink-0">
@@ -147,12 +140,10 @@ export function IncidentsCard() {
 
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs bg-champagne-gold text-palace-navy">
-                      {incident.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-palace-navy">{incident.assignedTo}</span>
+                  <span className="text-sm text-soft-pewter">Assigné à:</span>
+                  <span className="text-sm font-medium text-palace-navy">
+                    {incident.type} • {incident.assignedTo}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-soft-pewter" />
@@ -170,7 +161,7 @@ export function IncidentsCard() {
             <span className="text-soft-pewter">Statuts aujourd'hui:</span>
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
-                <div className="h-2 w-2 rounded-full bg-success-green" />
+                <div className="h-2 w-2 rounded-full bg-green-500" />
                 <span className="text-xs">{incidents.filter(i => i.status === 'Ouvert').length} ouverts</span>
               </div>
               <div className="flex items-center space-x-1">
@@ -178,7 +169,7 @@ export function IncidentsCard() {
                 <span className="text-xs">{incidents.filter(i => i.status === 'En cours').length} en cours</span>
               </div>
               <div className="flex items-center space-x-1">
-                <div className="h-2 w-2 rounded-full bg-palace-navy" />
+                <div className="h-2 w-2 rounded-full bg-green-500" />
                 <span className="text-xs">{incidents.filter(i => i.status === 'Résolu').length} résolus</span>
               </div>
             </div>
@@ -213,30 +204,19 @@ export function IncidentsCard() {
                  <span className="text-xs text-soft-pewter px-2 py-1 bg-muted rounded">
                    {selectedIncident.type}
                  </span>
-                 {selectedIncident.priority === 'URGENCE' ? (
-                   <Badge className={getPriorityColor(selectedIncident.priority)}>
-                     {selectedIncident.priority}
-                   </Badge>
-                 ) : (
-                   <span className={getPriorityColor(selectedIncident.priority)}>
-                     {selectedIncident.priority}
-                   </span>
-                 )}
+                  {selectedIncident.priority === 'URGENCE' && (
+                    <Badge className={getPriorityColor(selectedIncident.priority)}>
+                      {selectedIncident.priority}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
+                 <div>
                   <span className="font-medium text-palace-navy">Assigné à:</span>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-champagne-gold text-palace-navy">
-                        {selectedIncident.avatar}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{selectedIncident.assignedTo}</span>
-                  </div>
-                </div>
+                  <p className="mt-1">{selectedIncident.type} • {selectedIncident.assignedTo}</p>
+                 </div>
                 <div>
                   <span className="font-medium text-palace-navy">Localisation:</span>
                   <p className="mt-1">{selectedIncident.room}</p>
