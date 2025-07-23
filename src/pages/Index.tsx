@@ -22,12 +22,13 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
 
           {/* Dashboard Grid - Row 1: 50/50 Layout */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            {/* Zone 1: Incidents */}
-            <IncidentsCard />
-            
-            {/* Zone 2: Client Requests */}
-            <ClientRequestsCard />
+          <div className="flex flex-row space-x-8 mb-8">
+            <div className="flex-1">
+              <IncidentsCard />
+            </div>
+            <div className="flex-1">
+              <ClientRequestsCard />
+            </div>
           </div>
 
           {/* Zone 3: Relances - Full Width */}
