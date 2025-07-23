@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -232,6 +232,22 @@ export function IncidentsCard() {
               <div>
                 <span className="font-medium text-palace-navy">Description:</span>
                 <p className="mt-2 text-soft-pewter">{selectedIncident.description}</p>
+              </div>
+
+              {/* Barre d'outils Trello */}
+              <div className="flex space-x-3">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted">
+                  <Clock className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Reminder</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted">
+                  <CheckSquare className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Checklist</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted">
+                  <Users className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Membres</span>
+                </Button>
               </div>
 
               {/* Commentaires et activité */}
