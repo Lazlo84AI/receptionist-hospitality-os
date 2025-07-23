@@ -141,9 +141,9 @@ export function IncidentsCard() {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-soft-pewter">Assigné à:</span>
-                  <Badge variant="secondary" className="bg-palace-navy text-white">
-                    {incident.type} • {incident.assignedTo}
-                  </Badge>
+                  <span className="text-sm font-medium text-palace-navy">
+                    {incident.type === 'Maintenance' ? 'Prestataire' : incident.type === 'Client' ? 'Réception' : 'Gouvernante'} : {incident.assignedTo}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-soft-pewter" />
@@ -215,9 +215,9 @@ export function IncidentsCard() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                  <div>
                   <span className="font-medium text-palace-navy">Assigné à:</span>
-                  <Badge variant="secondary" className="bg-palace-navy text-white mt-1 inline-block">
-                    {selectedIncident.type} • {selectedIncident.assignedTo}
-                  </Badge>
+                  <p className="mt-1 text-palace-navy">
+                    {selectedIncident.type === 'Maintenance' ? 'Prestataire' : selectedIncident.type === 'Client' ? 'Réception' : 'Gouvernante'} : {selectedIncident.assignedTo}
+                  </p>
                  </div>
                 <div>
                   <span className="font-medium text-palace-navy">Localisation:</span>

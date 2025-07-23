@@ -147,7 +147,7 @@ export function ClientRequestsCard() {
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-soft-pewter">Assigné à:</span>
                 <span className="text-sm font-medium text-palace-navy">
-                  Gouvernante • {request.gouvernante}
+                  Gouvernante : {request.gouvernante}
                 </span>
               </div>
             </div>
