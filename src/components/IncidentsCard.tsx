@@ -383,7 +383,7 @@ export function IncidentsCard() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90">
-                      Changer status
+                      Changer le statut
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
