@@ -31,14 +31,16 @@ const Index = () => {
           </div>
 
           {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Zone 1: Incidents (Priority - takes 2 columns on large screens) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Zone 1: Incidents */}
             <IncidentsCard />
             
             {/* Zone 2: Client Requests */}
             <ClientRequestsCard />
-            
-            {/* Zone 3: Follow-ups */}
+          </div>
+
+          {/* Zone 3: Relances - Full Width */}
+          <div className="w-full">
             <FollowUpsCard />
           </div>
 

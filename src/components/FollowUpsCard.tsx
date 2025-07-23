@@ -100,16 +100,16 @@ export function FollowUpsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Follow-ups Required
+              Relances à Faire
             </h2>
             <p className="text-sm text-soft-pewter">
-              Critical deadline tracking
+              Suivi des échéances critiques
             </p>
           </div>
         </div>
         {overdueCount > 0 && (
           <Badge className="bg-urgence-red text-white text-sm px-3 py-1">
-            {overdueCount} overdue
+            {overdueCount} en retard
           </Badge>
         )}
       </div>
@@ -176,7 +176,7 @@ export function FollowUpsCard() {
                       {item.type}
                     </span>
                     <Badge className={getStatusColor(item.statut, item.overdue)}>
-                      {item.overdue ? 'Overdue' : item.statut}
+                      {item.overdue ? 'En retard' : item.statut}
                     </Badge>
                   </div>
                 </div>
@@ -194,7 +194,7 @@ export function FollowUpsCard() {
                 variant="outline" 
                 className="text-xs h-7"
               >
-                Follow up
+                Relancer
               </Button>
             </div>
           </div>
@@ -205,19 +205,19 @@ export function FollowUpsCard() {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-urgence-red">{overdueCount}</p>
-            <p className="text-xs text-soft-pewter">Overdue</p>
+            <p className="text-xs text-soft-pewter">En retard</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-soft-pewter">
               {followUps.filter(item => !item.overdue && item.statut === 'À faire').length}
             </p>
-            <p className="text-xs text-soft-pewter">To process</p>
+            <p className="text-xs text-soft-pewter">À traiter</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-palace-navy">
               {followUps.filter(item => item.statut === 'Programmé').length}
             </p>
-            <p className="text-xs text-soft-pewter">Scheduled</p>
+            <p className="text-xs text-soft-pewter">Programmés</p>
           </div>
         </div>
       </div>

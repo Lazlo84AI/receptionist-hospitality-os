@@ -14,7 +14,7 @@ const clientRequests = [
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     time: '16:00',
-    priority: 'VIP'
+    priority: 'URGENCE'
   },
   {
     id: 2,
@@ -26,7 +26,7 @@ const clientRequests = [
     gouvernante: 'Marie Rousseau',
     avatar: 'MR',
     time: '14:30',
-    priority: 'Standard'
+    priority: 'NORMAL'
   },
   {
     id: 3,
@@ -38,7 +38,7 @@ const clientRequests = [
     gouvernante: 'Sophie Bernard',
     avatar: 'SB',
     time: '12:00',
-    priority: 'Business'
+    priority: 'NORMAL'
   },
   {
     id: 4,
@@ -50,22 +50,36 @@ const clientRequests = [
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     time: '18:00',
-    priority: 'Wellness'
+    priority: 'URGENCE'
   }
 ];
 
 export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'À préparer': return 'bg-urgence-red/10 text-urgence-red border-urgence-red/20';
-      case 'En cours': return 'bg-muted text-soft-pewter border-border';
+      case 'À préparer': return 'bg-success-green text-white';
+      case 'En cours': return 'bg-muted text-palace-navy border-border';
       case 'Préparé': return 'bg-muted text-palace-navy border-border';
       default: return 'bg-muted text-soft-pewter border-border';
     }
   };
 
-  const getPriorityIcon = (priority: string) => {
-    if (priority === 'VIP') return <Star className="h-4 w-4 text-palace-navy" />;
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'URGENCE': return 'bg-urgence-red text-white';
+      case 'NORMAL': return 'text-palace-navy';
+      default: return 'text-palace-navy';
+    }
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    if (priority === 'URGENCE') {
+      return (
+        <Badge className={getPriorityColor(priority)}>
+          URGENCE
+        </Badge>
+      );
+    }
     return null;
   };
 
@@ -109,7 +123,7 @@ export function ClientRequestsCard() {
                   <h3 className="font-semibold text-palace-navy">
                     {request.clientName}
                   </h3>
-                  {getPriorityIcon(request.priority)}
+                  {getPriorityBadge(request.priority)}
                 </div>
                 <p className="text-sm text-soft-pewter mb-2">
                   {request.room} • {request.occasion}
@@ -154,7 +168,7 @@ export function ClientRequestsCard() {
           <span className="text-soft-pewter">Statuts aujourd'hui:</span>
           <div className="flex space-x-4">
             <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-urgence-red" />
+              <div className="h-2 w-2 rounded-full bg-success-green" />
               <span className="text-xs">2 à préparer</span>
             </div>
             <div className="flex items-center space-x-1">
