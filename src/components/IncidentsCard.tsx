@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 const incidents = [
@@ -314,9 +315,21 @@ export function IncidentsCard() {
               </div>
 
               <div className="flex justify-end space-x-3">
-                <Button className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90">
-                  Changer status
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90">
+                      Changer status
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => console.log('En cours')}>
+                      En cours
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => console.log('Résolu')}>
+                      Résolu
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           )}

@@ -10,7 +10,7 @@ const clientRequests = [
     room: 'Suite 201',
     request: 'Champagne Dom Pérignon et roses rouges',
     occasion: 'Anniversaire de mariage',
-    status: 'À préparer',
+    status: 'À traiter',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     time: '16:00',
@@ -46,7 +46,7 @@ const clientRequests = [
     room: 'Chambre 208',
     request: 'Repas végétalien + yoga mat',
     occasion: 'Retraite wellness',
-    status: 'À préparer',
+    status: 'À traiter',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     time: '18:00',
@@ -57,7 +57,7 @@ const clientRequests = [
 export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'À préparer': return 'bg-green-500 text-white';
+      case 'À traiter': return 'bg-green-500 text-white';
       case 'En cours': return 'bg-muted text-palace-navy border-border';
       case 'Préparé': return 'bg-muted text-palace-navy border-border';
       default: return 'bg-muted text-soft-pewter border-border';
@@ -161,7 +161,7 @@ export function ClientRequestsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">2 à préparer</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'À traiter').length} à traiter</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
