@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChecklistComponent } from './ChecklistComponent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -292,53 +293,10 @@ export function IncidentsCard() {
 
               {/* Affichage de la checklist si créée */}
               {showChecklist && (
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <CheckSquare className="h-5 w-5 text-palace-navy" />
-                      <h5 className="font-semibold text-palace-navy">{checklistTitle}</h5>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowChecklist(false)}
-                      className="text-soft-pewter hover:text-palace-navy"
-                    >
-                      Supprimer
-                    </Button>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Progress value={0} className="flex-1 mr-3" />
-                      <span className="text-sm text-soft-pewter">0%</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Input
-                      placeholder="Ajouter un élément"
-                      value={checklistItem}
-                      onChange={(e) => setChecklistItem(e.target.value)}
-                    />
-                    <div className="flex items-center space-x-3">
-                      <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
-                        Ajouter
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-palace-navy">
-                        Annuler
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-palace-navy">
-                        <User className="h-4 w-4 mr-1" />
-                        Attribuer
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-palace-navy">
-                        <Clock className="h-4 w-4 mr-1" />
-                        Date limite
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <ChecklistComponent
+                  title={checklistTitle}
+                  onDelete={() => setShowChecklist(false)}
+                />
               )}
 
               {/* Commentaires et activité */}
