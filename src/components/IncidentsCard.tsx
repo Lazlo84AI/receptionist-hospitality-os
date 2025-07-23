@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users } from 'lucide-react';
+import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +70,24 @@ export function IncidentsCard() {
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
   const [comment, setComment] = useState('');
+  
+  // États pour les pop-ins
+  const [showChecklistDialog, setShowChecklistDialog] = useState(false);
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
+  
+  // États pour les fonctionnalités
+  const [checklistTitle, setChecklistTitle] = useState('Checklist');
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [checklistItem, setChecklistItem] = useState('');
+  
+  // États pour le reminder
+  const [reminderText, setReminderText] = useState('');
+  const [reminderDate, setReminderDate] = useState<Date | undefined>(new Date());
+  const [hasStartDate, setHasStartDate] = useState(false);
+  const [hasDeadline, setHasDeadline] = useState(true);
+  const [deadlineTime, setDeadlineTime] = useState('23:30');
+  const [reminderBefore, setReminderBefore] = useState('10 minutes avant');
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -236,19 +261,85 @@ export function IncidentsCard() {
 
               {/* Barre d'outils Trello */}
               <div className="flex space-x-3">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                  onClick={() => setShowReminderDialog(true)}
+                >
                   <Clock className="h-4 w-4 text-palace-navy" />
                   <span className="text-sm text-palace-navy">Reminder</span>
                 </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                  onClick={() => setShowChecklistDialog(true)}
+                >
                   <CheckSquare className="h-4 w-4 text-palace-navy" />
                   <span className="text-sm text-palace-navy">Checklist</span>
                 </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                  onClick={() => setShowMembersDialog(true)}
+                >
                   <Users className="h-4 w-4 text-palace-navy" />
                   <span className="text-sm text-palace-navy">Membres</span>
                 </Button>
               </div>
+
+              {/* Affichage de la checklist si créée */}
+              {showChecklist && (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <CheckSquare className="h-5 w-5 text-palace-navy" />
+                      <h5 className="font-semibold text-palace-navy">{checklistTitle}</h5>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowChecklist(false)}
+                      className="text-soft-pewter hover:text-palace-navy"
+                    >
+                      Supprimer
+                    </Button>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Progress value={0} className="flex-1 mr-3" />
+                      <span className="text-sm text-soft-pewter">0%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Ajouter un élément"
+                      value={checklistItem}
+                      onChange={(e) => setChecklistItem(e.target.value)}
+                    />
+                    <div className="flex items-center space-x-3">
+                      <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
+                        Ajouter
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-palace-navy">
+                        Annuler
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-palace-navy">
+                        <User className="h-4 w-4 mr-1" />
+                        Attribuer
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-palace-navy">
+                        <Clock className="h-4 w-4 mr-1" />
+                        Date limite
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Commentaires et activité */}
               <div className="border-t pt-6">
@@ -349,6 +440,200 @@ export function IncidentsCard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Checklist */}
+      <Dialog open={showChecklistDialog} onOpenChange={setShowChecklistDialog}>
+        <DialogContent className="max-w-md luxury-card">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-lg text-palace-navy">
+              Ajouter une checklist
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-palace-navy">Titre</label>
+              <Input
+                value={checklistTitle}
+                onChange={(e) => setChecklistTitle(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowChecklistDialog(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowChecklist(true);
+                  setShowChecklistDialog(false);
+                }}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Ajouter
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Reminder */}
+      <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
+        <DialogContent className="max-w-md luxury-card">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-lg text-palace-navy">
+              🕓 Définir un reminder
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-palace-navy">Objet du reminder</label>
+              <Input
+                value={reminderText}
+                onChange={(e) => setReminderText(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-palace-navy">juillet 2025</h4>
+                <div className="flex space-x-2">
+                  <Button variant="ghost" size="sm">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <Calendar
+                mode="single"
+                selected={reminderDate}
+                onSelect={setReminderDate}
+                className="pointer-events-auto border rounded-md"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  checked={hasStartDate}
+                  onCheckedChange={(checked) => setHasStartDate(checked === true)}
+                  className="text-soft-pewter"
+                />
+                <span className="text-sm text-soft-pewter">Date de début</span>
+                <Input 
+                  placeholder="J/M/AAAA" 
+                  disabled={!hasStartDate}
+                  className="flex-1"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  checked={hasDeadline}
+                  onCheckedChange={(checked) => setHasDeadline(checked === true)}
+                  className="text-blue-600"
+                />
+                <span className="text-sm text-palace-navy">Date limite</span>
+                <Input 
+                  value="24/07/2025" 
+                  disabled={!hasDeadline}
+                  className="flex-1"
+                />
+                <Input 
+                  value={deadlineTime}
+                  onChange={(e) => setDeadlineTime(e.target.value)}
+                  disabled={!hasDeadline}
+                  className="w-20"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-palace-navy">⏰ Définir un rappel</label>
+              <Select value={reminderBefore} onValueChange={setReminderBefore}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5 minutes avant">5 minutes avant</SelectItem>
+                  <SelectItem value="10 minutes avant">10 minutes avant</SelectItem>
+                  <SelectItem value="30 minutes avant">30 minutes avant</SelectItem>
+                  <SelectItem value="1 heure avant">1 heure avant</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-soft-pewter mt-2">
+                Les rappels seront envoyés à tous les membres et les observateurs de cette carte.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button variant="outline">
+                Effacer
+              </Button>
+              <Button
+                onClick={() => setShowReminderDialog(false)}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Membres */}
+      <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
+        <DialogContent className="max-w-md luxury-card">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-lg text-palace-navy">
+              Attribution de membres
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Tabs defaultValue="members" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="members" className="text-sm">
+                  👥 Membres
+                </TabsTrigger>
+                <TabsTrigger value="attachments" className="text-sm">
+                  📎 Pièce jointe
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="members" className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-palace-navy">Membres</label>
+                  <Input
+                    placeholder="Rechercher des membres"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <h5 className="text-sm font-medium text-palace-navy mb-3">Membres du tableau</h5>
+                  <div className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-blue-600 text-white text-xs">
+                        WR
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-palace-navy">Membre du tableau</span>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="attachments">
+                <div className="text-center py-8 text-soft-pewter">
+                  <p className="text-sm">Fonctionnalité de pièces jointes à venir</p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </DialogContent>
       </Dialog>
     </>
