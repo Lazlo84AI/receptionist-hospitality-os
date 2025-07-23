@@ -1,4 +1,4 @@
-import { Calendar, User, CheckCircle, Clock, Star } from 'lucide-react';
+import { Heart, User, CheckCircle, Clock, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -94,8 +94,8 @@ export function ClientRequestsCard() {
     <div className="luxury-card p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-palace-navy/10 rounded-lg">
-            <Calendar className="h-6 w-6 text-palace-navy" />
+          <div className="p-2 bg-success-green/10 rounded-lg">
+            <Heart className="h-6 w-6 text-success-green" />
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
