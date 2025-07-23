@@ -23,24 +23,22 @@ const Index = () => {
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-playfair font-bold text-palace-navy mb-2">
-              Tableau de Bord Opérationnel
+              Operations Dashboard
             </h1>
             <p className="text-soft-pewter">
-              Gestion centralisée des opérations • Vue temps réel
+              Centralized operations management • Real-time overview
             </p>
           </div>
 
           {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Zone 1: Incidents */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Zone 1: Incidents (Priority - takes 2 columns on large screens) */}
             <IncidentsCard />
             
             {/* Zone 2: Client Requests */}
             <ClientRequestsCard />
-          </div>
-
-          {/* Zone 3: Follow-ups - Full Width */}
-          <div className="mb-8">
+            
+            {/* Zone 3: Follow-ups */}
             <FollowUpsCard />
           </div>
 

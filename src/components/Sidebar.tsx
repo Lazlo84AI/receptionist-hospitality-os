@@ -15,7 +15,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Tableau de Bord', href: '/', active: true },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/', active: true },
   { icon: RefreshCw, label: 'Passation Shift', href: '/shift' },
   { icon: BookOpen, label: 'Base de Connaissance', href: '/knowledge' },
   { icon: Settings, label: 'Paramètres', href: '/settings' },

@@ -62,23 +62,18 @@ export function IncidentsCard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Ouvert': return 'secondary' as const;
-      case 'En cours': return 'default' as const;
-      case 'Résolu': return 'secondary' as const;
-      default: return 'outline' as const;
+      case 'Ouvert': return 'destructive';
+      case 'En cours': return 'default';
+      case 'Résolu': return 'secondary';
+      default: return 'outline';
     }
-  };
-
-  const getStatusStyle = (status: string) => {
-    if (status === 'Ouvert') return 'bg-success-green text-white';
-    return '';
   };
 
 
   const getPriorityColor = (priority: string) => {
     return priority === 'URGENCE' 
       ? 'bg-urgence-red text-white animate-pulse' 
-      : 'text-palace-navy';
+      : 'bg-blue-500 text-white';
   };
 
   const getTimeColor = (timeElapsed: string) => {
@@ -122,10 +117,7 @@ export function IncidentsCard() {
                     {incident.title}
                   </h3>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge 
-                      variant={getStatusColor(incident.status)}
-                      className={getStatusStyle(incident.status)}
-                    >
+                    <Badge variant={getStatusColor(incident.status)}>
                       {incident.status}
                     </Badge>
                      <span className="text-xs text-soft-pewter">
@@ -177,10 +169,7 @@ export function IncidentsCard() {
                   {selectedIncident.title}
                 </h3>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge 
-                    variant={getStatusColor(selectedIncident.status)}
-                    className={getStatusStyle(selectedIncident.status)}
-                  >
+                  <Badge variant={getStatusColor(selectedIncident.status)}>
                     {selectedIncident.status}
                   </Badge>
                   <span className="text-xs text-soft-pewter px-2 py-1 bg-muted rounded">

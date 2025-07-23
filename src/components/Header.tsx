@@ -48,11 +48,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <Menu className="h-6 w-6" />
       </Button>
 
-      {/* Center: Simple Typography */}
-      <div>
-        <h1 className="text-lg font-playfair font-semibold text-warm-cream">
-          Tableau de bord : Vue réception
-        </h1>
+      {/* Center: Hotel Crest & Logo */}
+      <div className="flex items-center space-x-4">
+        <img 
+          src={hotelCrest} 
+          alt="Operations Dashboard" 
+          className="h-10 w-10 rounded-full ring-2 ring-champagne-gold/50"
+        />
+        <div className="hidden md:block">
+          <h1 className="text-lg font-playfair font-semibold text-warm-cream">
+            Operations Dashboard
+          </h1>
+          <p className="text-xs text-soft-pewter">Management System</p>
+        </div>
       </div>
 
       {/* Right: Time, Date & User */}

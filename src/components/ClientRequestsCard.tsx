@@ -57,10 +57,9 @@ const clientRequests = [
 export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'À préparer': return 'bg-success-green text-white';
+      case 'À préparer': return 'bg-urgence-red/10 text-urgence-red border-urgence-red/20';
       case 'En cours': return 'bg-muted text-soft-pewter border-border';
       case 'Préparé': return 'bg-muted text-palace-navy border-border';
-      case 'URGENCE': return 'bg-urgence-red text-white animate-pulse';
       default: return 'bg-muted text-soft-pewter border-border';
     }
   };
@@ -155,7 +154,7 @@ export function ClientRequestsCard() {
           <span className="text-soft-pewter">Statuts aujourd'hui:</span>
           <div className="flex space-x-4">
             <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-success-green" />
+              <div className="h-2 w-2 rounded-full bg-urgence-red" />
               <span className="text-xs">2 à préparer</span>
             </div>
             <div className="flex items-center space-x-1">

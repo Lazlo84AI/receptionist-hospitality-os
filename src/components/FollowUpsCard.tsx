@@ -99,17 +99,17 @@ export function FollowUpsCard() {
             <AlertCircle className="h-6 w-6 text-urgence-red" />
           </div>
           <div>
-          <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-            Relances à Faire
-          </h2>
-          <p className="text-sm text-soft-pewter">
-            Suivi des échéances critiques
-          </p>
+            <h2 className="text-xl font-playfair font-semibold text-palace-navy">
+              Follow-ups Required
+            </h2>
+            <p className="text-sm text-soft-pewter">
+              Critical deadline tracking
+            </p>
           </div>
         </div>
         {overdueCount > 0 && (
           <Badge className="bg-urgence-red text-white text-sm px-3 py-1">
-            {overdueCount} en retard
+            {overdueCount} overdue
           </Badge>
         )}
       </div>
@@ -176,7 +176,7 @@ export function FollowUpsCard() {
                       {item.type}
                     </span>
                     <Badge className={getStatusColor(item.statut, item.overdue)}>
-                      {item.overdue ? 'En retard' : item.statut}
+                      {item.overdue ? 'Overdue' : item.statut}
                     </Badge>
                   </div>
                 </div>
@@ -194,7 +194,7 @@ export function FollowUpsCard() {
                 variant="outline" 
                 className="text-xs h-7"
               >
-                Relancer
+                Follow up
               </Button>
             </div>
           </div>
@@ -205,19 +205,19 @@ export function FollowUpsCard() {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-urgence-red">{overdueCount}</p>
-            <p className="text-xs text-soft-pewter">En retard</p>
+            <p className="text-xs text-soft-pewter">Overdue</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-soft-pewter">
               {followUps.filter(item => !item.overdue && item.statut === 'À faire').length}
             </p>
-            <p className="text-xs text-soft-pewter">À traiter</p>
+            <p className="text-xs text-soft-pewter">To process</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-palace-navy">
               {followUps.filter(item => item.statut === 'Programmé').length}
             </p>
-            <p className="text-xs text-soft-pewter">Programmés</p>
+            <p className="text-xs text-soft-pewter">Scheduled</p>
           </div>
         </div>
       </div>
