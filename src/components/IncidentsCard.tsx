@@ -99,8 +99,8 @@ export function IncidentsCard() {
               </p>
             </div>
           </div>
-          <Badge className="bg-urgence-red text-white text-lg px-3 py-1 font-semibold">
-            {incidents.length} actifs
+          <Badge variant="outline" className="border-navy/30 text-navy">
+            {incidents.length} incidents
           </Badge>
         </div>
 

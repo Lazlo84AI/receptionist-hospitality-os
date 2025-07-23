@@ -30,8 +30,8 @@ const Index = () => {
             </p>
           </div>
 
-          {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Dashboard Grid - Row 1: 50/50 Layout */}
+          <div className="grid grid-cols-2 gap-8 mb-8">
             {/* Zone 1: Incidents */}
             <IncidentsCard />
             
