@@ -8,16 +8,14 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Les Airelles Luxury Palette */
+    /* Professional Clean Palette */
     --palace-navy: 210 32% 19%;        /* Deep navy #1a2332 */
-    --champagne-gold: 45 75% 52%;      /* Champagne gold #d4af37 */
-    --warm-cream: 40 44% 97%;          /* Warm cream #faf8f5 */
-    --soft-pewter: 220 28% 65%;        /* Soft pewter #8b9dc3 */
+    --champagne-gold: 45 75% 52%;      /* Gold accent #d4af37 */
+    --warm-cream: 0 0% 100%;           /* Pure white #ffffff */
+    --soft-pewter: 220 15% 60%;        /* Neutral gray #8b9dc3 */
     
-    /* Status Colors */
-    --urgence-red: 0 84% 60%;          /* Red for urgent items */
-    --success-green: 120 60% 50%;      /* Green for completed */
-    --warning-orange: 35 90% 60%;      /* Orange for in progress */
+    /* Status Colors - Minimal */
+    --urgence-red: 0 84% 60%;          /* Red for urgent items only */
     
     /* Design System */
     --background: var(--warm-cream);
@@ -35,7 +33,7 @@ All colors MUST be HSL.
     --secondary: var(--soft-pewter);
     --secondary-foreground: var(--warm-cream);
     
-    --muted: 220 20% 92%;
+    --muted: 220 10% 96%;
     --muted-foreground: var(--soft-pewter);
     
     --accent: var(--champagne-gold);
@@ -44,8 +42,8 @@ All colors MUST be HSL.
     --destructive: var(--urgence-red);
     --destructive-foreground: var(--warm-cream);
     
-    --border: 220 20% 88%;
-    --input: 220 20% 95%;
+    --border: 220 10% 90%;
+    --input: 220 5% 97%;
     --ring: var(--champagne-gold);
     
     --radius: 0.75rem;
@@ -121,10 +119,10 @@ All colors MUST be HSL.
 }
 
 @layer components {
-  /* Luxury Components */
+  /* Professional Components */
   .luxury-card {
-    @apply bg-card/95 backdrop-blur-sm border border-border/50 rounded-xl;
-    box-shadow: var(--shadow-luxury);
+    @apply bg-card border border-border/30 rounded-xl;
+    box-shadow: 0 2px 8px hsl(var(--palace-navy) / 0.08);
   }
   
   .glass-morphism {

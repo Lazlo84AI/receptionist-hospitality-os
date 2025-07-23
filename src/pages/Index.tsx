@@ -18,20 +18,20 @@ const Index = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       {/* Main Content */}
-      <main className="p-6">
+      <main className="p-8">
         <div className="max-w-7xl mx-auto">
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-playfair font-bold text-palace-navy mb-2">
-              Tableau de Bord Operations
+              Operations Dashboard
             </h1>
             <p className="text-soft-pewter">
-              Gestion centralisée des opérations palace • Vue d'ensemble temps réel
+              Centralized operations management • Real-time overview
             </p>
           </div>
 
           {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Zone 1: Incidents (Priority - takes 2 columns on large screens) */}
             <IncidentsCard />
             
@@ -43,7 +43,7 @@ const Index = () => {
           </div>
 
           {/* Additional Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
             <div className="luxury-card p-6 text-center">
               <div className="text-3xl font-bold text-champagne-gold mb-2">98%</div>
               <div className="text-sm text-soft-pewter">Satisfaction Client</div>

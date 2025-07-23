@@ -69,14 +69,6 @@ export function IncidentsCard() {
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Équipe': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Client': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Maintenance': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   const getPriorityColor = (priority: string) => {
     return priority === 'URGENCE' 
@@ -128,9 +120,9 @@ export function IncidentsCard() {
                     <Badge variant={getStatusColor(incident.status)}>
                       {incident.status}
                     </Badge>
-                    <Badge className={getTypeColor(incident.type)}>
-                      {incident.type}
-                    </Badge>
+                     <span className="text-xs text-soft-pewter">
+                       {incident.type}
+                     </span>
                     <Badge className={getPriorityColor(incident.priority)}>
                       {incident.priority}
                     </Badge>
@@ -180,9 +172,9 @@ export function IncidentsCard() {
                   <Badge variant={getStatusColor(selectedIncident.status)}>
                     {selectedIncident.status}
                   </Badge>
-                  <Badge className={getTypeColor(selectedIncident.type)}>
+                  <span className="text-xs text-soft-pewter px-2 py-1 bg-muted rounded">
                     {selectedIncident.type}
-                  </Badge>
+                  </span>
                   <Badge className={getPriorityColor(selectedIncident.priority)}>
                     {selectedIncident.priority}
                   </Badge>

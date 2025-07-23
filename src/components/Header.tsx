@@ -52,14 +52,14 @@ export function Header({ onMenuToggle }: HeaderProps) {
       <div className="flex items-center space-x-4">
         <img 
           src={hotelCrest} 
-          alt="Les Airelles Courchevel" 
+          alt="Operations Dashboard" 
           className="h-10 w-10 rounded-full ring-2 ring-champagne-gold/50"
         />
         <div className="hidden md:block">
           <h1 className="text-lg font-playfair font-semibold text-warm-cream">
-            Les Airelles Courchevel
+            Operations Dashboard
           </h1>
-          <p className="text-xs text-soft-pewter">Palace Operations</p>
+          <p className="text-xs text-soft-pewter">Management System</p>
         </div>
       </div>
 
