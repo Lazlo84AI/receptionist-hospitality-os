@@ -62,7 +62,7 @@ export function IncidentsCard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Ouvert': return 'bg-green-100 text-green-800 hover:bg-yellow-100 hover:text-yellow-800 transition-colors duration-200';
+      case 'Ouvert': return 'bg-green-500 text-white';
       case 'En cours': return 'default';
       case 'Résolu': return 'secondary';
       default: return 'outline';
@@ -141,9 +141,9 @@ export function IncidentsCard() {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-soft-pewter">Assigné à:</span>
-                  <span className="text-sm font-medium text-palace-navy">
+                  <Badge variant="secondary" className="bg-palace-navy text-white">
                     {incident.type} • {incident.assignedTo}
-                  </span>
+                  </Badge>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-soft-pewter" />
@@ -215,7 +215,9 @@ export function IncidentsCard() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                  <div>
                   <span className="font-medium text-palace-navy">Assigné à:</span>
-                  <p className="mt-1">{selectedIncident.type} • {selectedIncident.assignedTo}</p>
+                  <Badge variant="secondary" className="bg-palace-navy text-white mt-1 inline-block">
+                    {selectedIncident.type} • {selectedIncident.assignedTo}
+                  </Badge>
                  </div>
                 <div>
                   <span className="font-medium text-palace-navy">Localisation:</span>

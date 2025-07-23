@@ -1,4 +1,4 @@
-import { Calendar, User, CheckCircle, Clock, Star } from 'lucide-react';
+import { Heart, User, CheckCircle, Clock, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -57,7 +57,7 @@ const clientRequests = [
 export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'À préparer': return 'bg-green-100 text-green-800 hover:bg-yellow-100 hover:text-yellow-800 transition-colors duration-200';
+      case 'À préparer': return 'bg-green-500 text-white';
       case 'En cours': return 'bg-muted text-palace-navy border-border';
       case 'Préparé': return 'bg-muted text-palace-navy border-border';
       default: return 'bg-muted text-soft-pewter border-border';
@@ -94,8 +94,8 @@ export function ClientRequestsCard() {
     <div className="luxury-card p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-palace-navy/10 rounded-lg">
-            <Calendar className="h-6 w-6 text-palace-navy" />
+          <div className="p-2 bg-green-50 rounded-lg">
+            <Heart className="h-6 w-6 text-green-600" />
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
