@@ -387,6 +387,9 @@ export function IncidentsCard() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => console.log('À traiter')}>
+                      À traiter
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => console.log('En cours')}>
                       En cours
                     </DropdownMenuItem>
