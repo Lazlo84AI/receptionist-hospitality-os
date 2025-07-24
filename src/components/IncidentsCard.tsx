@@ -604,12 +604,9 @@ export function IncidentsCard() {
           </DialogHeader>
           <div className="space-y-4">
             <Tabs defaultValue="members" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="members" className="text-sm">
                   👥 Membres
-                </TabsTrigger>
-                <TabsTrigger value="attachments" className="text-sm">
-                  📎 Pièce jointe
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="members" className="space-y-4">
@@ -622,20 +619,15 @@ export function IncidentsCard() {
                 </div>
                 
                 <div>
-                  <h5 className="text-sm font-medium text-palace-navy mb-3">Membres du tableau</h5>
+                  <h5 className="text-sm font-medium text-palace-navy mb-3">Membres de l'annuaire de l'hôtel</h5>
                   <div className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-blue-600 text-white text-xs">
                         WR
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-palace-navy">Membre du tableau</span>
+                    <span className="text-sm text-palace-navy">Wilfried de Renty</span>
                   </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="attachments">
-                <div className="text-center py-8 text-soft-pewter">
-                  <p className="text-sm">Fonctionnalité de pièces jointes à venir</p>
                 </div>
               </TabsContent>
             </Tabs>
