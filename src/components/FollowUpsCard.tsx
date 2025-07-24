@@ -1,4 +1,5 @@
 import { AlertCircle, Building2, CreditCard, Clock, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { TaskDetailModal } from './TaskDetailModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,8 @@ const followUps = [
 
 export function FollowUpsCard() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedTask, setSelectedTask] = useState<(typeof followUps[0] & { description?: string; type?: string }) | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 2;
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
 
@@ -91,6 +94,15 @@ export function FollowUpsCard() {
 
   const prevSlide = () => {
     setCurrentIndex(Math.max(currentIndex - 1, 0));
+  };
+
+  const handleTaskClick = (task: typeof followUps[0]) => {
+    setSelectedTask({
+      ...task,
+      description: 'Description détaillée de la tâche à effectuer.',
+      type: 'Relance'
+    });
+    setIsModalOpen(true);
   };
 
   return (
@@ -155,7 +167,10 @@ export function FollowUpsCard() {
               <h3 className="font-bold text-foreground text-base flex-1">
                 {item.title}
               </h3>
-              <Eye className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" />
+              <Eye 
+                className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" 
+                onClick={() => handleTaskClick(item)}
+              />
             </div>
 
             {/* Ligne 2: Informations de localisation */}
@@ -221,6 +236,18 @@ export function FollowUpsCard() {
           </div>
         </div>
       </div>
+
+      {/* Modal de détails */}
+      {selectedTask && (
+        <TaskDetailModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedTask(null);
+          }}
+          task={selectedTask}
+        />
+      )}
     </div>
   );
 }
