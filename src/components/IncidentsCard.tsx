@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare, MoveUp } from 'lucide-react';
-import { useTasks } from '@/hooks/useTasks';
+import { useIncidents } from '@/hooks/useIncidents';
+import { useUsers } from '@/hooks/useUsers';
 import { ChecklistComponent } from './ChecklistComponent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,43 +20,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-// Mock data removed - now using real Supabase data
-
-const teamMembers = [
-  {
-    name: 'Jean Dupont',
-    role: 'Responsable Maintenance',
-    initials: 'JD',
-    bgColor: 'bg-blue-600'
-  },
-  {
-    name: 'Sophie Martin',
-    role: 'Responsable Réception',
-    initials: 'SM',
-    bgColor: 'bg-green-600'
-  },
-  {
-    name: 'Marie Dubois',
-    role: 'Gouvernante Générale',
-    initials: 'MD',
-    bgColor: 'bg-purple-600'
-  },
-  {
-    name: 'Pierre Leroy',
-    role: 'Technicien',
-    initials: 'PL',
-    bgColor: 'bg-orange-600'
-  },
-  {
-    name: 'Claire Rousseau',
-    role: 'Directrice',
-    initials: 'CR',
-    bgColor: 'bg-red-600'
-  }
-];
+// Using real Supabase data - no more mock data
 
 export function IncidentsCard() {
-  const { tasks: incidents, loading, error } = useTasks();
+  const { incidents, loading, error } = useIncidents();
+  const { users } = useUsers();
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
   const [comment, setComment] = useState('');
@@ -186,9 +155,9 @@ export function IncidentsCard() {
                   status: formattedStatus,
                   priority: formattedPriority,
                   timeElapsed,
-                  type: incident.task_type,
+                  type: incident.incident_type,
                   assignedTo: incident.assigned_to || 'Unassigned',
-                  room: incident.location || 'Not specified'
+                  room: incident.location_id || 'Not specified'
                 })}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -222,7 +191,7 @@ export function IncidentsCard() {
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-soft-pewter">Assigné à:</span>
                     <span className="text-sm font-medium text-palace-navy">
-                      {incident.task_type === 'maintenance' ? 'Service Provider' : incident.task_type === 'client_request' ? 'Reception' : 'Housekeeping'} : {incident.assigned_to || 'Unassigned'}
+                      {incident.incident_type === 'maintenance' ? 'Service Provider' : incident.incident_type === 'client' ? 'Reception' : 'Team'} : {users.find(u => u.id === incident.assigned_to)?.full_name || incident.assigned_to || 'Unassigned'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -243,7 +212,7 @@ export function IncidentsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'pending').length} to process</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'open').length} open</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
@@ -251,7 +220,7 @@ export function IncidentsCard() {
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'completed').length} resolved</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'resolved').length} resolved</span>
               </div>
             </div>
           </div>

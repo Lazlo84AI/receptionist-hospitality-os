@@ -1,5 +1,6 @@
 import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus, Search } from 'lucide-react';
-import { useTasksByType } from '@/hooks/useTasks';
+import { useSpecialRequests } from '@/hooks/useSpecialRequests';
+import { useUsers } from '@/hooks/useUsers';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-// Mock data removed - now using real Supabase data
+// Using real Supabase data - no more mock data
 
 interface ChecklistItem {
   id: string;
@@ -32,15 +33,9 @@ interface Checklist {
   items: ChecklistItem[];
 }
 
-const availableMembers = [
-  { id: 'JD', name: 'Jean Dupont', initials: 'JD' },
-  { id: 'SM', name: 'Sophie Martin', initials: 'SM' },
-  { id: 'MD', name: 'Marie Dubois', initials: 'MD' },
-  { id: 'WR', name: 'Wilfried de Renty', initials: 'WR' }
-];
-
 export function ClientRequestsCard() {
-  const { tasks: clientRequests, loading, error } = useTasksByType('client_request');
+  const { requests: clientRequests, loading, error } = useSpecialRequests();
+  const { users } = useUsers();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
@@ -260,8 +255,9 @@ export function ClientRequestsCard() {
       <div className="space-y-4">
         {clientRequests.map((request) => {
           const daysSince = getDaysSince(request.created_at);
-          const formattedStatus = formatStatus(request.status);
-          const formattedPriority = formatPriority(request.priority);
+          const formattedStatus = request.preparation_status === 'to_prepare' ? 'À traiter' : 
+                                   request.preparation_status === 'in_progress' ? 'En cours' : 
+                                   request.preparation_status === 'prepared' ? 'Préparé' : 'Terminé';
           
           return (
             <div
@@ -272,42 +268,41 @@ export function ClientRequestsCard() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-bold text-palace-navy">
-                      {request.title}
+                      {request.request_type}
                     </h3>
                     <Eye 
                       className="h-4 w-4 text-soft-pewter cursor-pointer hover:text-palace-navy" 
                       onClick={() => {
                         setSelectedRequest({
                           ...request,
-                          request: request.title,
-                          room: request.location || 'Non spécifié',
-                          clientName: 'Client',
+                          request: request.request_type,
+                          room: request.room_number,
+                          clientName: request.guest_name,
                           status: formattedStatus,
-                          priority: formattedPriority,
+                          priority: 'Normal',
                           daysSince,
-                          gouvernante: request.assigned_to || 'Non assigné'
+                          gouvernante: users.find(u => u.id === request.assigned_to)?.full_name || 'Non assigné'
                         });
                         setIsDetailModalOpen(true);
                       }}
                     />
                   </div>
                   <p className="text-palace-navy mb-1">
-                    {request.location || 'Non spécifié'}
+                    Chambre {request.room_number}
                   </p>
                   <p className="text-sm text-soft-pewter mb-3">
-                    Client
+                    {request.guest_name}
                   </p>
                   
                   <div className="flex items-center space-x-2 mb-3">
-                    {formattedStatus !== 'Résolu' && (
+                    {formattedStatus !== 'Terminé' && (
                       <Badge className={getStatusColor(formattedStatus)}>
                         {formattedStatus}
                       </Badge>
                     )}
-                    {formattedStatus === 'Résolu' && (
-                      <span className="text-soft-pewter">Résolu</span>
+                    {formattedStatus === 'Terminé' && (
+                      <span className="text-soft-pewter">Terminé</span>
                     )}
-                    {getPriorityBadge(formattedPriority)}
                   </div>
                 </div>
               </div>
@@ -316,7 +311,7 @@ export function ClientRequestsCard() {
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-soft-pewter">Assigné à :</span>
                   <span className="text-sm font-bold text-palace-navy">
-                    Gouvernante : {request.assigned_to || 'Non assigné'}
+                    Gouvernante : {users.find(u => u.id === request.assigned_to)?.full_name || 'Non assigné'}
                   </span>
                 </div>
                 <div className="flex items-center space-x-1 text-sm text-urgence-red">
@@ -335,15 +330,15 @@ export function ClientRequestsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{clientRequests.filter(r => r.status === 'pending').length} à traiter</span>
+                <span className="text-xs">{clientRequests.filter(r => r.preparation_status === 'to_prepare').length} à traiter</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">{clientRequests.filter(r => r.status === 'in_progress').length} en cours</span>
+                <span className="text-xs">{clientRequests.filter(r => r.preparation_status === 'in_progress').length} en cours</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{clientRequests.filter(r => r.status === 'completed').length} préparé</span>
+                <span className="text-xs">{clientRequests.filter(r => r.preparation_status === 'prepared').length} préparé</span>
               </div>
             </div>
         </div>
@@ -485,7 +480,7 @@ export function ClientRequestsCard() {
                         </span>
                         {item.assignee && (
                           <Badge variant="outline" className="text-xs">
-                            {availableMembers.find(m => m.id === item.assignee)?.initials}
+                            {users.find(m => m.id === item.assignee)?.full_name?.split(' ').map(n => n[0]).join('') || 'A'}
                           </Badge>
                         )}
                         {item.dueDate && (
@@ -539,7 +534,7 @@ export function ClientRequestsCard() {
                           </PopoverTrigger>
                           <PopoverContent className="w-48">
                             <div className="space-y-2">
-                              {availableMembers.map((member) => (
+                              {users.map((member) => (
                                 <div
                                   key={member.id}
                                   className="flex items-center space-x-2 p-2 hover:bg-muted rounded cursor-pointer"
@@ -548,10 +543,10 @@ export function ClientRequestsCard() {
                                     setShowMemberSelection(null);
                                   }}
                                 >
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarFallback className="text-xs">{member.initials}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm">{member.name}</span>
+                                   <Avatar className="h-6 w-6">
+                                     <AvatarFallback className="text-xs">{member.full_name?.split(' ').map(n => n[0]).join('') || member.email[0].toUpperCase()}</AvatarFallback>
+                                   </Avatar>
+                                   <span className="text-sm">{member.full_name || member.email}</span>
                                 </div>
                               ))}
                             </div>
@@ -876,21 +871,21 @@ export function ClientRequestsCard() {
               </h4>
               
               <div className="space-y-2">
-                {availableMembers
+                {users
                   .filter(member => 
-                    member.name.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                    (member.full_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) || false)
                   )
                   .map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer"
                     >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-500 text-white text-sm">
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-palace-navy">{member.name}</span>
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-500 text-white text-sm">
+                            {member.full_name?.split(' ').map(n => n[0]).join('') || member.email[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-palace-navy">{member.full_name || member.email}</span>
                     </div>
                   ))}
               </div>
@@ -943,21 +938,21 @@ export function ClientRequestsCard() {
 
               {/* Liste des membres */}
               <div className="space-y-2">
-                {availableMembers
+                {users
                   .filter(member => 
-                    member.name.toLowerCase().includes(escaladeMemberSearchQuery.toLowerCase())
+                    (member.full_name?.toLowerCase().includes(escaladeMemberSearchQuery.toLowerCase()) || false)
                   )
                   .map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer"
                     >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-500 text-white text-sm">
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-palace-navy">{member.name}</span>
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-500 text-white text-sm">
+                            {member.full_name?.split(' ').map(n => n[0]).join('') || member.email[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-palace-navy">{member.full_name || member.email}</span>
                     </div>
                   ))}
               </div>

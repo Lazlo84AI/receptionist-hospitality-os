@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useTasks } from '@/hooks/useTasks';
+import { useUsers } from '@/hooks/useUsers';
 
 // Mock data removed - now using real Supabase data
 
 export function FollowUpsCard() {
   const { tasks: allTasks, loading, error } = useTasks();
+  const { users } = useUsers();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,7 +29,7 @@ export function FollowUpsCard() {
       client: '',
       statut: task.status === 'pending' ? 'À traiter' : 'En cours',
       priority: task.priority === 'critical' ? 'urgence' : null,
-      assignedTo: `${task.task_type === 'maintenance' ? 'Service Provider' : task.task_type === 'client_request' ? 'Reception' : 'Housekeeping'} : ${task.assigned_to || 'Unassigned'}`,
+      assignedTo: `${task.task_type === 'maintenance' ? 'Service Provider' : task.task_type === 'client_request' ? 'Reception' : 'Housekeeping'} : ${users.find(u => u.id === task.assigned_to)?.full_name || task.assigned_to || 'Unassigned'}`,
       hoursElapsed,
       overdue: isOverdue
     };
