@@ -70,21 +70,9 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4 border-b">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-foreground">
-                  {task.type || 'Demande client'}
-                </h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <h2 className="text-lg font-bold text-foreground">
+              {task.type || 'Demande client'}
+            </h2>
           </DialogHeader>
 
           <div className="pt-4">
