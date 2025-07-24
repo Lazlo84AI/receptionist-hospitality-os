@@ -128,7 +128,7 @@ export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'À traiter': return 'bg-green-500 text-white';
-      case 'En cours': return 'bg-palace-navy text-white';
+      case 'En cours': return 'bg-background text-foreground border border-border';
       case 'Résolu': return '';
       default: return 'bg-muted text-soft-pewter border-border';
     }
@@ -256,7 +256,7 @@ export function ClientRequestsCard() {
             <Heart className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <h2 className="text-xl font-playfair font-semibold text-palace-navy">
+            <h2 className="text-xl font-playfair font-semibold text-foreground">
               Demandes Clients
             </h2>
             <p className="text-sm text-soft-pewter capitalize">
@@ -278,7 +278,7 @@ export function ClientRequestsCard() {
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-palace-navy">
+                  <h3 className="font-bold text-foreground">
                     {request.request}
                   </h3>
                   <Eye 
@@ -313,7 +313,7 @@ export function ClientRequestsCard() {
             <div className="flex items-center justify-between pt-3 border-t border-border/20">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-soft-pewter">Assigné à :</span>
-                <span className="text-sm font-bold text-palace-navy">
+                <span className="text-sm font-bold text-foreground">
                   Gouvernante : {request.gouvernante}
                 </span>
               </div>

@@ -131,7 +131,7 @@ export function IncidentsCard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'À traiter': return 'bg-green-500 text-white';
-      case 'En cours': return 'default';
+      case 'En cours': return 'bg-background text-foreground border border-border';
       case 'Résolu': return 'secondary';
       default: return 'outline';
     }
@@ -159,7 +159,7 @@ export function IncidentsCard() {
               <AlertTriangle className="h-6 w-6 text-urgence-red" />
             </div>
             <div>
-              <h2 className="text-xl font-playfair font-semibold text-palace-navy">
+              <h2 className="text-xl font-playfair font-semibold text-foreground">
                 Incidents en Cours
               </h2>
               <p className="text-sm text-soft-pewter">
@@ -181,7 +181,7 @@ export function IncidentsCard() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-palace-navy mb-2">
+                  <h3 className="font-semibold text-foreground mb-2">
                     {incident.title}
                   </h3>
                    <div className="flex flex-wrap gap-2 mb-3">
@@ -209,7 +209,7 @@ export function IncidentsCard() {
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-soft-pewter">Assigné à:</span>
-                  <span className="text-sm font-medium text-palace-navy">
+                  <span className="text-sm font-medium text-foreground">
                     {incident.type === 'Maintenance' ? 'Prestataire' : incident.type === 'Client' ? 'Réception' : 'Gouvernante'} : {incident.assignedTo}
                   </span>
                 </div>
