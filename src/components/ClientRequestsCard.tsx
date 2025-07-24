@@ -26,7 +26,8 @@ const clientRequests = [
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     daysSince: 2,
-    priority: 'URGENCE'
+    priority: 'URGENCE',
+    description: 'Charles et Emily Anderson célèbrent leurs 25 ans de mariage. Charles est amateur de grands crus et Emily adore les roses. Ils ont mentionné que leur lune de miel était à Champagne, ils seront touchés par ce clin d\'œil.'
   },
   {
     id: 2,
@@ -38,7 +39,8 @@ const clientRequests = [
     gouvernante: 'Marie Rousseau',
     avatar: 'MR',
     daysSince: 1,
-    priority: 'NORMAL'
+    priority: 'NORMAL',
+    description: 'Pierre et Léa Dubois voyagent avec leur bébé de 8 mois, Lucas, qui fait ses premières vacances. Léa a mentionné que Lucas a une peau sensible suite à un eczéma. Très attentifs au bien-être de leur enfant, ils apprécieront notre attention aux détails.'
   },
   {
     id: 3,
@@ -50,7 +52,8 @@ const clientRequests = [
     gouvernante: 'Sophie Bernard',
     avatar: 'SB',
     daysSince: 0,
-    priority: 'NORMAL'
+    priority: 'NORMAL',
+    description: 'Dr. James Williams, chirurgien cardiaque de Londres, doit finaliser une publication médicale importante pendant son séjour. Il travaille souvent tard le soir et apprécie le calme absolu. Grand amateur de café italien, il sera ravi de notre sélection.'
   },
   {
     id: 4,
@@ -62,7 +65,8 @@ const clientRequests = [
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     daysSince: 1,
-    priority: 'URGENCE'
+    priority: 'URGENCE',
+    description: 'Isabella Martinez, professeure de yoga et influenceuse wellness, revient d\'un voyage spirituel de 3 mois à Bali. Passionnée de méditation et de cuisine ayurvédique, elle documente son séjour pour ses 50k followers. Une attention particulière l\'enchantera.'
   }
 ];
 
@@ -385,9 +389,7 @@ export function ClientRequestsCard() {
                 <h3 className="font-semibold text-palace-navy mb-1">Description de la demande</h3>
                 <p className="text-xs text-muted-foreground italic mb-2">(avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)</p>
                 <p className="text-soft-pewter">
-                  {selectedRequest.clientName}, {selectedRequest.occasion === 'Anniversaire de mariage' 
-                    ? "fêtent leur anniversaire de mariage, ne pas oublier de rajouter une carte bonne anniversaire de mariage de la part de l'Hotel Duquesne."
-                    : `contexte: ${selectedRequest.occasion}`}
+                  {selectedRequest.description}
                 </p>
               </div>
 
