@@ -36,7 +36,7 @@ const UserManagement = () => {
         permissions: {}
       };
 
-      const response = await fetch('https://primary-production-31bef.up.railway.app/webhook-test/fetch_data', {
+      const response = await fetch('http://localhost:5678/webhook-test/get_data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
