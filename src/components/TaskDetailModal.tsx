@@ -69,111 +69,97 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="flex-row items-center justify-between space-y-0 pb-6">
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-foreground mb-3">
-                Tâches à faire ou relance à faire
-              </h1>
-              <h2 className="text-2xl font-bold text-foreground mb-4">
-                {task.title}
-              </h2>
-              <div className="flex items-center space-x-3">
-                <Badge className={getStatusColor(task.statut)}>
-                  {task.statut}
-                </Badge>
-                {task.type && (
-                  <Badge className="bg-muted text-muted-foreground">
-                    {task.type}
+          <DialogHeader className="space-y-0 pb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h1 className="text-lg font-medium text-foreground mb-2">
+                  Détails de l'Incident
+                </h1>
+                <h2 className="text-xl font-semibold text-foreground mb-4">
+                  {task.title}
+                </h2>
+                <div className="flex items-center space-x-2">
+                  <Badge className={getStatusColor(task.statut)}>
+                    {task.statut}
                   </Badge>
-                )}
-                {task.priority === 'urgence' && (
-                  <Badge className="bg-urgence-red text-white">
-                    URGENCE
-                  </Badge>
-                )}
+                  {task.type && (
+                    <Badge className="bg-gray-200 text-gray-600">
+                      {task.type}
+                    </Badge>
+                  )}
+                  {task.priority === 'urgence' && (
+                    <Badge className="bg-pink-400 text-white">
+                      URGENCE
+                    </Badge>
+                  )}
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </DialogHeader>
 
-          <div className="space-y-8 pt-2">
+          <div className="space-y-6">
             {/* Attribution & Localisation */}
-            <div className="flex justify-between items-start">
-              <div className="flex space-x-12">
-                <div>
-                  <span className="text-foreground">Assigné à : </span>
-                  <span className="font-bold text-foreground">{task.assignedTo}</span>
-                </div>
-                <div>
-                  <span className="text-foreground">Localisation : </span>
-                  <span className="font-bold text-foreground">{task.location}</span>
-                </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <span className="text-sm text-foreground font-medium">Assigné à:</span>
+                <div className="text-foreground">{task.assignedTo}</div>
               </div>
-              <div className="flex items-center space-x-1">
-                <Clock className={cn(
-                  "h-4 w-4",
-                  task.overdue ? "text-urgence-red" : "text-soft-pewter"
-                )} />
-                <span className={cn(
-                  "text-sm font-medium",
-                  task.overdue ? "text-urgence-red" : "text-soft-pewter"
-                )}>
-                  {formatElapsedTime(task.hoursElapsed)}
-                </span>
+              <div>
+                <span className="text-sm text-foreground font-medium">Localisation:</span>
+                <div className="text-foreground">{task.location}</div>
               </div>
             </div>
 
             {/* Description */}
             <div>
-              <p className="font-bold text-foreground mb-3">Description :</p>
-              <p className="text-soft-pewter leading-relaxed">
+              <p className="text-sm font-medium text-foreground mb-2">Description:</p>
+              <p className="text-gray-400">
                 {task.description || "Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir."}
               </p>
             </div>
 
-            {/* Boutons d'action centrés */}
-            <div className="flex justify-center">
-              <div className="grid grid-cols-4 gap-4 max-w-2xl">
-                <Button
-                  variant="outline"
-                  onClick={() => setReminderModalOpen(true)}
-                  className="flex items-center justify-center space-x-2 h-12 border-border hover:bg-accent"
-                >
-                  <AlarmClock className="h-4 w-4" />
-                  <span>Reminder</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setChecklistModalOpen(true)}
-                  className="flex items-center justify-center space-x-2 h-12 border-border hover:bg-accent"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  <span>Checklist</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setMembersModalOpen(true)}
-                  className="flex items-center justify-center space-x-2 h-12 border-border hover:bg-accent"
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Membres</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setEscalationModalOpen(true)}
-                  className="flex items-center justify-center space-x-2 h-12 border-border hover:bg-accent"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                  <span>Escalade</span>
-                </Button>
-              </div>
+            {/* Boutons d'action */}
+            <div className="grid grid-cols-4 gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setReminderModalOpen(true)}
+                className="flex items-center justify-center space-x-2 h-10 text-sm"
+              >
+                <AlarmClock className="h-4 w-4" />
+                <span>Reminder</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setChecklistModalOpen(true)}
+                className="flex items-center justify-center space-x-2 h-10 text-sm"
+              >
+                <CheckSquare className="h-4 w-4" />
+                <span>Checklist</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setMembersModalOpen(true)}
+                className="flex items-center justify-center space-x-2 h-10 text-sm"
+              >
+                <Users className="h-4 w-4" />
+                <span>Membres</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setEscalationModalOpen(true)}
+                className="flex items-center justify-center space-x-2 h-10 text-sm"
+              >
+                <ArrowUp className="h-4 w-4" />
+                <span>Escalade</span>
+              </Button>
             </div>
 
             {/* Checklists */}
