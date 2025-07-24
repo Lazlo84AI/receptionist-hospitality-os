@@ -382,7 +382,7 @@ export function ClientRequestsCard() {
 
               {/* Description de la demande */}
               <div>
-                <h3 className="font-semibold text-palace-navy mb-2">Description de la demande :</h3>
+                <h3 className="font-semibold text-palace-navy mb-2">Description de la demande avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique :)</h3>
                 <p className="text-soft-pewter">
                   {selectedRequest.clientName}, {selectedRequest.occasion === 'Anniversaire de mariage' 
                     ? "fêtent leur anniversaire de mariage, ne pas oublier de rajouter une carte bonne anniversaire de mariage de la part de l'Hotel Duquesne."
@@ -664,18 +664,9 @@ export function ClientRequestsCard() {
       <Dialog open={isChecklistModalOpen} onOpenChange={setIsChecklistModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-bold text-palace-navy">
-                Ajouter une checklist
-              </DialogTitle>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setIsChecklistModalOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle className="text-lg font-bold text-palace-navy">
+              Ajouter une checklist
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -714,20 +705,11 @@ export function ClientRequestsCard() {
       <Dialog open={isReminderModalOpen} onOpenChange={setIsReminderModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-pink-500" />
-                <DialogTitle className="text-lg font-bold text-palace-navy">
-                  Définir un reminder
-                </DialogTitle>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setIsReminderModalOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-pink-500" />
+              <DialogTitle className="text-lg font-bold text-palace-navy">
+                Définir un reminder
+              </DialogTitle>
             </div>
           </DialogHeader>
 
@@ -852,18 +834,9 @@ export function ClientRequestsCard() {
       <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-bold text-palace-navy">
-                Attribution de membres
-              </DialogTitle>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setIsMembersModalOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle className="text-lg font-bold text-palace-navy">
+              Attribution de membres
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -924,18 +897,9 @@ export function ClientRequestsCard() {
       <Dialog open={isEscaladeModalOpen} onOpenChange={setIsEscaladeModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-bold text-palace-navy">
-                Choix du canal
-              </DialogTitle>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setIsEscaladeModalOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle className="text-lg font-bold text-palace-navy">
+              Choix du canal
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
