@@ -393,6 +393,164 @@ export function ClientRequestsCard() {
                 </Button>
               </div>
 
+              {/* Affichage des checklists */}
+              {checklists.map((checklist) => (
+                <div key={checklist.id} className="space-y-4 p-4 bg-muted/10 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={checklist.items.every(item => item.completed)}
+                        onChange={() => {}}
+                        className="rounded border-border"
+                      />
+                      <h4 className="font-bold text-palace-navy">{checklist.title}</h4>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteChecklist(checklist.id)}
+                      className="text-urgence-red hover:text-urgence-red"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Barre de progression */}
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${getChecklistProgress(checklist)}%` }}
+                    />
+                  </div>
+                  <div className="text-sm text-soft-pewter">
+                    {getChecklistProgress(checklist)}% complété
+                  </div>
+
+                  {/* Liste des éléments */}
+                  <div className="space-y-2">
+                    {checklist.items.map((item, index) => (
+                      <div key={item.id} className="flex items-center space-x-2 group">
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
+                          onChange={() => handleToggleItem(checklist.id, item.id)}
+                          className="rounded border-border"
+                        />
+                        <span className="text-sm text-palace-navy flex-1">
+                          {index + 1}. {item.text}
+                        </span>
+                        {item.assignee && (
+                          <Badge variant="outline" className="text-xs">
+                            {availableMembers.find(m => m.id === item.assignee)?.initials}
+                          </Badge>
+                        )}
+                        {item.dueDate && (
+                          <Badge variant="outline" className="text-xs">
+                            {format(item.dueDate, 'dd/MM')}
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteItem(checklist.id, item.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-3 w-3 text-soft-pewter" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Ajout d'un nouvel élément */}
+                  {editingItem === checklist.id ? (
+                    <div className="space-y-3">
+                      <Input
+                        value={newItemText}
+                        onChange={(e) => setNewItemText(e.target.value)}
+                        placeholder="Ajouter un élément"
+                        className="border-yellow-400 focus:border-yellow-400"
+                        autoFocus
+                      />
+                      <div className="flex items-center space-x-2">
+                        <Button size="sm" onClick={() => handleAddItem(checklist.id)}>
+                          Ajouter
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setEditingItem(null);
+                            setNewItemText('');
+                          }}
+                        >
+                          Annuler
+                        </Button>
+                        
+                        {/* Assignation */}
+                        <Popover open={showMemberSelection === checklist.id} onOpenChange={(open) => setShowMemberSelection(open ? checklist.id : null)}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Attribuer
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48">
+                            <div className="space-y-2">
+                              {availableMembers.map((member) => (
+                                <div
+                                  key={member.id}
+                                  className="flex items-center space-x-2 p-2 hover:bg-muted rounded cursor-pointer"
+                                  onClick={() => {
+                                    // Pour la nouvelle tâche, on peut stocker l'assignation temporairement
+                                    setShowMemberSelection(null);
+                                  }}
+                                >
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-xs">{member.initials}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{member.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        {/* Date limite */}
+                        <Popover open={showDatePicker === checklist.id} onOpenChange={(open) => setShowDatePicker(open ? checklist.id : null)}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Date limite
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setSelectedDate(date);
+                                  setShowDatePicker(null);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingItem(checklist.id)}
+                      className="text-soft-pewter hover:text-palace-navy"
+                    >
+                      Ajouter un élément
+                    </Button>
+                  )}
+                </div>
+              ))}
+
               {/* Section Commentaires et activité */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -453,177 +611,6 @@ export function ClientRequestsCard() {
                   </div>
                 )}
               </div>
-
-              {/* Affichage des checklists */}
-              {checklists.map((checklist) => (
-                <div key={checklist.id} className="space-y-4 p-4 bg-muted/10 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <input 
-                        type="checkbox" 
-                        className="h-4 w-4 rounded border-border"
-                        checked={false}
-                        readOnly
-                      />
-                      <h4 className="font-bold text-palace-navy">{checklist.title}</h4>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleDeleteChecklist(checklist.id)}
-                      className="text-urgence-red hover:text-urgence-red"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Barre de progression */}
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${getChecklistProgress(checklist)}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-soft-pewter">
-                    {getChecklistProgress(checklist)}% complété
-                  </div>
-
-                  {/* Items de la checklist */}
-                  <div className="space-y-2">
-                    {checklist.items.map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between space-x-3">
-                        <div className="flex items-center space-x-3 flex-1">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 rounded border-border"
-                            checked={item.completed}
-                            onChange={() => handleToggleItem(checklist.id, item.id)}
-                          />
-                          <span className={cn(
-                            "text-palace-navy",
-                            item.completed && "line-through text-soft-pewter"
-                          )}>
-                            {index + 1}. {item.text}
-                          </span>
-                          {item.assignee && (
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="bg-blue-500 text-white text-xs">
-                                {availableMembers.find(m => m.id === item.assignee)?.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          {item.dueDate && (
-                            <span className="text-xs text-soft-pewter">
-                              {format(item.dueDate, 'dd/MM')}
-                            </span>
-                          )}
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeleteItem(checklist.id, item.id)}
-                          className="text-soft-pewter hover:text-urgence-red"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    
-                    {/* Ajouter un nouvel item */}
-                    {editingItem === checklist.id ? (
-                      <div className="space-y-3">
-                        <Input
-                          value={newItemText}
-                          onChange={(e) => setNewItemText(e.target.value)}
-                          placeholder="Nom de l'élément"
-                          className="border-yellow-500"
-                          autoFocus
-                        />
-                        <div className="flex items-center space-x-2">
-                          <Button 
-                            size="sm"
-                            onClick={() => handleAddItem(checklist.id)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white"
-                          >
-                            Ajouter
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              setEditingItem(null);
-                              setNewItemText('');
-                            }}
-                            className="text-soft-pewter"
-                          >
-                            Annuler
-                          </Button>
-                          
-                          {/* Attribution membre */}
-                          <Popover open={showMemberSelection === `${checklist.id}-new`} onOpenChange={(open) => setShowMemberSelection(open ? `${checklist.id}-new` : null)}>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                Attribuer
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48 p-2">
-                              <div className="space-y-1">
-                                {availableMembers.map((member) => (
-                                  <button
-                                    key={member.id}
-                                    className="w-full flex items-center space-x-2 p-2 hover:bg-muted rounded text-left"
-                                    onClick={() => {
-                                      // For new items, we'll handle this when adding
-                                      setShowMemberSelection(null);
-                                    }}
-                                  >
-                                    <Avatar className="h-6 w-6">
-                                      <AvatarFallback className="bg-blue-500 text-white text-xs">
-                                        {member.initials}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm">{member.name}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-
-                          {/* Date limite */}
-                          <Popover open={showDatePicker === `${checklist.id}-new`} onOpenChange={(open) => setShowDatePicker(open ? `${checklist.id}-new` : null)}>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                Date limite
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CalendarComponent
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={(date) => {
-                                  if (date) {
-                                    setSelectedDate(date);
-                                    setShowDatePicker(null);
-                                  }
-                                }}
-                                initialFocus
-                                className="p-3 pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setEditingItem(checklist.id)}
-                        className="text-soft-pewter hover:text-palace-navy text-sm"
-                      >
-                        Ajouter un élément
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
 
               {/* Bouton Changer le statut */}
               <div className="flex justify-end pt-4">
