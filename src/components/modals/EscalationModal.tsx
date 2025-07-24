@@ -56,16 +56,16 @@ export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
               <div className="space-y-2">
                 <div className="flex items-center space-x-3 p-3 rounded-lg border">
                   <RadioGroupItem value="email" id="email" />
-                  <Mail className="h-4 w-4 text-soft-pewter" />
-                  <Label htmlFor="email" className="cursor-pointer">
-                    Envoi d'un email
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border">
-                  <RadioGroupItem value="whatsapp" id="whatsapp" />
-                  <MessageCircle className="h-4 w-4 text-soft-pewter" />
-                  <Label htmlFor="whatsapp" className="cursor-pointer">
-                    Envoi d'un message WhatsApp
+                   <Mail className="h-4 w-4 text-foreground" />
+                   <Label htmlFor="email" className="cursor-pointer text-foreground">
+                     Envoi d'un email
+                   </Label>
+                 </div>
+                 <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                   <RadioGroupItem value="whatsapp" id="whatsapp" />
+                   <MessageCircle className="h-4 w-4 text-foreground" />
+                   <Label htmlFor="whatsapp" className="cursor-pointer text-foreground">
+                     Envoi d'un message WhatsApp
                   </Label>
                 </div>
               </div>
@@ -78,7 +78,7 @@ export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
               Destinataire
             </Label>
             <div className="relative mb-3">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-foreground" />
               <Input
                 placeholder="Rechercher des membres..."
                 value={searchTerm}
@@ -98,10 +98,10 @@ export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
                            {member.initials}
                          </AvatarFallback>
                       </Avatar>
-                      <Label htmlFor={`escalation-${member.id}`} className="flex-1 cursor-pointer">
-                        <div className="font-medium text-foreground">{member.name}</div>
-                        <div className="text-sm text-soft-pewter">{member.role}</div>
-                      </Label>
+                       <Label htmlFor={`escalation-${member.id}`} className="flex-1 cursor-pointer">
+                         <div className="font-medium text-foreground">{member.name}</div>
+                         <div className="text-sm text-foreground">{member.role}</div>
+                       </Label>
                     </div>
                   ))}
                 </div>
@@ -109,18 +109,17 @@ export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
             </div>
 
             {filteredMembers.length === 0 && (
-              <div className="text-center text-soft-pewter py-4">
-                Aucun membre trouvé
-              </div>
+               <div className="text-center text-foreground py-4">
+                 Aucun membre trouvé
+               </div>
             )}
           </div>
 
           <div className="flex justify-end pt-4">
-            <Button 
-              onClick={handleSend}
-              disabled={!selectedMember}
-              className="bg-primary text-primary-foreground"
-            >
+             <Button 
+               onClick={handleSend}
+               disabled={!selectedMember}
+             >
               Envoyer
             </Button>
           </div>

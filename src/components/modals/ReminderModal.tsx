@@ -45,7 +45,7 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
 
         <div className="space-y-4 pt-4">
           <div>
-            <Label htmlFor="subject">Objet du reminder</Label>
+            <Label htmlFor="subject" className="text-foreground">Objet du reminder</Label>
             <Input
               id="subject"
               value={subject}
@@ -57,7 +57,7 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Date limite</Label>
+              <Label className="text-foreground">Date limite</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -84,9 +84,9 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
             </div>
 
             <div>
-              <Label htmlFor="time">Heure</Label>
+              <Label htmlFor="time" className="text-foreground">Heure</Label>
               <div className="relative mt-1">
-                <Clock className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
+                <Clock className="absolute left-3 top-3 h-4 w-4 text-foreground" />
                 <Input
                   id="time"
                   type="time"
@@ -99,7 +99,7 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
           </div>
 
           <div>
-            <Label>Rappel avant échéance</Label>
+            <Label className="text-foreground">Rappel avant échéance</Label>
             <Select value={reminderTime} onValueChange={setReminderTime}>
               <SelectTrigger className="mt-1">
                 <SelectValue />

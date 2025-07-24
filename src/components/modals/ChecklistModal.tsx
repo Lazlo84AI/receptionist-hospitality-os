@@ -38,7 +38,7 @@ export function ChecklistModal({ isOpen, onClose, onAdd }: ChecklistModalProps) 
 
         <div className="space-y-4 pt-4">
           <div>
-            <Label htmlFor="checklistTitle">Titre</Label>
+            <Label htmlFor="checklistTitle" className="text-foreground">Titre</Label>
             <Input
               id="checklistTitle"
               value={title}
