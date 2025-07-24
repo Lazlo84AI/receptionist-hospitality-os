@@ -1,4 +1,4 @@
-import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus } from 'lucide-react';
+import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -82,7 +83,8 @@ interface Checklist {
 const availableMembers = [
   { id: 'JD', name: 'Jean Dupont', initials: 'JD' },
   { id: 'SM', name: 'Sophie Martin', initials: 'SM' },
-  { id: 'MD', name: 'Marie Dubois', initials: 'MD' }
+  { id: 'MD', name: 'Marie Dubois', initials: 'MD' },
+  { id: 'WR', name: 'Wilfried de Renty', initials: 'WR' }
 ];
 
 export function ClientRequestsCard() {
@@ -109,6 +111,15 @@ export function ClientRequestsCard() {
   const [reminderNotification, setReminderNotification] = useState('10 minutes avant');
   const [hasStartDate, setHasStartDate] = useState(false);
   const [hasEndDate, setHasEndDate] = useState(true);
+  
+  // Members states
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  
+  // Escalade states
+  const [isEscaladeModalOpen, setIsEscaladeModalOpen] = useState(false);
+  const [escaladeChannel, setEscaladeChannel] = useState<'email' | 'whatsapp' | null>(null);
+  const [escaladeMemberSearchQuery, setEscaladeMemberSearchQuery] = useState('');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -399,11 +410,21 @@ export function ClientRequestsCard() {
                   <CheckCircle className="h-4 w-4" />
                   <span>Checklist</span>
                 </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2"
+                  onClick={() => setIsMembersModalOpen(true)}
+                >
                   <Users className="h-4 w-4" />
                   <span>Membres</span>
                 </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2"
+                  onClick={() => setIsEscaladeModalOpen(true)}
+                >
                   <TrendingUp className="h-4 w-4" />
                   <span>Escalade</span>
                 </Button>
@@ -821,6 +842,168 @@ export function ClientRequestsCard() {
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Attribution de membres */}
+      <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-bold text-palace-navy">
+                Attribution de membres
+              </DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setIsMembersModalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Bouton Membres */}
+            <Button 
+              className="w-full justify-start space-x-2 bg-purple-100 text-purple-700 hover:bg-purple-200"
+              variant="outline"
+            >
+              <Users className="h-4 w-4 text-purple-500" />
+              <span>👥 Membres</span>
+            </Button>
+
+            {/* Champ de recherche */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-palace-navy">Membres</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-soft-pewter" />
+                <Input
+                  value={memberSearchQuery}
+                  onChange={(e) => setMemberSearchQuery(e.target.value)}
+                  placeholder="Rechercher des membres"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Section Membres de l'annuaire de l'hôtel */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-palace-navy">
+                Membres de l'annuaire de l'hôtel
+              </h4>
+              
+              <div className="space-y-2">
+                {availableMembers
+                  .filter(member => 
+                    member.name.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                  )
+                  .map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-blue-500 text-white text-sm">
+                          {member.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-palace-navy">{member.name}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Escalade */}
+      <Dialog open={isEscaladeModalOpen} onOpenChange={setIsEscaladeModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-bold text-palace-navy">
+                Choix du canal
+              </DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setIsEscaladeModalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Section Choix du canal */}
+            <div className="space-y-3">
+              <RadioGroup value={escaladeChannel || ''} onValueChange={(value) => setEscaladeChannel(value as 'email' | 'whatsapp')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="email" id="email" />
+                  <Label htmlFor="email" className="text-palace-navy">Envoi d'un email</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="whatsapp" id="whatsapp" />
+                  <Label htmlFor="whatsapp" className="text-palace-navy">Envoi d'un message WhatsApp</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Section Attribution de membres */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold text-palace-navy">Attribution de membres</h4>
+              
+              <div className="space-y-2">
+                <Label className="text-sm text-palace-navy">Membres</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-soft-pewter" />
+                  <Input
+                    value={escaladeMemberSearchQuery}
+                    onChange={(e) => setEscaladeMemberSearchQuery(e.target.value)}
+                    placeholder="Rechercher des membres"
+                    className="pl-10"
+                    disabled={!escaladeChannel}
+                  />
+                </div>
+              </div>
+
+              {/* Liste des membres */}
+              <div className="space-y-2">
+                {availableMembers
+                  .filter(member => 
+                    member.name.toLowerCase().includes(escaladeMemberSearchQuery.toLowerCase())
+                  )
+                  .map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-blue-500 text-white text-sm">
+                          {member.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-palace-navy">{member.name}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Bouton d'action */}
+            <div className="flex justify-end pt-4">
+              <Button 
+                disabled={!escaladeChannel}
+                onClick={() => {
+                  // Logique pour envoyer l'escalade
+                  setIsEscaladeModalOpen(false);
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white disabled:bg-soft-pewter"
+              >
+                Envoyer
               </Button>
             </div>
           </div>
