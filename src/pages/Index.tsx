@@ -42,9 +42,6 @@ const Index = () => {
       
       {/* Floating Voice Command Button */}
       <VoiceCommandButton />
-      
-      {/* Floating Quick Action Button */}
-      <QuickActionButton />
     </div>
   );
 };

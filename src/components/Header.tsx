@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Menu, User, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { QuickActionButton } from '@/components/QuickActionButton';
 import hotelCrest from '@/assets/hotel-crest.jpg';
 
 interface HeaderProps {
@@ -55,8 +56,11 @@ export function Header({ onMenuToggle }: HeaderProps) {
         </h1>
       </div>
 
-      {/* Right: Time, Date & User */}
+      {/* Right: Quick Action, Time, Date & User */}
       <div className="flex items-center space-x-4">
+        {/* Quick Action Button */}
+        <QuickActionButton />
+
         {/* Time & Date */}
         <div className="hidden lg:block text-right">
           <div className="flex items-center space-x-2 text-warm-cream">
