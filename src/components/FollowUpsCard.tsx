@@ -158,20 +158,27 @@ export function FollowUpsCard() {
         {visibleItems.map((item) => (
           <div
             key={item.id}
-            className="p-6 rounded-lg border bg-background hover-luxury transition-all duration-300"
+            className="p-6 rounded-lg border bg-background hover-luxury transition-all duration-300 cursor-pointer"
           >
-            {/* En-tête avec titre et sous-titre */}
-            <div className="mb-4">
-              <h3 className="font-bold text-foreground text-lg mb-2">
-                Relance
-              </h3>
-              <p className="text-foreground font-medium">
+            {/* Ligne 1: Titre + icône œil */}
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-bold text-foreground text-base flex-1">
                 {item.title}
-              </p>
+              </h3>
+              <Eye 
+                className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" 
+                onClick={() => handleTaskClick(item)}
+              />
             </div>
 
-            {/* Badges de statut et priorité */}
-            <div className="flex items-center space-x-2 mb-6">
+            {/* Ligne 2: Informations de localisation */}
+            <div className="mb-3">
+              <span className="text-sm font-medium text-foreground">{item.location}</span>
+              {item.client && <span className="text-sm text-soft-pewter ml-2">{item.client}</span>}
+            </div>
+
+            {/* Ligne 3: Badges de statut et priorité */}
+            <div className="flex items-center space-x-2 mb-4">
               <Badge className={getStatusColor(item.statut)}>
                 {item.statut}
               </Badge>
@@ -182,95 +189,14 @@ export function FollowUpsCard() {
               )}
             </div>
 
-            {/* Informations en deux colonnes */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <p className="text-sm font-medium text-foreground mb-1">
-                  Assigné à :
-                </p>
-                <p className="text-sm text-soft-pewter">
-                  {item.assignedTo}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground mb-1">
-                  Localisation :
-                </p>
-                <p className="text-sm text-soft-pewter">
-                  {item.location}
-                </p>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="mb-6">
-              <p className="text-sm font-medium text-foreground mb-2">
-                Description de la relance
-              </p>
-              <p className="text-sm text-soft-pewter italic">
-                (avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)
-              </p>
-              <p className="text-sm text-soft-pewter mt-2">
-                Tâche nécessitant un suivi et une action dans les meilleurs délais.
-              </p>
-            </div>
-
-            {/* Boutons d'action */}
-            <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-border/20">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-foreground hover:bg-muted"
-                onClick={() => handleTaskClick(item)}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Reminder
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-foreground hover:bg-muted"
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Checklist
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-foreground hover:bg-muted"
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Membres
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-foreground hover:bg-muted"
-              >
-                <AlertCircle className="h-4 w-4 mr-2" />
-                Escalade
-              </Button>
-            </div>
-
-            {/* Section commentaires et activité */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-foreground">
-                  Commentaires et activité
-                </h4>
-                <Button variant="ghost" size="sm" className="text-foreground">
-                  Afficher les détails
-                </Button>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-sm text-soft-pewter placeholder:text-soft-pewter">
-                  Écrivez un commentaire...
-                </p>
-              </div>
-            </div>
-
-            {/* Indicateur de temps et bouton statut */}
+            {/* Dernière ligne: Assignation à gauche, horloge à droite */}
             <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-soft-pewter">Assigné à : </span>
+                <span className="text-sm font-medium text-palace-navy">
+                  {item.assignedTo}
+                </span>
+              </div>
               <div className="flex items-center space-x-1">
                 <Clock className={cn(
                   "h-4 w-4",
@@ -283,9 +209,6 @@ export function FollowUpsCard() {
                   {formatElapsedTime(item.hoursElapsed)}
                 </span>
               </div>
-              <Button className="bg-primary text-primary-foreground">
-                Changer le statut
-              </Button>
             </div>
           </div>
         ))}
