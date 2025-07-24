@@ -36,17 +36,12 @@ const UserManagement = () => {
         permissions: {}
       };
 
-      // Convert userData to URL parameters for GET request
-      const params = new URLSearchParams();
-      Object.entries(userData).forEach(([key, value]) => {
-        params.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
-      });
-
-      const response = await fetch(`https://primary-production-31bef.up.railway.app/webhook-test/fetch_data?${params.toString()}`, {
-        method: 'GET',
+      const response = await fetch('https://primary-production-31bef.up.railway.app/webhook-test/fetch_data', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify(userData)
       });
 
       if (response.ok) {
