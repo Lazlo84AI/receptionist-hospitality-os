@@ -72,7 +72,7 @@ export function FollowUpsCard() {
 
   const getStatusColor = (statut: string) => {
     if (statut === 'À traiter') return 'bg-green-500 text-white';
-    if (statut === 'En cours') return 'bg-background text-foreground border border-border';
+    if (statut === 'En cours') return 'bg-palace-navy text-white';
     return 'bg-muted text-soft-pewter border-border';
   };
 
@@ -113,7 +113,7 @@ export function FollowUpsCard() {
             <AlertCircle className="h-6 w-6 text-blue-500" />
           </div>
           <div>
-            <h2 className="text-xl font-playfair font-semibold text-foreground">
+            <h2 className="text-xl font-playfair font-semibold text-palace-navy">
               Relances et tâches à faire
             </h2>
             <p className="text-sm text-soft-pewter">
@@ -193,7 +193,7 @@ export function FollowUpsCard() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm text-soft-pewter">Assigné à : </span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-sm font-medium text-palace-navy">
                   {item.assignedTo}
                 </span>
               </div>

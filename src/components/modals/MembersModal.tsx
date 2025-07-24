@@ -47,7 +47,7 @@ export function MembersModal({ isOpen, onClose }: MembersModalProps) {
 
         <div className="space-y-4 pt-4">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-foreground" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
             <Input
               placeholder="Rechercher des membres..."
               value={searchTerm}
@@ -69,7 +69,7 @@ export function MembersModal({ isOpen, onClose }: MembersModalProps) {
                     </Avatar>
                     <Label htmlFor={member.id} className="flex-1 cursor-pointer">
                       <div className="font-medium text-foreground">{member.name}</div>
-                      <div className="text-sm text-foreground">{member.role}</div>
+                      <div className="text-sm text-soft-pewter">{member.role}</div>
                     </Label>
                   </div>
                 ))}
@@ -78,7 +78,7 @@ export function MembersModal({ isOpen, onClose }: MembersModalProps) {
           </div>
 
           {filteredMembers.length === 0 && (
-            <div className="text-center text-foreground py-4">
+            <div className="text-center text-soft-pewter py-4">
               Aucun membre trouvé
             </div>
           )}

@@ -8,32 +8,32 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Professional Dark Palette - Mode Nuit */
+    /* Professional Clean Palette */
     --palace-navy: 210 32% 19%;        /* Deep navy #1a2332 */
     --champagne-gold: 45 75% 52%;      /* Gold accent #d4af37 */
     --warm-cream: 0 0% 100%;           /* Pure white #ffffff */
-    --soft-pewter: 220 15% 70%;        /* Lighter gray for better contrast */
+    --soft-pewter: 220 15% 60%;        /* Neutral gray #8b9dc3 */
     
     /* Status Colors - Minimal */
     --urgence-red: 0 84% 60%;          /* Red for urgent items only */
     
-    /* Design System - Mode Nuit */
-    --background: var(--palace-navy);
-    --foreground: var(--warm-cream);
+    /* Design System */
+    --background: var(--warm-cream);
+    --foreground: var(--palace-navy);
     
-    --card: 210 25% 22%;               /* Slightly lighter than background */
-    --card-foreground: var(--warm-cream);
+    --card: var(--warm-cream);
+    --card-foreground: var(--palace-navy);
     
-    --popover: 210 25% 22%;
-    --popover-foreground: var(--warm-cream);
+    --popover: var(--warm-cream);
+    --popover-foreground: var(--palace-navy);
     
-    --primary: var(--champagne-gold);
-    --primary-foreground: var(--palace-navy);
+    --primary: var(--palace-navy);
+    --primary-foreground: var(--warm-cream);
     
-    --secondary: 220 15% 35%;          /* Medium gray for secondary elements */
+    --secondary: var(--soft-pewter);
     --secondary-foreground: var(--warm-cream);
     
-    --muted: 210 20% 25%;              /* Muted background */
+    --muted: 220 10% 96%;
     --muted-foreground: var(--soft-pewter);
     
     --accent: var(--champagne-gold);
@@ -42,30 +42,30 @@ All colors MUST be HSL.
     --destructive: var(--urgence-red);
     --destructive-foreground: var(--warm-cream);
     
-    --border: 220 15% 30%;             /* Darker borders */
-    --input: 210 20% 25%;              /* Dark input backgrounds */
+    --border: 220 10% 90%;
+    --input: 220 5% 97%;
     --ring: var(--champagne-gold);
     
     --radius: 0.75rem;
     
-    /* Luxury Gradients - Dark Mode */
-    --gradient-luxury: linear-gradient(135deg, hsl(var(--palace-navy)), hsl(210 25% 22%));
+    /* Luxury Gradients */
+    --gradient-luxury: linear-gradient(135deg, hsl(var(--palace-navy)), hsl(var(--palace-navy) / 0.8));
     --gradient-gold: linear-gradient(135deg, hsl(var(--champagne-gold)), hsl(var(--champagne-gold) / 0.8));
-    --gradient-glass: linear-gradient(135deg, hsl(var(--warm-cream) / 0.05), hsl(var(--warm-cream) / 0.02));
+    --gradient-glass: linear-gradient(135deg, hsl(var(--warm-cream) / 0.1), hsl(var(--warm-cream) / 0.05));
     
-    /* Luxury Shadows - Dark Mode */
-    --shadow-luxury: 0 20px 40px -10px hsl(0 0% 0% / 0.3);
-    --shadow-gold: 0 10px 30px -5px hsl(var(--champagne-gold) / 0.2);
-    --shadow-glass: 0 8px 32px hsl(0 0% 0% / 0.2);
+    /* Luxury Shadows */
+    --shadow-luxury: 0 20px 40px -10px hsl(var(--palace-navy) / 0.15);
+    --shadow-gold: 0 10px 30px -5px hsl(var(--champagne-gold) / 0.3);
+    --shadow-glass: 0 8px 32px hsl(var(--palace-navy) / 0.1);
     
     /* Sidebar */
     --sidebar-background: var(--palace-navy);
     --sidebar-foreground: var(--warm-cream);
     --sidebar-primary: var(--champagne-gold);
     --sidebar-primary-foreground: var(--palace-navy);
-    --sidebar-accent: hsl(210 25% 22%);
+    --sidebar-accent: hsl(var(--palace-navy) / 0.8);
     --sidebar-accent-foreground: var(--warm-cream);
-    --sidebar-border: hsl(var(--soft-pewter) / 0.2);
+    --sidebar-border: hsl(var(--soft-pewter) / 0.3);
     --sidebar-ring: var(--champagne-gold);
   }
 
@@ -122,7 +122,7 @@ All colors MUST be HSL.
   /* Professional Components */
   .luxury-card {
     @apply bg-card border border-border/30 rounded-xl;
-    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.2);
+    box-shadow: 0 2px 8px hsl(var(--palace-navy) / 0.08);
   }
   
   .glass-morphism {
@@ -145,6 +145,6 @@ All colors MUST be HSL.
   }
   
   .hover-luxury:hover {
-    box-shadow: 0 8px 25px hsl(var(--champagne-gold) / 0.2);
+    box-shadow: var(--shadow-gold);
   }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Trash2, Calendar, Clock, Bell } from 'lucide-react';
+import { X, Trash2, Calendar, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,19 +17,19 @@ interface ReminderModalProps {
 
 export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
   const [subject, setSubject] = useState('');
-  const [startDate, setStartDate] = useState<Date>();
+  const [date, setDate] = useState<Date>();
   const [time, setTime] = useState('');
   const [reminderTime, setReminderTime] = useState('10');
 
   const handleSave = () => {
     // Logique de sauvegarde du reminder
-    console.log('Reminder saved:', { subject, startDate, time, reminderTime });
+    console.log('Reminder saved:', { subject, date, time, reminderTime });
     onClose();
   };
 
   const handleClear = () => {
     setSubject('');
-    setStartDate(undefined);
+    setDate(undefined);
     setTime('');
     setReminderTime('10');
   };
@@ -45,7 +45,7 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
 
         <div className="space-y-4 pt-4">
           <div>
-            <Label htmlFor="subject" className="text-foreground">Objet du reminder</Label>
+            <Label htmlFor="subject">Objet du reminder</Label>
             <Input
               id="subject"
               value={subject}
@@ -55,29 +55,27 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
             />
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-foreground flex items-center mb-2">
-                <Calendar className="mr-2 h-4 w-4" />
-                Date de début
-              </Label>
+              <Label>Date limite</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
+                      "w-full justify-start text-left font-normal mt-1",
+                      !date && "text-muted-foreground"
                     )}
                   >
-                    {startDate ? format(startDate, "dd/MM/yyyy") : "J/M/AAAA"}
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {date ? format(date, "dd/MM/yyyy") : "Sélectionner"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <CalendarComponent
                     mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
+                    selected={date}
+                    onSelect={setDate}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -85,37 +83,25 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
               </Popover>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-foreground mb-2 block">
-                  {startDate ? format(startDate, "dd/MM/yyyy") : "24/07/2025"}
-                </Label>
-                <Input
-                  value={startDate ? format(startDate, "dd/MM/yyyy") : "24/07/2025"}
-                  readOnly
-                  className="text-foreground"
-                />
-              </div>
-              <div>
-                <Label htmlFor="time" className="text-foreground mb-2 block">Heure</Label>
+            <div>
+              <Label htmlFor="time">Heure</Label>
+              <div className="relative mt-1">
+                <Clock className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
                 <Input
                   id="time"
                   type="time"
-                  value={time || "23:30"}
+                  value={time}
                   onChange={(e) => setTime(e.target.value)}
-                  className="text-foreground"
+                  className="pl-10"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <Label className="text-foreground flex items-center mb-2">
-              <Bell className="mr-2 h-4 w-4" />
-              Rappel
-            </Label>
+            <Label>Rappel avant échéance</Label>
             <Select value={reminderTime} onValueChange={setReminderTime}>
-              <SelectTrigger>
+              <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -127,17 +113,12 @@ export function ReminderModal({ isOpen, onClose }: ReminderModalProps) {
             </Select>
           </div>
 
-          <div className="bg-muted/10 p-3 rounded-lg">
-            <p className="text-sm text-foreground">
-              Les rappels seront envoyés à tous les membres et les observateurs de cette carte.
-            </p>
-          </div>
-
           <div className="flex justify-between pt-4">
             <Button variant="outline" onClick={handleClear}>
+              <Trash2 className="h-4 w-4 mr-2" />
               Effacer
             </Button>
-            <Button onClick={handleSave} className="bg-primary text-primary-foreground">
+            <Button onClick={handleSave}>
               Enregistrer
             </Button>
           </div>

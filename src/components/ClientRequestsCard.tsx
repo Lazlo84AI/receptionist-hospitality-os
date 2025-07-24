@@ -128,7 +128,7 @@ export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'À traiter': return 'bg-green-500 text-white';
-      case 'En cours': return 'bg-background text-foreground border border-border';
+      case 'En cours': return 'bg-palace-navy text-white';
       case 'Résolu': return '';
       default: return 'bg-muted text-soft-pewter border-border';
     }
@@ -252,11 +252,11 @@ export function ClientRequestsCard() {
     <div className="luxury-card p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-champagne-gold/10 rounded-lg">
-            <Heart className="h-6 w-6 text-champagne-gold" />
+          <div className="p-2 bg-green-50 rounded-lg">
+            <Heart className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <h2 className="text-xl font-playfair font-semibold text-foreground">
+            <h2 className="text-xl font-playfair font-semibold text-palace-navy">
               Demandes Clients
             </h2>
             <p className="text-sm text-soft-pewter capitalize">
@@ -278,7 +278,7 @@ export function ClientRequestsCard() {
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-foreground">
+                  <h3 className="font-bold text-palace-navy">
                     {request.request}
                   </h3>
                   <Eye 
@@ -289,7 +289,7 @@ export function ClientRequestsCard() {
                     }}
                   />
                 </div>
-                <p className="text-foreground mb-1">
+                <p className="text-palace-navy mb-1">
                   {request.room}
                 </p>
                 <p className="text-sm text-soft-pewter mb-3">
@@ -313,7 +313,7 @@ export function ClientRequestsCard() {
             <div className="flex items-center justify-between pt-3 border-t border-border/20">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-soft-pewter">Assigné à :</span>
-                <span className="text-sm font-bold text-foreground">
+                <span className="text-sm font-bold text-palace-navy">
                   Gouvernante : {request.gouvernante}
                 </span>
               </div>
@@ -350,7 +350,7 @@ export function ClientRequestsCard() {
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-playfair font-semibold text-foreground">
+            <DialogTitle className="text-xl font-playfair font-semibold text-palace-navy">
               Demande client
             </DialogTitle>
           </DialogHeader>
@@ -359,7 +359,7 @@ export function ClientRequestsCard() {
             <div className="space-y-6">
               {/* En-tête avec nom et badges */}
               <div className="space-y-4">
-                <h2 className="text-lg font-bold text-foreground">
+                <h2 className="text-lg font-bold text-palace-navy">
                   {selectedRequest.request}
                 </h2>
                 
@@ -375,20 +375,20 @@ export function ClientRequestsCard() {
               {/* Informations générales */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">Assigné à :</h3>
-                  <p className="text-foreground">Gouvernante : {selectedRequest.gouvernante}</p>
+                  <h3 className="font-semibold text-palace-navy mb-2">Assigné à :</h3>
+                  <p className="text-palace-navy">Gouvernante : {selectedRequest.gouvernante}</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">Localisation :</h3>
-                  <p className="text-foreground">{selectedRequest.room}</p>
+                  <h3 className="font-semibold text-palace-navy mb-2">Localisation :</h3>
+                  <p className="text-palace-navy">{selectedRequest.room}</p>
                 </div>
               </div>
 
               {/* Description de la demande */}
               <div>
-                <h3 className="font-semibold text-foreground mb-1">Description de la demande</h3>
+                <h3 className="font-semibold text-palace-navy mb-1">Description de la demande</h3>
                 <p className="text-xs text-muted-foreground italic mb-2">(avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)</p>
-                <p className="text-foreground">
+                <p className="text-soft-pewter">
                   {selectedRequest.description}
                 </p>
               </div>
