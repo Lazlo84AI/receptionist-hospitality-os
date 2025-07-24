@@ -1,4 +1,4 @@
-import { Heart, User, CheckCircle, Clock, Star } from 'lucide-react';
+import { Heart, User, CheckCircle, Clock, Star, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,7 @@ const clientRequests = [
     status: 'À traiter',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
-    time: '16:00',
+    daysSince: 2,
     priority: 'URGENCE'
   },
   {
@@ -25,7 +25,7 @@ const clientRequests = [
     status: 'En cours',
     gouvernante: 'Marie Rousseau',
     avatar: 'MR',
-    time: '14:30',
+    daysSince: 1,
     priority: 'NORMAL'
   },
   {
@@ -34,10 +34,10 @@ const clientRequests = [
     room: 'Suite 102',
     request: 'Bureau adapté télétravail + silence',
     occasion: 'Séjour d\'affaires',
-    status: 'Préparé',
+    status: 'Résolu',
     gouvernante: 'Sophie Bernard',
     avatar: 'SB',
-    time: '12:00',
+    daysSince: 0,
     priority: 'NORMAL'
   },
   {
@@ -49,7 +49,7 @@ const clientRequests = [
     status: 'À traiter',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
-    time: '18:00',
+    daysSince: 1,
     priority: 'URGENCE'
   }
 ];
@@ -58,29 +58,27 @@ export function ClientRequestsCard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'À traiter': return 'bg-green-500 text-white';
-      case 'En cours': return 'bg-muted text-palace-navy border-border';
-      case 'Préparé': return 'bg-muted text-palace-navy border-border';
+      case 'En cours': return 'bg-palace-navy text-white';
+      case 'Résolu': return '';
       default: return 'bg-muted text-soft-pewter border-border';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'URGENCE': return 'bg-urgence-red text-white';
-      case 'NORMAL': return 'text-palace-navy';
-      default: return 'text-palace-navy';
     }
   };
 
   const getPriorityBadge = (priority: string) => {
     if (priority === 'URGENCE') {
       return (
-        <Badge className={getPriorityColor(priority)}>
+        <Badge className="bg-urgence-red text-white">
           URGENCE
         </Badge>
       );
     }
     return null;
+  };
+
+  const getDaysSinceText = (days: number) => {
+    if (days === 0) return "Aujourd'hui";
+    if (days === 1) return "Depuis 1 jour";
+    return `Depuis ${days} jours`;
   };
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -119,36 +117,43 @@ export function ClientRequestsCard() {
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h3 className="font-semibold text-palace-navy">
-                    {request.clientName}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-palace-navy">
+                    {request.request}
                   </h3>
-                  {getPriorityBadge(request.priority)}
+                  <Eye className="h-4 w-4 text-soft-pewter cursor-pointer hover:text-palace-navy" />
                 </div>
-                <p className="text-sm text-soft-pewter mb-2">
-                  {request.room} • {request.occasion}
+                <p className="text-palace-navy mb-1">
+                  {request.room}
                 </p>
-                <p className="text-sm text-palace-navy font-medium">
-                  {request.request}
+                <p className="text-sm text-soft-pewter mb-3">
+                  {request.clientName}
                 </p>
-              </div>
-              <div className="text-right">
-                <Badge className={getStatusColor(request.status)}>
-                  {request.status}
-                </Badge>
-                <div className="flex items-center justify-end space-x-1 mt-2 text-xs text-soft-pewter">
-                  <Clock className="h-3 w-3" />
-                  <span>{request.time}</span>
+                
+                <div className="flex items-center space-x-2 mb-3">
+                  {request.status !== 'Résolu' && (
+                    <Badge className={getStatusColor(request.status)}>
+                      {request.status}
+                    </Badge>
+                  )}
+                  {request.status === 'Résolu' && (
+                    <span className="text-soft-pewter">Résolu</span>
+                  )}
+                  {getPriorityBadge(request.priority)}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-border/20">
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-soft-pewter">Assigné à:</span>
-                <span className="text-sm font-medium text-palace-navy">
+                <span className="text-sm text-soft-pewter">Assigné à :</span>
+                <span className="text-sm font-bold text-palace-navy">
                   Gouvernante : {request.gouvernante}
                 </span>
+              </div>
+              <div className="flex items-center space-x-1 text-sm text-urgence-red">
+                <Clock className="h-4 w-4" />
+                <span>{getDaysSinceText(request.daysSince)}</span>
               </div>
             </div>
           </div>

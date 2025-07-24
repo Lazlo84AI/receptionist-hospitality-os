@@ -100,7 +100,7 @@ export function FollowUpsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Relances à Faire
+              Relances et tâches à faire
             </h2>
             <p className="text-sm text-soft-pewter">
               Suivi des échéances critiques
