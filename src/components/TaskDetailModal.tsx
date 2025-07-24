@@ -198,6 +198,38 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
                     className="min-h-[80px]"
                   />
                 </div>
+
+                {showComments && (
+                  <div className="space-y-4">
+                    {/* Commentaire existant */}
+                    <div className="flex space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-medium">XX</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-foreground">Commentaire laissé</span>
+                          <span className="text-sm text-soft-pewter">il y a 4 heures</span>
+                        </div>
+                        <p className="text-foreground mb-2">lol</p>
+                        <div className="flex space-x-2 text-sm text-soft-pewter">
+                          <button className="hover:text-foreground">Modifier</button>
+                          <span>|</span>
+                          <button className="hover:text-foreground">Supprimer</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Historique d'activité */}
+                    <div className="space-y-2 text-sm text-soft-pewter">
+                      <div>Nom utilisateur a marqué cette carte comme inachevée <span className="text-soft-pewter">il y a 4 heures</span></div>
+                      <div>Nom utilisateur a marqué cette carte comme étant terminée <span className="text-soft-pewter">il y a 4 heures</span></div>
+                      <div>Nom utilisateur a ajouté cette carte à Aujourd'hui <span className="text-soft-pewter">il y a 4 heures</span></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
