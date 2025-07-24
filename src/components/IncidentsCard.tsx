@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare } from 'lucide-react';
 import { ChecklistComponent } from './ChecklistComponent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,39 @@ const incidents = [
   }
 ];
 
+const teamMembers = [
+  {
+    name: 'Jean Dupont',
+    role: 'Responsable Maintenance',
+    initials: 'JD',
+    bgColor: 'bg-blue-600'
+  },
+  {
+    name: 'Sophie Martin',
+    role: 'Responsable Réception',
+    initials: 'SM',
+    bgColor: 'bg-green-600'
+  },
+  {
+    name: 'Marie Dubois',
+    role: 'Gouvernante Générale',
+    initials: 'MD',
+    bgColor: 'bg-purple-600'
+  },
+  {
+    name: 'Pierre Leroy',
+    role: 'Technicien',
+    initials: 'PL',
+    bgColor: 'bg-orange-600'
+  },
+  {
+    name: 'Claire Rousseau',
+    role: 'Directrice',
+    initials: 'CR',
+    bgColor: 'bg-red-600'
+  }
+];
+
 export function IncidentsCard() {
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
@@ -76,6 +109,9 @@ export function IncidentsCard() {
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [showMembersDialog, setShowMembersDialog] = useState(false);
+  const [showEscaladeDialog, setShowEscaladeDialog] = useState(false);
+  const [selectedEscaladeMember, setSelectedEscaladeMember] = useState('');
+  const [escaladeMethod, setEscaladeMethod] = useState('mail');
   
   // États pour les fonctionnalités
   const [checklistTitle, setChecklistTitle] = useState('Checklist');
@@ -288,6 +324,15 @@ export function IncidentsCard() {
                 >
                   <Users className="h-4 w-4 text-palace-navy" />
                   <span className="text-sm text-palace-navy">Membres</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                  onClick={() => setShowEscaladeDialog(true)}
+                >
+                  <TrendingUp className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Escalade</span>
                 </Button>
               </div>
 
