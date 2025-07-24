@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
+import { QuickActionButton } from '@/components/QuickActionButton';
 import { IncidentsCard } from '@/components/IncidentsCard';
 import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { FollowUpsCard } from '@/components/FollowUpsCard';
@@ -41,6 +42,9 @@ const Index = () => {
       
       {/* Floating Voice Command Button */}
       <VoiceCommandButton />
+      
+      {/* Floating Quick Action Button */}
+      <QuickActionButton />
     </div>
   );
 };
