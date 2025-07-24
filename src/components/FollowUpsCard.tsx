@@ -59,7 +59,7 @@ export function FollowUpsCard() {
 
   const getStatusColor = (statut: string) => {
     if (statut === 'À traiter') return 'bg-green-500 text-white';
-    if (statut === 'En cours') return 'bg-blue-500 text-white';
+    if (statut === 'En cours') return 'bg-palace-navy text-white';
     return 'bg-muted text-soft-pewter border-border';
   };
 
