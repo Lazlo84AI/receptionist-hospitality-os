@@ -252,8 +252,8 @@ export function ClientRequestsCard() {
     <div className="luxury-card p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-green-50 rounded-lg">
-            <Heart className="h-6 w-6 text-green-600" />
+          <div className="p-2 bg-champagne-gold/10 rounded-lg">
+            <Heart className="h-6 w-6 text-champagne-gold" />
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-foreground">
@@ -289,7 +289,7 @@ export function ClientRequestsCard() {
                     }}
                   />
                 </div>
-                <p className="text-palace-navy mb-1">
+                <p className="text-foreground mb-1">
                   {request.room}
                 </p>
                 <p className="text-sm text-soft-pewter mb-3">
