@@ -215,7 +215,7 @@ export function FollowUpsCard() {
       </div>
 
       <div className="mt-6 pt-4 border-t border-border/20">
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex flex-col items-center text-sm space-y-3">
           <span className="text-soft-pewter">Statuts aujourd'hui:</span>
           <div className="flex space-x-4">
             <div className="flex items-center space-x-1">
