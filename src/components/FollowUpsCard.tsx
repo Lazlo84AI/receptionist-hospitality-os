@@ -8,8 +8,8 @@ const followUps = [
   {
     id: 1,
     title: 'Confirmation arrivée VIP',
-    location: 'Chambre 301',
-    client: 'M. Delacroix',
+    location: 'Réception',
+    client: '',
     statut: 'À traiter',
     priority: 'urgence',
     assignedTo: 'Réception : Leopold Bechu',
@@ -19,8 +19,8 @@ const followUps = [
   {
     id: 2,
     title: 'Message non lu WhatsApp',
-    location: 'Chambre 208',
-    client: 'Mlle Martinez',
+    location: 'Réception',
+    client: '',
     statut: 'En cours',
     priority: null,
     assignedTo: 'Gouvernante : Marie Dubois',
@@ -31,7 +31,7 @@ const followUps = [
     id: 3,
     title: 'Équipement manquant en chambre',
     location: 'Chambre 450',
-    client: 'Mme Chen',
+    client: '',
     statut: 'À traiter',
     priority: 'urgence',
     assignedTo: 'Prestataire : Jean Dupont',
@@ -42,7 +42,7 @@ const followUps = [
     id: 4,
     title: 'Confirmation équipements massage',
     location: 'Spa',
-    client: 'M. Rodriguez',
+    client: '',
     statut: 'En cours',
     priority: null,
     assignedTo: 'Gouvernante : Marie Dubois',
@@ -53,7 +53,7 @@ const followUps = [
     id: 5,
     title: 'Livraison arrangements floraux',
     location: 'Lobby',
-    client: 'Event Team',
+    client: '',
     statut: 'À traiter',
     priority: 'urgence',
     assignedTo: 'Prestataire : Jean Dupont',
@@ -148,7 +148,7 @@ export function FollowUpsCard() {
         {visibleItems.map((item) => (
           <div
             key={item.id}
-            className="p-6 rounded-lg border bg-background hover:bg-yellow-50 transition-all duration-300 cursor-pointer"
+            className="p-6 rounded-lg border bg-background hover-luxury transition-all duration-300 cursor-pointer"
           >
             {/* Ligne 1: Titre + icône œil */}
             <div className="flex items-start justify-between mb-3">
@@ -161,7 +161,7 @@ export function FollowUpsCard() {
             {/* Ligne 2: Informations de localisation */}
             <div className="mb-3">
               <span className="text-sm font-medium text-foreground">{item.location}</span>
-              <span className="text-sm text-soft-pewter ml-2">{item.client}</span>
+              {item.client && <span className="text-sm text-soft-pewter ml-2">{item.client}</span>}
             </div>
 
             {/* Ligne 3: Badges de statut et priorité */}
