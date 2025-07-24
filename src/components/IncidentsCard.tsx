@@ -133,7 +133,7 @@ export function IncidentsCard() {
     return (
       <div className="luxury-card p-6 col-span-full lg:col-span-2">
         <div className="flex items-center justify-center h-48">
-          <div className="text-soft-pewter">Chargement des incidents...</div>
+          <div className="text-soft-pewter">Loading incidents...</div>
         </div>
       </div>
     );
@@ -159,7 +159,7 @@ export function IncidentsCard() {
             </div>
             <div>
               <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-                Incidents en Cours
+                Ongoing Incidents
               </h2>
               <p className="text-sm text-soft-pewter">
                 Suivi des situations prioritaires
@@ -187,8 +187,8 @@ export function IncidentsCard() {
                   priority: formattedPriority,
                   timeElapsed,
                   type: incident.task_type,
-                  assignedTo: incident.assigned_to || 'Non assigné',
-                  room: incident.location || 'Non spécifié'
+                  assignedTo: incident.assigned_to || 'Unassigned',
+                  room: incident.location || 'Not specified'
                 })}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -222,7 +222,7 @@ export function IncidentsCard() {
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-soft-pewter">Assigné à:</span>
                     <span className="text-sm font-medium text-palace-navy">
-                      {incident.task_type === 'maintenance' ? 'Prestataire' : incident.task_type === 'client_request' ? 'Réception' : 'Gouvernante'} : {incident.assigned_to || 'Non assigné'}
+                      {incident.task_type === 'maintenance' ? 'Service Provider' : incident.task_type === 'client_request' ? 'Reception' : 'Housekeeping'} : {incident.assigned_to || 'Unassigned'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -243,15 +243,15 @@ export function IncidentsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'pending').length} à traiter</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'pending').length} to process</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'in_progress').length} en cours</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'in_progress').length} in progress</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'completed').length} résolus</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'completed').length} resolved</span>
               </div>
             </div>
           </div>
@@ -263,7 +263,7 @@ export function IncidentsCard() {
         <DialogContent className="max-w-2xl luxury-card">
           <DialogHeader>
             <DialogTitle className="font-playfair text-xl text-palace-navy">
-              Détails de l'Incident
+              Incident Details
             </DialogTitle>
           </DialogHeader>
           {selectedIncident && (

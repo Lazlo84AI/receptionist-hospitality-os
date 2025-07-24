@@ -17,11 +17,11 @@ interface SidebarProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/', active: true },
-  { icon: Users, label: 'Gestion Utilisateurs', href: '/users' },
-  { icon: RefreshCw, label: 'Passation Shift', href: '/shift' },
-  { icon: BookOpen, label: 'Base de Connaissance', href: '/knowledge' },
-  { icon: Settings, label: 'Paramètres', href: '/settings' },
-  { icon: LogOut, label: 'Déconnexion', href: '/logout', danger: true },
+  { icon: Users, label: 'User Management', href: '/users' },
+  { icon: RefreshCw, label: 'Shift Handover', href: '/shift' },
+  { icon: BookOpen, label: 'Knowledge Base', href: '/knowledge' },
+  { icon: Settings, label: 'Settings', href: '/settings' },
+  { icon: LogOut, label: 'Logout', href: '/logout', danger: true },
 ];
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -93,10 +93,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className="h-3 w-3 rounded-full bg-success-green animate-pulse" />
               <div>
                 <p className="text-sm font-medium text-warm-cream">
-                  Système Opérationnel
+                  System Operational
                 </p>
                 <p className="text-xs text-soft-pewter">
-                  Tous services actifs
+                  All services active
                 </p>
               </div>
             </div>

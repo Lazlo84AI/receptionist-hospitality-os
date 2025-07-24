@@ -27,7 +27,7 @@ export function FollowUpsCard() {
       client: '',
       statut: task.status === 'pending' ? 'À traiter' : 'En cours',
       priority: task.priority === 'critical' ? 'urgence' : null,
-      assignedTo: `${task.task_type === 'maintenance' ? 'Prestataire' : task.task_type === 'client_request' ? 'Réception' : 'Gouvernante'} : ${task.assigned_to || 'Non assigné'}`,
+      assignedTo: `${task.task_type === 'maintenance' ? 'Service Provider' : task.task_type === 'client_request' ? 'Reception' : 'Housekeeping'} : ${task.assigned_to || 'Unassigned'}`,
       hoursElapsed,
       overdue: isOverdue
     };
@@ -66,8 +66,8 @@ export function FollowUpsCard() {
     const originalTask = allTasks.find(t => t.id === task.id);
     setSelectedTask({
       ...task,
-      description: originalTask?.description || 'Description détaillée de la tâche à effectuer.',
-      type: 'Relance'
+      description: originalTask?.description || 'Detailed description of the task to be performed.',
+      type: 'Follow-up'
     });
     setIsModalOpen(true);
   };
@@ -76,7 +76,7 @@ export function FollowUpsCard() {
     return (
       <div className="luxury-card p-8">
         <div className="flex items-center justify-center h-48">
-          <div className="text-soft-pewter">Chargement des relances...</div>
+          <div className="text-soft-pewter">Loading follow-ups...</div>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ export function FollowUpsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Relances et tâches à faire
+              Follow-ups and tasks to do
             </h2>
             <p className="text-sm text-soft-pewter">
               Suivi des échéances critiques

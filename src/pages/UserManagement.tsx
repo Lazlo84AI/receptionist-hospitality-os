@@ -46,8 +46,8 @@ const UserManagement = () => {
 
       if (response.ok) {
         toast({
-          title: "Utilisateur créé avec succès",
-          description: `${formData.full_name} a été ajouté au système.`,
+          title: "User created successfully",
+          description: `${formData.full_name} has been added to the system.`,
         });
         
         // Reset form
@@ -60,12 +60,12 @@ const UserManagement = () => {
           is_active: true
         });
       } else {
-        throw new Error('Erreur lors de la création');
+        throw new Error('Error during creation');
       }
     } catch (error) {
       toast({
-        title: "Erreur",
-        description: "Impossible de créer l'utilisateur. Veuillez réessayer.",
+        title: "Error",
+        description: "Unable to create user. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -89,11 +89,11 @@ const UserManagement = () => {
             <div className="flex items-center space-x-3 mb-2">
               <Users className="h-8 w-8 text-champagne-gold" />
               <h1 className="text-3xl font-playfair font-bold text-foreground">
-                Gestion des Utilisateurs
+                User Management
               </h1>
             </div>
             <p className="text-muted-foreground">
-              Gérez les comptes utilisateurs et leurs permissions dans le système.
+              Manage user accounts and their permissions in the system.
             </p>
           </div>
 
@@ -102,10 +102,10 @@ const UserManagement = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Plus className="h-5 w-5 text-champagne-gold" />
-                <span>Créer un Nouvel Utilisateur</span>
+                <span>Create New User</span>
               </CardTitle>
               <CardDescription>
-                Ajoutez un nouveau membre à l'équipe avec les informations requises.
+                Add a new team member with the required information.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -126,7 +126,7 @@ const UserManagement = () => {
 
                   {/* Full Name */}
                   <div className="space-y-2">
-                    <Label htmlFor="full_name">Nom Complet *</Label>
+                    <Label htmlFor="full_name">Full Name *</Label>
                     <Input
                       id="full_name"
                       value={formData.full_name}
@@ -138,16 +138,16 @@ const UserManagement = () => {
 
                   {/* Role */}
                   <div className="space-y-2">
-                    <Label htmlFor="role">Rôle</Label>
+                    <Label htmlFor="role">Role</Label>
                     <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="receptionist">Réceptionniste</SelectItem>
+                        <SelectItem value="receptionist">Receptionist</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="admin">Administrateur</SelectItem>
-                        <SelectItem value="housekeeping">Ménage</SelectItem>
+                        <SelectItem value="admin">Administrator</SelectItem>
+                        <SelectItem value="housekeeping">Housekeeping</SelectItem>
                         <SelectItem value="maintenance">Maintenance</SelectItem>
                       </SelectContent>
                     </Select>
@@ -155,33 +155,33 @@ const UserManagement = () => {
 
                   {/* Shift Type */}
                   <div className="space-y-2">
-                    <Label htmlFor="shift_type">Type d'Équipe</Label>
+                    <Label htmlFor="shift_type">Shift Type</Label>
                     <Select value={formData.shift_type} onValueChange={(value) => setFormData({ ...formData, shift_type: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="morning">Matin</SelectItem>
-                        <SelectItem value="afternoon">Après-midi</SelectItem>
-                        <SelectItem value="evening">Soir</SelectItem>
-                        <SelectItem value="night">Nuit</SelectItem>
+                        <SelectItem value="morning">Morning</SelectItem>
+                        <SelectItem value="afternoon">Afternoon</SelectItem>
+                        <SelectItem value="evening">Evening</SelectItem>
+                        <SelectItem value="night">Night</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {/* Department */}
                   <div className="space-y-2">
-                    <Label htmlFor="department">Département</Label>
+                    <Label htmlFor="department">Department</Label>
                     <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Front Desk">Réception</SelectItem>
-                        <SelectItem value="Housekeeping">Ménage</SelectItem>
+                        <SelectItem value="Front Desk">Reception</SelectItem>
+                        <SelectItem value="Housekeeping">Housekeeping</SelectItem>
                         <SelectItem value="Maintenance">Maintenance</SelectItem>
-                        <SelectItem value="Management">Direction</SelectItem>
-                        <SelectItem value="Security">Sécurité</SelectItem>
+                        <SelectItem value="Management">Management</SelectItem>
+                        <SelectItem value="Security">Security</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -194,10 +194,10 @@ const UserManagement = () => {
                         checked={formData.is_active}
                         onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                       />
-                      <Label htmlFor="is_active">Compte Actif</Label>
+                      <Label htmlFor="is_active">Active Account</Label>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Un compte inactif ne pourra pas se connecter au système.
+                      An inactive account will not be able to log into the system.
                     </p>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ const UserManagement = () => {
                     disabled={isCreating}
                     className="min-w-[150px]"
                   >
-                    {isCreating ? "Création..." : "Créer l'Utilisateur"}
+                    {isCreating ? "Creating..." : "Create User"}
                   </Button>
                 </div>
               </form>

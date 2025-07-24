@@ -123,7 +123,7 @@ export function ClientRequestsCard() {
     return (
       <div className="luxury-card p-6">
         <div className="flex items-center justify-center h-48">
-          <div className="text-soft-pewter">Chargement des demandes clients...</div>
+          <div className="text-soft-pewter">Loading client requests...</div>
         </div>
       </div>
     );
@@ -245,7 +245,7 @@ export function ClientRequestsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Demandes Clients
+              Client Requests
             </h2>
             <p className="text-sm text-soft-pewter capitalize">
               {today}
@@ -253,7 +253,7 @@ export function ClientRequestsCard() {
           </div>
         </div>
         <span className="text-sm text-soft-pewter font-medium">
-          {clientRequests.length} demandes
+          {clientRequests.length} requests
         </span>
       </div>
 
@@ -354,7 +354,7 @@ export function ClientRequestsCard() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-playfair font-semibold text-palace-navy">
-              Demande client
+              Client request
             </DialogTitle>
           </DialogHeader>
 
@@ -389,7 +389,7 @@ export function ClientRequestsCard() {
 
               {/* Description de la demande */}
               <div>
-                <h3 className="font-semibold text-palace-navy mb-1">Description de la demande</h3>
+                <h3 className="font-semibold text-palace-navy mb-1">Request description</h3>
                 <p className="text-xs text-muted-foreground italic mb-2">(avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)</p>
                 <p className="text-soft-pewter">
                   {selectedRequest.description}

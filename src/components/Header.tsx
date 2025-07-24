@@ -20,7 +20,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   });
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('fr-FR', { 
+    return date.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: false 
@@ -28,7 +28,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', {
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -51,7 +51,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
       {/* Center: Dashboard Title */}
       <div className="flex items-center">
         <h1 className="text-lg font-playfair font-semibold text-warm-cream">
-          Tableau de bord : Vue réception
+          Dashboard: Reception View
         </h1>
       </div>
 
@@ -74,7 +74,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <div className="flex items-center space-x-2">
           <div className="hidden md:block text-right">
             <p className="text-sm font-medium text-warm-cream">Marie Dubois</p>
-            <p className="text-xs text-soft-pewter">Chef de Réception</p>
+            <p className="text-xs text-soft-pewter">Reception Manager</p>
           </div>
           <Avatar className="h-10 w-10 ring-2 ring-champagne-gold/50">
             <AvatarImage src="/api/placeholder/40/40" />
