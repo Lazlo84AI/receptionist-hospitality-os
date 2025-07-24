@@ -13,12 +13,12 @@ interface EscalationModalProps {
 }
 
 const hotelMembers = [
-  { id: '1', name: 'Jean Dupont', role: 'Réception', initials: 'JD', color: 'bg-blue-500' },
-  { id: '2', name: 'Marie Dubois', role: 'Gouvernante', initials: 'MD', color: 'bg-green-500' },
-  { id: '3', name: 'Pierre Leroy', role: 'Réception', initials: 'PL', color: 'bg-purple-500' },
-  { id: '4', name: 'Claire Petit', role: 'Gouvernante', initials: 'CP', color: 'bg-pink-500' },
-  { id: '5', name: 'Wilfried de Renty', role: 'Direction', initials: 'WR', color: 'bg-orange-500' },
-  { id: '6', name: 'Leopold Bechu', role: 'Réception', initials: 'LB', color: 'bg-teal-500' },
+  { id: '1', name: 'Jean Dupont', role: 'Réception', initials: 'JD' },
+  { id: '2', name: 'Marie Dubois', role: 'Gouvernante', initials: 'MD' },
+  { id: '3', name: 'Pierre Leroy', role: 'Réception', initials: 'PL' },
+  { id: '4', name: 'Claire Petit', role: 'Gouvernante', initials: 'CP' },
+  { id: '5', name: 'Wilfried de Renty', role: 'Direction', initials: 'WR' },
+  { id: '6', name: 'Leopold Bechu', role: 'Réception', initials: 'LB' },
 ];
 
 export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
@@ -40,18 +40,10 @@ export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader className="flex-row items-center justify-between space-y-0 pb-4 border-b">
+        <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
             Choix du canal
           </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-6 w-6 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
 
         <div className="space-y-6 pt-4">
@@ -101,10 +93,10 @@ export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
                   {filteredMembers.map((member) => (
                     <div key={member.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted">
                       <RadioGroupItem value={member.id} id={`escalation-${member.id}`} />
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className={`${member.color} text-white text-xs`}>
-                          {member.initials}
-                        </AvatarFallback>
+                       <Avatar className="h-8 w-8">
+                         <AvatarFallback className="bg-palace-navy text-white text-xs">
+                           {member.initials}
+                         </AvatarFallback>
                       </Avatar>
                       <Label htmlFor={`escalation-${member.id}`} className="flex-1 cursor-pointer">
                         <div className="font-medium text-foreground">{member.name}</div>

@@ -30,18 +30,10 @@ export function ChecklistModal({ isOpen, onClose, onAdd }: ChecklistModalProps) 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader className="flex-row items-center justify-between space-y-0 pb-4 border-b">
+        <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
             Ajouter une checklist
           </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-6 w-6 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
 
         <div className="space-y-4 pt-4">

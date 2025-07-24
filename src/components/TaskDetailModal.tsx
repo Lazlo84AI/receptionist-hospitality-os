@@ -73,7 +73,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <h1 className="text-lg font-medium text-foreground mb-2">
-                  Détails de l'Incident
+                  Détail de la tâche
                 </h1>
                 <h2 className="text-xl font-semibold text-foreground mb-4">
                   {task.title}
@@ -226,7 +226,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
 
             {/* Bouton Changer le statut */}
             <div className="flex justify-end pt-4">
-              <Button className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-6 py-2 rounded-md">
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2 rounded-md">
                 Changer le statut
               </Button>
             </div>
