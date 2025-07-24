@@ -382,7 +382,8 @@ export function ClientRequestsCard() {
 
               {/* Description de la demande */}
               <div>
-                <h3 className="font-semibold text-palace-navy mb-2">Description de la demande avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique :)</h3>
+                <h3 className="font-semibold text-palace-navy mb-1">Description de la demande</h3>
+                <p className="text-xs text-muted-foreground italic mb-2">(avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)</p>
                 <p className="text-soft-pewter">
                   {selectedRequest.clientName}, {selectedRequest.occasion === 'Anniversaire de mariage' 
                     ? "fêtent leur anniversaire de mariage, ne pas oublier de rajouter une carte bonne anniversaire de mariage de la part de l'Hotel Duquesne."
