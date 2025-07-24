@@ -36,21 +36,6 @@ const Index = () => {
             <FollowUpsCard />
           </div>
 
-          {/* Additional Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-            <div className="luxury-card p-6 text-center">
-              <div className="text-3xl font-bold text-champagne-gold mb-2">98%</div>
-              <div className="text-sm text-soft-pewter">Satisfaction Client</div>
-            </div>
-            <div className="luxury-card p-6 text-center">
-              <div className="text-3xl font-bold text-success-green mb-2">12min</div>
-              <div className="text-sm text-soft-pewter">Temps Réponse Moyen</div>
-            </div>
-            <div className="luxury-card p-6 text-center">
-              <div className="text-3xl font-bold text-palace-navy mb-2">24/7</div>
-              <div className="text-sm text-soft-pewter">Service Disponible</div>
-            </div>
-          </div>
         </div>
       </main>
       
