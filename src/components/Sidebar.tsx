@@ -4,6 +4,7 @@ import {
   LayoutDashboard, 
   RefreshCw, 
   BookOpen, 
+  Users,
   Settings, 
   LogOut,
   X
@@ -16,6 +17,7 @@ interface SidebarProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/', active: true },
+  { icon: Users, label: 'Gestion Utilisateurs', href: '/users' },
   { icon: RefreshCw, label: 'Passation Shift', href: '/shift' },
   { icon: BookOpen, label: 'Base de Connaissance', href: '/knowledge' },
   { icon: Settings, label: 'Paramètres', href: '/settings' },
