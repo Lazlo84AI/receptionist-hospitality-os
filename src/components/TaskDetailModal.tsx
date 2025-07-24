@@ -69,30 +69,12 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="space-y-0 pb-6">
+          <DialogHeader className="pb-4 border-b">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h1 className="text-lg font-medium text-foreground mb-2">
-                  Détail de la tâche
-                </h1>
-                <h2 className="text-xl font-semibold text-foreground mb-4">
-                  {task.title}
+                <h2 className="text-lg font-bold text-foreground">
+                  {task.type || 'Demande client'}
                 </h2>
-                <div className="flex items-center space-x-2">
-                  <Badge className={getStatusColor(task.statut)}>
-                    {task.statut}
-                  </Badge>
-                  {task.type && (
-                    <Badge className="bg-gray-200 text-gray-600">
-                      {task.type}
-                    </Badge>
-                  )}
-                  {task.priority === 'urgence' && (
-                    <Badge className="bg-pink-400 text-white">
-                      URGENCE
-                    </Badge>
-                  )}
-                </div>
               </div>
               <Button
                 variant="ghost"
@@ -104,6 +86,27 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
               </Button>
             </div>
           </DialogHeader>
+
+          <div className="pt-4">
+            <h3 className="text-base font-medium text-foreground mb-4">
+              {task.title}
+            </h3>
+            <div className="flex items-center space-x-2 mb-6">
+              <Badge className={getStatusColor(task.statut)}>
+                {task.statut}
+              </Badge>
+              {task.type && (
+                <Badge className="bg-muted text-foreground">
+                  Client
+                </Badge>
+              )}
+              {task.priority === 'urgence' && (
+                <Badge className="bg-urgence-red text-white">
+                  URGENCE
+                </Badge>
+              )}
+            </div>
+          </div>
 
           <div className="space-y-6">
             {/* Attribution & Localisation */}
@@ -120,9 +123,12 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
 
             {/* Description */}
             <div>
-              <p className="text-sm font-medium text-foreground mb-2">Description:</p>
-              <p className="text-gray-400">
-                {task.description || "Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir."}
+              <p className="text-sm font-medium text-foreground mb-2">Description de la demande</p>
+              <p className="text-xs text-soft-pewter italic mb-2">
+                (avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)
+              </p>
+              <p className="text-foreground">
+                {task.description || "Dr. James Williams, chirurgien cardiaque de Londres, doit finaliser une publication médicale importante pendant son séjour. Il travaille souvent tard le soir et apprécie le calme absolu. Grand amateur de café italien, il sera ravi de notre sélection."}
               </p>
             </div>
 
@@ -174,59 +180,30 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             {/* Commentaires et activité */}
             <div className="border-t pt-6">
               <div className="flex items-center justify-between mb-4">
-                <div
-                  className="flex items-center space-x-2 cursor-pointer"
-                  onClick={() => setShowComments(!showComments)}
-                >
-                  <MessageSquare className="h-4 w-4 text-soft-pewter" />
-                  <h3 className="font-bold text-foreground">Commentaires et activité</h3>
-                  {showComments ? (
-                    <ChevronUp className="h-4 w-4 text-soft-pewter" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-soft-pewter" />
-                  )}
-                </div>
+                <h3 className="font-medium text-foreground">Commentaires et activité</h3>
                 <span 
-                  className="text-soft-pewter cursor-pointer hover:text-foreground"
+                  className="text-soft-pewter cursor-pointer hover:text-foreground text-sm"
                   onClick={() => setShowComments(!showComments)}
                 >
-                  {showComments ? 'Masquer les détails' : 'Afficher les détails'}
+                  Afficher les détails
                 </span>
               </div>
 
-              {showComments && (
-                <div className="space-y-4">
-                  <div>
-                    <Textarea
-                      placeholder="Écrivez un commentaire…"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      className="min-h-[100px]"
-                    />
-                    <div className="flex justify-end mt-2">
-                      <Button size="sm">Publier</Button>
-                    </div>
-                  </div>
-
-                  {/* Exemple de commentaires passés */}
-                  <div className="space-y-3">
-                    <div className="p-3 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-foreground">Marie Dubois</span>
-                        <span className="text-xs text-soft-pewter">Il y a 2h</span>
-                      </div>
-                      <p className="text-sm text-soft-pewter">
-                        Équipement vérifié, tout est en ordre pour l'arrivée VIP.
-                      </p>
-                    </div>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <Textarea
+                    placeholder="Écrivez un commentaire..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="min-h-[80px]"
+                  />
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Bouton Changer le statut */}
             <div className="flex justify-end pt-4">
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2 rounded-md">
+              <Button className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium px-6 py-2 rounded-md">
                 Changer le statut
               </Button>
             </div>
