@@ -1,4 +1,4 @@
-import { AlertCircle, Building2, CreditCard, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Building2, CreditCard, Clock, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -7,57 +7,47 @@ import { useState } from 'react';
 const followUps = [
   {
     id: 1,
-    type: 'Prestataire',
-    destinataire: 'Spa Wellness Pro',
-    sujet: 'Confirmation équipements massage',
-    dateLimite: '2024-01-15',
-    statut: 'En retard',
-    priority: 'high',
-    icon: Building2,
-    overdue: true
-  },
-  {
-    id: 2,
-    type: 'Client',
-    destinataire: 'M. Richardson',
-    sujet: 'Paiement séjour prolongé',
-    dateLimite: '2024-01-16',
-    statut: 'À faire',
-    priority: 'medium',
-    icon: CreditCard,
+    title: 'Confirmation arrivée VIP',
+    statut: 'À traiter',
+    priority: 'urgence',
+    assignedTo: 'Réception : Leopold Bechu',
+    hoursElapsed: 3,
     overdue: false
   },
   {
-    id: 3,
-    type: 'Prestataire',
-    destinataire: 'Alpine Flowers',
-    sujet: 'Livraison arrangements floraux',
-    dateLimite: '2024-01-14',
-    statut: 'En retard',
-    priority: 'high',
-    icon: Building2,
+    id: 2,
+    title: 'Message non lu WhatsApp',
+    statut: 'En cours',
+    priority: null,
+    assignedTo: 'Gouvernante : Marie Dubois',
+    hoursElapsed: 24,
     overdue: true
   },
   {
+    id: 3,
+    title: 'Équipement manquant en chambre',
+    statut: 'À traiter',
+    priority: 'urgence',
+    assignedTo: 'Prestataire : Jean Dupont',
+    hoursElapsed: 6,
+    overdue: false
+  },
+  {
     id: 4,
-    type: 'Tâche',
-    destinataire: 'Équipe Maintenance',
-    sujet: 'Inspection système chauffage',
-    dateLimite: '2024-01-17',
-    statut: 'Programmé',
-    priority: 'low',
-    icon: Clock,
+    title: 'Confirmation équipements massage',
+    statut: 'En cours',
+    priority: null,
+    assignedTo: 'Gouvernante : Marie Dubois',
+    hoursElapsed: 12,
     overdue: false
   },
   {
     id: 5,
-    type: 'Client',
-    destinataire: 'Famille Chen',
-    sujet: 'Confirmation excursion privée',
-    dateLimite: '2024-01-15',
-    statut: 'En retard',
-    priority: 'medium',
-    icon: CreditCard,
+    title: 'Livraison arrangements floraux',
+    statut: 'À traiter',
+    priority: 'urgence',
+    assignedTo: 'Prestataire : Jean Dupont',
+    hoursElapsed: 48,
     overdue: true
   }
 ];
@@ -67,17 +57,19 @@ export function FollowUpsCard() {
   const itemsPerPage = 2;
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
 
-  const getStatusColor = (statut: string, overdue: boolean) => {
-    if (overdue) return 'bg-urgence-red text-white';
+  const getStatusColor = (statut: string) => {
+    if (statut === 'À traiter') return 'bg-green-500 text-white';
+    if (statut === 'En cours') return 'bg-blue-500 text-white';
     return 'bg-muted text-soft-pewter border-border';
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short'
-    });
+  const formatElapsedTime = (hours: number) => {
+    if (hours < 24) {
+      return `Depuis ${hours}h`;
+    } else {
+      const days = Math.floor(hours / 24);
+      return `Depuis ${days}j`;
+    }
   };
 
   const overdueCount = followUps.filter(item => item.overdue).length;
@@ -141,61 +133,50 @@ export function FollowUpsCard() {
         </Button>
       </div>
 
-      {/* Horizontal Cards */}
+      {/* Cards with new UI structure */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {visibleItems.map((item) => (
           <div
             key={item.id}
-            className={cn(
-              "p-6 rounded-lg border transition-all duration-300",
-              item.overdue 
-                ? "bg-urgence-red/5 border-urgence-red/20" 
-                : "bg-muted/20 border-border/30"
-            )}
+            className="p-6 rounded-lg border bg-background hover:shadow-md transition-all duration-300"
           >
+            {/* Header with title and eye icon */}
             <div className="flex items-start justify-between mb-4">
-              <div className="flex items-start space-x-3 flex-1">
-                <div className={cn(
-                  "p-2 rounded-lg",
-                  item.overdue ? "bg-urgence-red/10" : "bg-muted"
-                )}>
-                  <item.icon className={cn(
-                    "h-4 w-4",
+              <h3 className="font-bold text-palace-navy text-base flex-1">
+                {item.title}
+              </h3>
+              <div className="flex flex-col items-end space-y-2">
+                <Eye className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" />
+                <div className="flex items-center space-x-1">
+                  <Clock className="h-3 w-3 text-soft-pewter" />
+                  <span className={cn(
+                    "text-xs font-medium",
                     item.overdue ? "text-urgence-red" : "text-soft-pewter"
-                  )} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-palace-navy text-sm mb-1">
-                    {item.sujet}
-                  </h3>
-                  <p className="text-sm text-soft-pewter mb-3">
-                    {item.destinataire}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-soft-pewter">
-                      {item.type}
-                    </span>
-                    <Badge className={getStatusColor(item.statut, item.overdue)}>
-                      {item.overdue ? 'En retard' : item.statut}
-                    </Badge>
-                  </div>
+                  )}>
+                    {formatElapsedTime(item.hoursElapsed)}
+                  </span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <p className={cn(
-                "text-xs font-medium",
-                item.overdue ? "text-urgence-red" : "text-soft-pewter"
-              )}>
-                {formatDate(item.dateLimite)}
-              </p>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="text-xs h-7"
-              >
-                Relancer
-              </Button>
+
+            {/* Status and priority badges */}
+            <div className="flex items-center space-x-2 mb-4">
+              <Badge className={getStatusColor(item.statut)}>
+                {item.statut}
+              </Badge>
+              {item.priority === 'urgence' && (
+                <Badge className="bg-urgence-red text-white">
+                  URGENCE
+                </Badge>
+              )}
+            </div>
+
+            {/* Assignment line */}
+            <div className="mb-4">
+              <span className="text-sm text-soft-pewter">Assigné à : </span>
+              <span className="text-sm font-medium text-palace-navy">
+                {item.assignedTo}
+              </span>
             </div>
           </div>
         ))}
@@ -209,15 +190,15 @@ export function FollowUpsCard() {
           </div>
           <div>
             <p className="text-2xl font-bold text-soft-pewter">
-              {followUps.filter(item => !item.overdue && item.statut === 'À faire').length}
+              {followUps.filter(item => item.statut === 'À traiter').length}
             </p>
             <p className="text-xs text-soft-pewter">À traiter</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-palace-navy">
-              {followUps.filter(item => item.statut === 'Programmé').length}
+              {followUps.filter(item => item.statut === 'En cours').length}
             </p>
-            <p className="text-xs text-soft-pewter">Programmés</p>
+            <p className="text-xs text-soft-pewter">En cours</p>
           </div>
         </div>
       </div>
