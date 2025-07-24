@@ -8,6 +8,8 @@ const followUps = [
   {
     id: 1,
     title: 'Confirmation arrivée VIP',
+    location: 'Chambre 301',
+    client: 'M. Delacroix',
     statut: 'À traiter',
     priority: 'urgence',
     assignedTo: 'Réception : Leopold Bechu',
@@ -17,6 +19,8 @@ const followUps = [
   {
     id: 2,
     title: 'Message non lu WhatsApp',
+    location: 'Chambre 208',
+    client: 'Mlle Martinez',
     statut: 'En cours',
     priority: null,
     assignedTo: 'Gouvernante : Marie Dubois',
@@ -26,6 +30,8 @@ const followUps = [
   {
     id: 3,
     title: 'Équipement manquant en chambre',
+    location: 'Chambre 450',
+    client: 'Mme Chen',
     statut: 'À traiter',
     priority: 'urgence',
     assignedTo: 'Prestataire : Jean Dupont',
@@ -35,6 +41,8 @@ const followUps = [
   {
     id: 4,
     title: 'Confirmation équipements massage',
+    location: 'Spa',
+    client: 'M. Rodriguez',
     statut: 'En cours',
     priority: null,
     assignedTo: 'Gouvernante : Marie Dubois',
@@ -44,6 +52,8 @@ const followUps = [
   {
     id: 5,
     title: 'Livraison arrangements floraux',
+    location: 'Lobby',
+    client: 'Event Team',
     statut: 'À traiter',
     priority: 'urgence',
     assignedTo: 'Prestataire : Jean Dupont',
@@ -138,28 +148,23 @@ export function FollowUpsCard() {
         {visibleItems.map((item) => (
           <div
             key={item.id}
-            className="p-6 rounded-lg border bg-background hover:shadow-md transition-all duration-300"
+            className="p-6 rounded-lg border bg-background hover:bg-yellow-50 transition-all duration-300 cursor-pointer"
           >
-            {/* Header with title and eye icon */}
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="font-bold text-palace-navy text-base flex-1">
+            {/* Ligne 1: Titre + icône œil */}
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-bold text-foreground text-base flex-1">
                 {item.title}
               </h3>
-              <div className="flex flex-col items-end space-y-2">
-                <Eye className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" />
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-3 w-3 text-soft-pewter" />
-                  <span className={cn(
-                    "text-xs font-medium",
-                    item.overdue ? "text-urgence-red" : "text-soft-pewter"
-                  )}>
-                    {formatElapsedTime(item.hoursElapsed)}
-                  </span>
-                </div>
-              </div>
+              <Eye className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" />
             </div>
 
-            {/* Status and priority badges */}
+            {/* Ligne 2: Informations de localisation */}
+            <div className="mb-3">
+              <span className="text-sm font-medium text-foreground">{item.location}</span>
+              <span className="text-sm text-soft-pewter ml-2">{item.client}</span>
+            </div>
+
+            {/* Ligne 3: Badges de statut et priorité */}
             <div className="flex items-center space-x-2 mb-4">
               <Badge className={getStatusColor(item.statut)}>
                 {item.statut}
@@ -171,12 +176,26 @@ export function FollowUpsCard() {
               )}
             </div>
 
-            {/* Assignment line */}
-            <div className="mb-4">
-              <span className="text-sm text-soft-pewter">Assigné à : </span>
-              <span className="text-sm font-medium text-palace-navy">
-                {item.assignedTo}
-              </span>
+            {/* Dernière ligne: Assignation à gauche, horloge à droite */}
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-soft-pewter">Assigné à : </span>
+                <span className="text-sm font-medium text-palace-navy">
+                  {item.assignedTo}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Clock className={cn(
+                  "h-4 w-4",
+                  item.overdue ? "text-urgence-red" : "text-soft-pewter"
+                )} />
+                <span className={cn(
+                  "text-sm font-medium",
+                  item.overdue ? "text-urgence-red" : "text-soft-pewter"
+                )}>
+                  {formatElapsedTime(item.hoursElapsed)}
+                </span>
+              </div>
             </div>
           </div>
         ))}
