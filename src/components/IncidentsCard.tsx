@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare, MoveUp } from 'lucide-react';
 import { ChecklistComponent } from './ChecklistComponent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 const incidents = [
@@ -331,7 +333,7 @@ export function IncidentsCard() {
                   className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
                   onClick={() => setShowEscaladeDialog(true)}
                 >
-                  <TrendingUp className="h-4 w-4 text-palace-navy" />
+                  <MoveUp className="h-4 w-4 text-palace-navy" />
                   <span className="text-sm text-palace-navy">Escalade</span>
                 </Button>
               </div>
@@ -631,6 +633,90 @@ export function IncidentsCard() {
                 </div>
               </TabsContent>
             </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Escalade */}
+      <Dialog open={showEscaladeDialog} onOpenChange={setShowEscaladeDialog}>
+        <DialogContent className="max-w-md luxury-card">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-lg text-palace-navy">
+              Choix du canal
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Sélection du canal */}
+            <div>
+              <RadioGroup 
+                value={escaladeMethod} 
+                onValueChange={setEscaladeMethod}
+                className="space-y-3"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="email" id="email" />
+                  <Label htmlFor="email" className="text-sm text-palace-navy">
+                    Envoi d'un email
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="whatsapp" id="whatsapp" />
+                  <Label htmlFor="whatsapp" className="text-sm text-palace-navy">
+                    Envoi d'un message WhatsApp
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Section Attribution de membres */}
+            <div>
+              <h3 className="font-playfair text-lg text-palace-navy mb-4">
+                Attribution de membres
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-palace-navy">Membres</label>
+                  <Input
+                    placeholder="Rechercher des membres"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <h5 className="text-sm font-medium text-palace-navy mb-3">Membres de l'annuaire de l'hôtel</h5>
+                  <div 
+                    className={cn(
+                      "flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors",
+                      selectedEscaladeMember === 'WR' && "bg-blue-100 border border-blue-300"
+                    )}
+                    onClick={() => setSelectedEscaladeMember('WR')}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-blue-600 text-white text-xs">
+                        WR
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-palace-navy">Wilfried de Renty</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bouton Envoyé */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  // Ici on peut ajouter la logique d'envoi
+                  console.log(`Escalade via ${escaladeMethod} vers ${selectedEscaladeMember}`);
+                  setShowEscaladeDialog(false);
+                }}
+                disabled={!selectedEscaladeMember}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Envoyé
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
