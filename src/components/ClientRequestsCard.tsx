@@ -1,4 +1,5 @@
 import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus, Search } from 'lucide-react';
+import { useTasksByType } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,60 +16,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-const clientRequests = [
-  {
-    id: 1,
-    clientName: 'M. et Mme Anderson',
-    room: 'Suite 201',
-    request: 'Champagne Dom Pérignon et roses rouges',
-    occasion: 'Anniversaire de mariage',
-    status: 'À traiter',
-    gouvernante: 'Claire Petit',
-    avatar: 'CP',
-    daysSince: 2,
-    priority: 'URGENCE',
-    description: 'Charles et Emily Anderson célèbrent leurs 25 ans de mariage. Charles est amateur de grands crus et Emily adore les roses. Ils ont mentionné que leur lune de miel était à Champagne, ils seront touchés par ce clin d\'œil.'
-  },
-  {
-    id: 2,
-    clientName: 'Famille Dubois',
-    room: 'Chambre 305',
-    request: 'Lit bébé et produits hypoallergéniques',
-    occasion: 'Voyage en famille',
-    status: 'En cours',
-    gouvernante: 'Marie Rousseau',
-    avatar: 'MR',
-    daysSince: 1,
-    priority: 'NORMAL',
-    description: 'Pierre et Léa Dubois voyagent avec leur bébé de 8 mois, Lucas, qui fait ses premières vacances. Léa a mentionné que Lucas a une peau sensible suite à un eczéma. Très attentifs au bien-être de leur enfant, ils apprécieront notre attention aux détails.'
-  },
-  {
-    id: 3,
-    clientName: 'Dr. Williams',
-    room: 'Suite 102',
-    request: 'Bureau adapté télétravail + silence',
-    occasion: 'Séjour d\'affaires',
-    status: 'Résolu',
-    gouvernante: 'Sophie Bernard',
-    avatar: 'SB',
-    daysSince: 0,
-    priority: 'NORMAL',
-    description: 'Dr. James Williams, chirurgien cardiaque de Londres, doit finaliser une publication médicale importante pendant son séjour. Il travaille souvent tard le soir et apprécie le calme absolu. Grand amateur de café italien, il sera ravi de notre sélection.'
-  },
-  {
-    id: 4,
-    clientName: 'Mlle Martinez',
-    room: 'Chambre 208',
-    request: 'Repas végétalien + yoga mat',
-    occasion: 'Retraite wellness',
-    status: 'À traiter',
-    gouvernante: 'Claire Petit',
-    avatar: 'CP',
-    daysSince: 1,
-    priority: 'URGENCE',
-    description: 'Isabella Martinez, professeure de yoga et influenceuse wellness, revient d\'un voyage spirituel de 3 mois à Bali. Passionnée de méditation et de cuisine ayurvédique, elle documente son séjour pour ses 50k followers. Une attention particulière l\'enchantera.'
-  }
-];
+// Mock data removed - now using real Supabase data
 
 interface ChecklistItem {
   id: string;
@@ -92,6 +40,7 @@ const availableMembers = [
 ];
 
 export function ClientRequestsCard() {
+  const { tasks: clientRequests, loading, error } = useTasksByType('client_request');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
@@ -150,6 +99,45 @@ export function ClientRequestsCard() {
     if (days === 1) return "Depuis 1 jour";
     return `Depuis ${days} jours`;
   };
+
+  const getDaysSince = (createdAt: string) => {
+    const now = new Date();
+    const created = new Date(createdAt);
+    const diffInDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+    return diffInDays;
+  };
+
+  const formatStatus = (status: string) => {
+    if (status === 'pending') return 'À traiter';
+    if (status === 'in_progress') return 'En cours'; 
+    if (status === 'completed') return 'Résolu';
+    return status;
+  };
+
+  const formatPriority = (priority: string) => {
+    if (priority === 'critical') return 'URGENCE';
+    return priority;
+  };
+
+  if (loading) {
+    return (
+      <div className="luxury-card p-6">
+        <div className="flex items-center justify-center h-48">
+          <div className="text-soft-pewter">Chargement des demandes clients...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="luxury-card p-6">
+        <div className="flex items-center justify-center h-48">
+          <div className="text-red-500">Erreur: {error}</div>
+        </div>
+      </div>
+    );
+  }
 
   // Checklist functions
   const handleCreateChecklist = () => {
@@ -270,60 +258,75 @@ export function ClientRequestsCard() {
       </div>
 
       <div className="space-y-4">
-        {clientRequests.map((request) => (
-          <div
-            key={request.id}
-            className="p-4 bg-muted/20 rounded-lg border border-border/30 hover-luxury transition-all duration-300"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-palace-navy">
-                    {request.request}
-                  </h3>
-                  <Eye 
-                    className="h-4 w-4 text-soft-pewter cursor-pointer hover:text-palace-navy" 
-                    onClick={() => {
-                      setSelectedRequest(request);
-                      setIsDetailModalOpen(true);
-                    }}
-                  />
-                </div>
-                <p className="text-palace-navy mb-1">
-                  {request.room}
-                </p>
-                <p className="text-sm text-soft-pewter mb-3">
-                  {request.clientName}
-                </p>
-                
-                <div className="flex items-center space-x-2 mb-3">
-                  {request.status !== 'Résolu' && (
-                    <Badge className={getStatusColor(request.status)}>
-                      {request.status}
-                    </Badge>
-                  )}
-                  {request.status === 'Résolu' && (
-                    <span className="text-soft-pewter">Résolu</span>
-                  )}
-                  {getPriorityBadge(request.priority)}
+        {clientRequests.map((request) => {
+          const daysSince = getDaysSince(request.created_at);
+          const formattedStatus = formatStatus(request.status);
+          const formattedPriority = formatPriority(request.priority);
+          
+          return (
+            <div
+              key={request.id}
+              className="p-4 bg-muted/20 rounded-lg border border-border/30 hover-luxury transition-all duration-300"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-palace-navy">
+                      {request.title}
+                    </h3>
+                    <Eye 
+                      className="h-4 w-4 text-soft-pewter cursor-pointer hover:text-palace-navy" 
+                      onClick={() => {
+                        setSelectedRequest({
+                          ...request,
+                          request: request.title,
+                          room: request.location || 'Non spécifié',
+                          clientName: 'Client',
+                          status: formattedStatus,
+                          priority: formattedPriority,
+                          daysSince,
+                          gouvernante: request.assigned_to || 'Non assigné'
+                        });
+                        setIsDetailModalOpen(true);
+                      }}
+                    />
+                  </div>
+                  <p className="text-palace-navy mb-1">
+                    {request.location || 'Non spécifié'}
+                  </p>
+                  <p className="text-sm text-soft-pewter mb-3">
+                    Client
+                  </p>
+                  
+                  <div className="flex items-center space-x-2 mb-3">
+                    {formattedStatus !== 'Résolu' && (
+                      <Badge className={getStatusColor(formattedStatus)}>
+                        {formattedStatus}
+                      </Badge>
+                    )}
+                    {formattedStatus === 'Résolu' && (
+                      <span className="text-soft-pewter">Résolu</span>
+                    )}
+                    {getPriorityBadge(formattedPriority)}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-border/20">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-soft-pewter">Assigné à :</span>
-                <span className="text-sm font-bold text-palace-navy">
-                  Gouvernante : {request.gouvernante}
-                </span>
-              </div>
-              <div className="flex items-center space-x-1 text-sm text-urgence-red">
-                <Clock className="h-4 w-4" />
-                <span>{getDaysSinceText(request.daysSince)}</span>
+              <div className="flex items-center justify-between pt-3 border-t border-border/20">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-soft-pewter">Assigné à :</span>
+                  <span className="text-sm font-bold text-palace-navy">
+                    Gouvernante : {request.assigned_to || 'Non assigné'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1 text-sm text-urgence-red">
+                  <Clock className="h-4 w-4" />
+                  <span>{getDaysSinceText(daysSince)}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 pt-4 border-t border-border/20">
@@ -332,15 +335,15 @@ export function ClientRequestsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{clientRequests.filter(r => r.status === 'À traiter').length} à traiter</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'pending').length} à traiter</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">1 en cours</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'in_progress').length} en cours</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">1 préparé</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'completed').length} préparé</span>
               </div>
             </div>
         </div>

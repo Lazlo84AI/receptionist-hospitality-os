@@ -4,70 +4,35 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useTasks } from '@/hooks/useTasks';
 
-const followUps = [
-  {
-    id: 1,
-    title: 'Confirmation arrivée VIP',
-    location: 'Réception',
-    client: '',
-    statut: 'À traiter',
-    priority: 'urgence',
-    assignedTo: 'Réception : Leopold Bechu',
-    hoursElapsed: 3,
-    overdue: false
-  },
-  {
-    id: 2,
-    title: 'Message non lu WhatsApp',
-    location: 'Réception',
-    client: '',
-    statut: 'En cours',
-    priority: null,
-    assignedTo: 'Gouvernante : Marie Dubois',
-    hoursElapsed: 24,
-    overdue: true
-  },
-  {
-    id: 3,
-    title: 'Équipement manquant en chambre',
-    location: 'Chambre 450',
-    client: '',
-    statut: 'À traiter',
-    priority: 'urgence',
-    assignedTo: 'Prestataire : Jean Dupont',
-    hoursElapsed: 6,
-    overdue: false
-  },
-  {
-    id: 4,
-    title: 'Confirmation équipements massage',
-    location: 'Spa',
-    client: '',
-    statut: 'En cours',
-    priority: null,
-    assignedTo: 'Gouvernante : Marie Dubois',
-    hoursElapsed: 12,
-    overdue: false
-  },
-  {
-    id: 5,
-    title: 'Livraison arrangements floraux',
-    location: 'Lobby',
-    client: '',
-    statut: 'À traiter',
-    priority: 'urgence',
-    assignedTo: 'Prestataire : Jean Dupont',
-    hoursElapsed: 48,
-    overdue: true
-  }
-];
+// Mock data removed - now using real Supabase data
 
 export function FollowUpsCard() {
+  const { tasks: allTasks, loading, error } = useTasks();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedTask, setSelectedTask] = useState<(typeof followUps[0] & { description?: string; type?: string }) | null>(null);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 2;
+  
+  // Filter and format tasks as follow-ups
+  const followUps = allTasks.map(task => {
+    const hoursElapsed = Math.floor((new Date().getTime() - new Date(task.created_at).getTime()) / (1000 * 60 * 60));
+    const isOverdue = hoursElapsed > 24 && task.status === 'pending';
+    
+    return {
+      id: task.id,
+      title: task.title,
+      location: task.location || 'Non spécifié',
+      client: '',
+      statut: task.status === 'pending' ? 'À traiter' : 'En cours',
+      priority: task.priority === 'critical' ? 'urgence' : null,
+      assignedTo: `${task.task_type === 'maintenance' ? 'Prestataire' : task.task_type === 'client_request' ? 'Réception' : 'Gouvernante'} : ${task.assigned_to || 'Non assigné'}`,
+      hoursElapsed,
+      overdue: isOverdue
+    };
+  });
+  
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
 
   const getStatusColor = (statut: string) => {
@@ -96,14 +61,36 @@ export function FollowUpsCard() {
     setCurrentIndex(Math.max(currentIndex - 1, 0));
   };
 
-  const handleTaskClick = (task: typeof followUps[0]) => {
+  const handleTaskClick = (task: any) => {
+    // Find the original task from allTasks to get the full data
+    const originalTask = allTasks.find(t => t.id === task.id);
     setSelectedTask({
       ...task,
-      description: 'Description détaillée de la tâche à effectuer.',
+      description: originalTask?.description || 'Description détaillée de la tâche à effectuer.',
       type: 'Relance'
     });
     setIsModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="luxury-card p-8">
+        <div className="flex items-center justify-center h-48">
+          <div className="text-soft-pewter">Chargement des relances...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="luxury-card p-8">
+        <div className="flex items-center justify-center h-48">
+          <div className="text-red-500">Erreur: {error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="luxury-card p-8">
