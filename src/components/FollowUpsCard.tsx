@@ -109,8 +109,8 @@ export function FollowUpsCard() {
     <div className="luxury-card p-8">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-urgence-red/10 rounded-lg">
-            <AlertCircle className="h-6 w-6 text-urgence-red" />
+          <div className="p-2 bg-blue-500/10 rounded-lg">
+            <AlertCircle className="h-6 w-6 text-blue-500" />
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
