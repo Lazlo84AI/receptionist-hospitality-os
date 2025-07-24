@@ -67,10 +67,10 @@ export function MembersModal({ isOpen, onClose }: MembersModalProps) {
                          {member.initials}
                        </AvatarFallback>
                     </Avatar>
-                     <Label htmlFor={member.id} className="flex-1 cursor-pointer">
-                       <div className="font-medium text-foreground">{member.name}</div>
-                       <div className="text-sm text-foreground">{member.role}</div>
-                     </Label>
+                    <Label htmlFor={member.id} className="flex-1 cursor-pointer">
+                      <div className="font-medium text-foreground">{member.name}</div>
+                      <div className="text-sm text-foreground">{member.role}</div>
+                    </Label>
                   </div>
                 ))}
               </div>
