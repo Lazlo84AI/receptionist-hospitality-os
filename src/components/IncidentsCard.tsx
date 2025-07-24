@@ -249,14 +249,14 @@ export function IncidentsCard() {
       <Dialog open={!!selectedIncident} onOpenChange={() => setSelectedIncident(null)}>
         <DialogContent className="max-w-2xl luxury-card">
           <DialogHeader>
-            <DialogTitle className="font-playfair text-xl text-palace-navy">
+            <DialogTitle className="font-playfair text-xl text-foreground">
               Détails de l'Incident
             </DialogTitle>
           </DialogHeader>
           {selectedIncident && (
             <div className="space-y-6">
               <div>
-                <h3 className="font-semibold text-lg text-palace-navy mb-3">
+                <h3 className="font-semibold text-lg text-foreground mb-3">
                   {selectedIncident.title}
                 </h3>
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -282,20 +282,20 @@ export function IncidentsCard() {
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                  <div>
-                  <span className="font-medium text-palace-navy">Assigné à:</span>
-                  <p className="mt-1 text-palace-navy">
+                  <span className="font-medium text-foreground">Assigné à:</span>
+                  <p className="mt-1 text-foreground">
                     {selectedIncident.type === 'Maintenance' ? 'Prestataire' : selectedIncident.type === 'Client' ? 'Réception' : 'Gouvernante'} : {selectedIncident.assignedTo}
                   </p>
                  </div>
                 <div>
-                  <span className="font-medium text-palace-navy">Localisation:</span>
-                  <p className="mt-1">{selectedIncident.room}</p>
+                  <span className="font-medium text-foreground">Localisation:</span>
+                  <p className="mt-1 text-foreground">{selectedIncident.room}</p>
                 </div>
               </div>
 
               <div>
-                <span className="font-medium text-palace-navy">Description:</span>
-                <p className="mt-2 text-soft-pewter">{selectedIncident.description}</p>
+                <span className="font-medium text-foreground">Description:</span>
+                <p className="mt-2 text-foreground">{selectedIncident.description}</p>
               </div>
 
               {/* Barre d'outils Trello */}
@@ -306,8 +306,8 @@ export function IncidentsCard() {
                   className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
                   onClick={() => setShowReminderDialog(true)}
                 >
-                  <Clock className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Reminder</span>
+                  <Clock className="h-4 w-4 text-foreground" />
+                  <span className="text-sm text-foreground">Reminder</span>
                 </Button>
                 <Button 
                   variant="outline" 
@@ -315,8 +315,8 @@ export function IncidentsCard() {
                   className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
                   onClick={() => setShowChecklistDialog(true)}
                 >
-                  <CheckSquare className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Checklist</span>
+                  <CheckSquare className="h-4 w-4 text-foreground" />
+                  <span className="text-sm text-foreground">Checklist</span>
                 </Button>
                 <Button 
                   variant="outline" 
@@ -324,8 +324,8 @@ export function IncidentsCard() {
                   className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
                   onClick={() => setShowMembersDialog(true)}
                 >
-                  <Users className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Membres</span>
+                  <Users className="h-4 w-4 text-foreground" />
+                  <span className="text-sm text-foreground">Membres</span>
                 </Button>
                 <Button 
                   variant="outline" 
@@ -333,8 +333,8 @@ export function IncidentsCard() {
                   className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
                   onClick={() => setShowEscaladeDialog(true)}
                 >
-                  <MoveUp className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Escalade</span>
+                  <MoveUp className="h-4 w-4 text-foreground" />
+                  <span className="text-sm text-foreground">Escalade</span>
                 </Button>
               </div>
 
@@ -350,8 +350,8 @@ export function IncidentsCard() {
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <MessageCircle className="h-5 w-5 text-palace-navy" />
-                    <h4 className="font-semibold text-palace-navy">Commentaires et activité</h4>
+                    <MessageCircle className="h-5 w-5 text-foreground" />
+                    <h4 className="font-semibold text-foreground">Commentaires et activité</h4>
                   </div>
                   <Button 
                     variant="ghost" 

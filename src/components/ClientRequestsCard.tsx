@@ -350,7 +350,7 @@ export function ClientRequestsCard() {
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-playfair font-semibold text-palace-navy">
+            <DialogTitle className="text-xl font-playfair font-semibold text-foreground">
               Demande client
             </DialogTitle>
           </DialogHeader>
@@ -359,7 +359,7 @@ export function ClientRequestsCard() {
             <div className="space-y-6">
               {/* En-tête avec nom et badges */}
               <div className="space-y-4">
-                <h2 className="text-lg font-bold text-palace-navy">
+                <h2 className="text-lg font-bold text-foreground">
                   {selectedRequest.request}
                 </h2>
                 
@@ -375,20 +375,20 @@ export function ClientRequestsCard() {
               {/* Informations générales */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-semibold text-palace-navy mb-2">Assigné à :</h3>
-                  <p className="text-palace-navy">Gouvernante : {selectedRequest.gouvernante}</p>
+                  <h3 className="font-semibold text-foreground mb-2">Assigné à :</h3>
+                  <p className="text-foreground">Gouvernante : {selectedRequest.gouvernante}</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-palace-navy mb-2">Localisation :</h3>
-                  <p className="text-palace-navy">{selectedRequest.room}</p>
+                  <h3 className="font-semibold text-foreground mb-2">Localisation :</h3>
+                  <p className="text-foreground">{selectedRequest.room}</p>
                 </div>
               </div>
 
               {/* Description de la demande */}
               <div>
-                <h3 className="font-semibold text-palace-navy mb-1">Description de la demande</h3>
+                <h3 className="font-semibold text-foreground mb-1">Description de la demande</h3>
                 <p className="text-xs text-muted-foreground italic mb-2">(avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)</p>
-                <p className="text-soft-pewter">
+                <p className="text-foreground">
                   {selectedRequest.description}
                 </p>
               </div>
