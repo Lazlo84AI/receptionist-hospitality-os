@@ -8,6 +8,7 @@ import {
   LogOut,
   X
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -15,14 +16,21 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/', active: true },
-  { icon: RefreshCw, label: 'Passation Shift', href: '/shift' },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+  { icon: RefreshCw, label: 'Gestion de son shift', href: '/shift' },
   { icon: BookOpen, label: 'Base de Connaissance', href: '/knowledge' },
   { icon: Settings, label: 'Paramètres', href: '/settings' },
   { icon: LogOut, label: 'Déconnexion', href: '/logout', danger: true },
 ];
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleMenuClick = (href: string) => {
+    navigate(href);
+    onClose();
+  };
   return (
     <>
       {/* Backdrop Blur Overlay */}
@@ -63,23 +71,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Menu Items */}
         <nav className="p-6">
           <div className="space-y-2">
-            {menuItems.map((item, index) => (
-              <Button
-                key={index}
-                variant={item.active ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start text-left h-12 transition-all duration-300",
-                  item.active 
-                    ? "bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90 shadow-lg" 
-                    : item.danger
-                      ? "text-red-300 hover:text-red-200 hover:bg-red-500/10"
-                      : "text-warm-cream hover:text-champagne-gold hover:bg-champagne-gold/10"
-                )}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
-              </Button>
-            ))}
+            {menuItems.map((item, index) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Button
+                  key={index}
+                  variant={isActive ? "secondary" : "ghost"}
+                  onClick={() => handleMenuClick(item.href)}
+                  className={cn(
+                    "w-full justify-start text-left h-12 transition-all duration-300",
+                    isActive 
+                      ? "bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90 shadow-lg" 
+                      : item.danger
+                        ? "text-red-300 hover:text-red-200 hover:bg-red-500/10"
+                        : "text-warm-cream hover:text-champagne-gold hover:bg-champagne-gold/10"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 mr-3" />
+                  <span className="font-medium">{item.label}</span>
+                </Button>
+              );
+            })}
           </div>
 
           {/* Luxury Separator */}
