@@ -52,6 +52,17 @@ const services = [
   { id: 'maintenance', label: 'Maintenance' },
 ];
 
+const hotelMembers = [
+  { id: '1', name: 'Jean Dupont', role: 'Réception', service: 'reception', initials: 'JD' },
+  { id: '2', name: 'Marie Dubois', role: 'Gouvernante', service: 'housekeeping', initials: 'MD' },
+  { id: '3', name: 'Pierre Leroy', role: 'Réception', service: 'reception', initials: 'PL' },
+  { id: '4', name: 'Claire Petit', role: 'Gouvernante', service: 'housekeeping', initials: 'CP' },
+  { id: '5', name: 'Wilfried de Renty', role: 'Direction', service: 'reception', initials: 'WR' },
+  { id: '6', name: 'Leopold Bechu', role: 'Réception', service: 'reception', initials: 'LB' },
+  { id: '7', name: 'Marc Martin', role: 'Maintenance', service: 'maintenance', initials: 'MM' },
+  { id: '8', name: 'Sophie Bernard', role: 'Maintenance', service: 'maintenance', initials: 'SB' },
+];
+
 const rooms = Array.from({ length: 30 }, (_, i) => i + 1);
 const commonAreas = [
   'Lobby', 'Restaurant', 'Terrasse', 'Cuisine', 'Accueil', 'Lounge', 'Spa'
@@ -404,7 +415,14 @@ export function VoiceCommandButton() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
                 <label className="text-sm font-medium">Service</label>
-                <Select value={formData.service} onValueChange={(value) => setFormData(prev => ({ ...prev, service: value }))}>
+                <Select 
+                  value={formData.service} 
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    service: value,
+                    assignedMember: '' // Reset member when service changes
+                  }))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner le service" />
                   </SelectTrigger>
@@ -416,12 +434,30 @@ export function VoiceCommandButton() {
                 </Select>
               </div>
               <div className="space-y-3">
-                <label className="text-sm font-medium">Membre assigné</label>
-                <Input 
-                  placeholder="Nom du membre"
-                  value={formData.assignedMember}
-                  onChange={(e) => setFormData(prev => ({ ...prev, assignedMember: e.target.value }))}
-                />
+                <label className="text-sm font-medium">Membres assignés</label>
+                {formData.service ? (
+                  <Select 
+                    value={formData.assignedMember} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assignedMember: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un membre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hotelMembers
+                        .filter(member => member.service === formData.service)
+                        .map((member) => (
+                          <SelectItem key={member.id} value={member.name}>
+                            {member.name} - {member.role}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="h-10 flex items-center px-3 py-2 border border-input bg-muted text-muted-foreground rounded-md text-sm">
+                    Sélectionnez d'abord un service
+                  </div>
+                )}
               </div>
             </div>
 
