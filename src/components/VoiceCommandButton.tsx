@@ -325,7 +325,8 @@ export function VoiceCommandButton() {
                     key={category.id}
                     className={cn(
                       "cursor-pointer transition-all duration-200 hover:scale-105",
-                      formData.category === category.id ? "ring-2 ring-champagne-gold" : ""
+                      formData.category === category.id ? "ring-2 ring-champagne-gold" : "",
+                      creationMode === 'voice' ? "bg-gray-800 border-gray-600" : ""
                     )}
                     onClick={() => setFormData(prev => ({ ...prev, category: category.id }))}
                   >
@@ -333,7 +334,10 @@ export function VoiceCommandButton() {
                       <div className={cn("p-2 rounded-full", category.color)}>
                         <category.icon className="h-5 w-5" />
                       </div>
-                      <span className="font-medium">{category.label}</span>
+                      <span className={cn(
+                        "font-medium",
+                        creationMode === 'voice' ? "text-white" : ""
+                      )}>{category.label}</span>
                     </CardContent>
                   </Card>
                 ))}
@@ -391,7 +395,8 @@ export function VoiceCommandButton() {
                       variant={formData.priority === priority.id ? "default" : "outline"}
                       onClick={() => setFormData(prev => ({ ...prev, priority: priority.id }))}
                       className={cn(
-                        formData.priority === priority.id ? priority.color : ""
+                        formData.priority === priority.id ? priority.color : "",
+                        creationMode === 'voice' ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700" : ""
                       )}
                     >
                       {priority.label}
