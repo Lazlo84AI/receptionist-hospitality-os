@@ -618,6 +618,7 @@ export function VoiceCommandButton() {
       <ReminderModal
         isOpen={isReminderModalOpen}
         onClose={() => setIsReminderModalOpen(false)}
+        taskTitle={formData.title}
       />
     </>
   );
