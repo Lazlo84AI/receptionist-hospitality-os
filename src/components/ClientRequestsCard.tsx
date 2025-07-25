@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { ReminderModal } from './modals/ReminderModal';
 
 const clientRequests = [
   {
@@ -109,10 +110,6 @@ export function ClientRequestsCard() {
   
   // Reminder states
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [reminderSubject, setReminderSubject] = useState('');
-  const [reminderDate, setReminderDate] = useState<Date | undefined>(new Date());
-  const [reminderTime, setReminderTime] = useState('23:30');
-  const [reminderNotification, setReminderNotification] = useState('10 minutes avant');
   const [hasStartDate, setHasStartDate] = useState(false);
   const [hasEndDate, setHasEndDate] = useState(true);
   
@@ -704,134 +701,10 @@ export function ClientRequestsCard() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal pour définir un reminder */}
-      <Dialog open={isReminderModalOpen} onOpenChange={setIsReminderModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-pink-500" />
-              <DialogTitle className="text-lg font-bold text-palace-navy">
-                Définir un reminder
-              </DialogTitle>
-            </div>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Champ objet du reminder */}
-            <div>
-              <Input
-                value={reminderSubject}
-                onChange={(e) => setReminderSubject(e.target.value)}
-                placeholder="Objet du reminder"
-                className="w-full"
-              />
-            </div>
-
-            {/* Calendrier */}
-            <div className="space-y-4">
-              <CalendarComponent
-                mode="single"
-                selected={reminderDate}
-                onSelect={setReminderDate}
-                className="w-full border rounded-lg p-3 pointer-events-auto"
-              />
-            </div>
-
-            {/* Section date limite et heure */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={hasStartDate}
-                  onCheckedChange={setHasStartDate}
-                />
-                <span className="text-sm text-soft-pewter">Date de début</span>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={hasEndDate}
-                    onCheckedChange={setHasEndDate}
-                  />
-                  <span className="text-sm font-medium text-palace-navy">Date limite</span>
-                </div>
-                
-                {hasEndDate && (
-                  <div className="ml-8 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-palace-navy">Date :</span>
-                      <span className="text-sm text-palace-navy">
-                        {reminderDate ? format(reminderDate, 'dd/MM/yyyy') : '24/07/2025'}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-palace-navy">Heure :</span>
-                      <Input
-                        type="time"
-                        value={reminderTime}
-                        onChange={(e) => setReminderTime(e.target.value)}
-                        className="w-20 text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Définir un rappel */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <span className="text-pink-500">⏰</span>
-                <span className="text-sm font-medium text-palace-navy">Définir un rappel</span>
-              </div>
-              
-              <Select value={reminderNotification} onValueChange={setReminderNotification}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5 minutes avant">5 minutes avant</SelectItem>
-                  <SelectItem value="10 minutes avant">10 minutes avant</SelectItem>
-                  <SelectItem value="15 minutes avant">15 minutes avant</SelectItem>
-                  <SelectItem value="30 minutes avant">30 minutes avant</SelectItem>
-                  <SelectItem value="1 heure avant">1 heure avant</SelectItem>
-                  <SelectItem value="1 jour avant">1 jour avant</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <p className="text-xs text-soft-pewter">
-                Les rappels seront envoyés à tous les membres et les observateurs de cette carte.
-              </p>
-            </div>
-
-            {/* Boutons d'action */}
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline"
-                onClick={() => {
-                  setReminderSubject('');
-                  setReminderDate(new Date());
-                  setReminderTime('23:30');
-                  setReminderNotification('10 minutes avant');
-                  setHasStartDate(false);
-                  setHasEndDate(true);
-                }}
-              >
-                Effacer
-              </Button>
-              <Button 
-                onClick={() => {
-                  // Logique pour enregistrer le reminder
-                  setIsReminderModalOpen(false);
-                }}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                Enregistrer
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+      />
 
       {/* Modal Attribution de membres */}
       <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
