@@ -361,66 +361,66 @@ export function VoiceCommandButton() {
               </div>
             </div>
 
-            {/* Conditional Fields for Client Requests */}
-            {formData.category === 'client_request' && (
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Nom du client</label>
-                  <Input 
-                    placeholder="Nom du client"
-                    value={formData.guestName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
-                  />
-                </div>
-                
-                {/* Location Module for Client Requests */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Localisation</label>
-                  <div className="grid grid-cols-2 gap-4 h-48">
-                    {/* Rooms */}
-                    <div className="space-y-2 h-full">
-                      <h4 className="text-sm font-medium">Chambres</h4>
-                      <div className="grid grid-cols-6 gap-2 h-full overflow-y-auto">
-                        {rooms.map((room) => (
-                          <Button
-                            key={room}
-                            variant={formData.location === `Chambre ${room}` ? "default" : "outline"}
-                            className="h-8 w-12 text-xs"
-                            onClick={() => setFormData(prev => ({ ...prev, location: `Chambre ${room}` }))}
-                          >
-                            {room}
-                          </Button>
-                        ))}
-                      </div>
+            {/* Location Module for all card types requiring location */}
+            {(['client_request', 'incident', 'follow_up', 'internal_task'].includes(formData.category)) && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Localisation</label>
+                <div className="grid grid-cols-2 gap-4 h-48">
+                  {/* Rooms */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Chambres</h4>
+                    <div className="grid grid-cols-6 gap-2 max-h-44 overflow-y-auto">
+                      {rooms.map((room) => (
+                        <Button
+                          key={room}
+                          variant={formData.location === `Chambre ${room}` ? "default" : "outline"}
+                          className="h-8 w-12 text-xs"
+                          onClick={() => setFormData(prev => ({ ...prev, location: `Chambre ${room}` }))}
+                        >
+                          {room}
+                        </Button>
+                      ))}
                     </div>
-                    {/* Common Areas and Corridors */}
-                    <div className="space-y-2 h-full">
-                      <h4 className="text-sm font-medium">Espaces communs</h4>
-                      <div className="space-y-2 h-full overflow-y-auto">
-                        {commonAreas.map((area) => (
-                          <Button
-                            key={area}
-                            variant={formData.location === area ? "default" : "outline"}
-                            className="w-1/2 text-xs"
-                            onClick={() => setFormData(prev => ({ ...prev, location: area }))}
-                          >
-                            {area}
-                          </Button>
-                        ))}
-                        {corridors.map((corridor) => (
-                          <Button
-                            key={corridor}
-                            variant={formData.location === corridor ? "default" : "outline"}
-                            className="w-1/2 text-xs"
-                            onClick={() => setFormData(prev => ({ ...prev, location: corridor }))}
-                          >
-                            {corridor}
-                          </Button>
-                        ))}
-                      </div>
+                  </div>
+                  {/* Common Areas and Corridors */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Espaces communs</h4>
+                    <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto">
+                      {commonAreas.map((area) => (
+                        <Button
+                          key={area}
+                          variant={formData.location === area ? "default" : "outline"}
+                          className="text-xs h-8"
+                          onClick={() => setFormData(prev => ({ ...prev, location: area }))}
+                        >
+                          {area}
+                        </Button>
+                      ))}
+                      {corridors.map((corridor) => (
+                        <Button
+                          key={corridor}
+                          variant={formData.location === corridor ? "default" : "outline"}
+                          className="text-xs h-8"
+                          onClick={() => setFormData(prev => ({ ...prev, location: corridor }))}
+                        >
+                          {corridor}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Conditional Fields for Client Requests */}
+            {formData.category === 'client_request' && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Nom du client</label>
+                <Input 
+                  placeholder="Nom du client"
+                  value={formData.guestName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
+                />
               </div>
             )}
 
