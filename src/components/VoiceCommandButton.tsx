@@ -358,7 +358,7 @@ export function VoiceCommandButton() {
 
             {/* Conditional Fields for Client Requests */}
             {formData.category === 'client_request' && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-3">
                   <label className="text-sm font-medium">Nom du client</label>
                   <Input 
@@ -367,13 +367,44 @@ export function VoiceCommandButton() {
                     onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
                   />
                 </div>
+                
+                {/* Location Module for Client Requests */}
                 <div className="space-y-3">
-                  <label className="text-sm font-medium">Numéro de chambre</label>
-                  <Input 
-                    placeholder="Ex: 101"
-                    value={formData.roomNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
-                  />
+                  <label className="text-sm font-medium">Localisation</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Rooms */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Chambres</h4>
+                      <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                        {rooms.map((room) => (
+                          <Button
+                            key={room}
+                            variant={formData.location === `Chambre ${room}` ? "default" : "outline"}
+                            className="h-8 w-12 text-xs"
+                            onClick={() => setFormData(prev => ({ ...prev, location: `Chambre ${room}` }))}
+                          >
+                            {room}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Common Areas */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Espaces communs</h4>
+                      <div className="space-y-2">
+                        {commonAreas.map((area) => (
+                          <Button
+                            key={area}
+                            variant={formData.location === area ? "default" : "outline"}
+                            className="w-full text-xs"
+                            onClick={() => setFormData(prev => ({ ...prev, location: area }))}
+                          >
+                            {area}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -546,6 +577,12 @@ export function VoiceCommandButton() {
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={4}
               />
+              {/* Texte informatif pour les demandes client */}
+              {formData.category === 'client_request' && (
+                <p className="text-sm text-muted-foreground italic mt-2">
+                  (avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)
+                </p>
+              )}
             </div>
 
             {/* Additional Features */}
@@ -595,7 +632,7 @@ export function VoiceCommandButton() {
                 disabled={
                   !formData.category || 
                   !formData.description || 
-                  (formData.category === 'client_request' && (!formData.guestName || !formData.roomNumber)) ||
+                  (formData.category === 'client_request' && (!formData.guestName || !formData.location)) ||
                   (formData.category === 'follow_up' && !formData.recipient)
                 }
                 className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90"
