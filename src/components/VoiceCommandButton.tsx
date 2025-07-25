@@ -106,11 +106,14 @@ export function VoiceCommandButton() {
     setShowCreateModal(true);
   };
 
-  const handleModeSelection = (mode: 'edit' | 'voice') => {
-    console.log('Mode sélectionné:', mode); 
-    setCreationMode(mode);
-    setShowCreateModal(true);
-    setIsExpanded(false);
+  const handleVoiceModeClick = () => {
+    console.log('Basculer vers mode vocal - Fermeture édition + Ouverture vocal');
+    // État 3 : Fermer modal édition et ouvrir modal vocale
+    setShowCreateModal(false);
+    setTimeout(() => {
+      setCreationMode('voice');
+      setShowCreateModal(true);
+    }, 100);
   };
 
   const resetForm = () => {
@@ -250,13 +253,13 @@ export function VoiceCommandButton() {
 
       {/* Creation Button System */}
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
-        {/* Voice Mode Button - Visible when any modal is open */}
-        {showCreateModal && (
+        {/* Voice Mode Button - Visible seulement en mode édition (État 2) */}
+        {showCreateModal && creationMode === 'edit' && (
           <div className="relative">
             <Button
               onClick={() => {
                 console.log('Clic sur bouton Vocal - Basculer vers mode vocal');
-                handleModeSelection('voice');
+                handleVoiceModeClick();
               }}
               className={cn(
                 "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
@@ -267,10 +270,7 @@ export function VoiceCommandButton() {
               <Mic className="h-6 w-6 text-palace-navy" />
             </Button>
             
-            {/* Pulse Animation for Voice Button - ONLY when voice mode is active */}
-            {creationMode === 'voice' && (
-              <div className="absolute -bottom-20 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
-            )}
+            {/* Pas d'onde pour le bouton micro en État 2 (mode édition) */}
           </div>
         )}
 
@@ -297,9 +297,13 @@ export function VoiceCommandButton() {
           <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
 
-        {/* Pulse Animation for Main Button */}
-        {/* État 1: Pas de modal ouverte OU État 2: Modal édition ouverte */}
+        {/* Pulse Animation for Main Button - États 1 et 2 seulement */}
         {(!showCreateModal || (showCreateModal && creationMode === 'edit')) && (
+          <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
+        )}
+        
+        {/* Pulse Animation for Voice Button - État 4 seulement */}
+        {showCreateModal && creationMode === 'voice' && (
           <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
         )}
       </div>
