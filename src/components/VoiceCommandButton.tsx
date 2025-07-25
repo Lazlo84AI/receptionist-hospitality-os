@@ -249,44 +249,22 @@ export function VoiceCommandButton() {
       )}
 
       {/* Creation Button System */}
-      <div className="fixed bottom-6 right-6 z-[9999]">
-        {/* Expanded Sub-Buttons */}
-        {isExpanded && (
-          <div className="absolute bottom-16 right-0 mb-4 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
-            <Button
-              onClick={() => {
-                console.log('Clic sur bouton Édition');
-                handleModeSelection('edit');
-              }}
-              className={cn(
-                "h-12 px-4 bg-palace-navy text-warm-cream border border-champagne-gold/30 hover:bg-champagne-gold hover:text-palace-navy transition-all duration-300",
-                "shadow-lg pointer-events-auto"
-              )}
-            >
-              <Edit3 className="h-5 w-5 mr-2" />
-              <span className="whitespace-nowrap font-medium">
-                Édition
-              </span>
-            </Button>
-            <Button
-              onClick={() => {
-                console.log('Clic sur bouton Vocal');
-                handleModeSelection('voice');
-              }}
-              className={cn(
-                "h-12 px-4 bg-palace-navy text-warm-cream border border-champagne-gold/30 hover:bg-champagne-gold hover:text-palace-navy transition-all duration-300",
-                "shadow-lg pointer-events-auto"
-              )}
-            >
-              <Mic className="h-5 w-5 mr-2" />
-              <span className="whitespace-nowrap font-medium">
-                Vocal
-              </span>
-            </Button>
-          </div>
-        )}
+      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
+        {/* Voice Mode Button (Night Mode) */}
+        <Button
+          onClick={() => {
+            console.log('Clic sur bouton Vocal - Mode Nuit');
+            handleModeSelection('voice');
+          }}
+          className={cn(
+            "h-14 w-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 transition-all duration-300",
+            "shadow-lg pointer-events-auto border-2 border-yellow-300"
+          )}
+        >
+          <Mic className="h-6 w-6" />
+        </Button>
 
-        {/* Main Creation Button */}
+        {/* Main Note Button */}
         <Button
           onClick={(e) => {
             e.preventDefault();
@@ -296,37 +274,38 @@ export function VoiceCommandButton() {
           }}
           className={cn(
             "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
-            isExpanded
-              ? "bg-urgence-red hover:bg-urgence-red/90 rotate-45 border-2 border-urgence-red"
-              : "bg-palace-navy hover:bg-palace-navy/90 border-2 border-champagne-gold/50 hover:border-champagne-gold",
+            "bg-palace-navy hover:bg-palace-navy/90 border-2 border-champagne-gold/50 hover:border-champagne-gold",
             "shadow-lg"
           )}
           style={{ pointerEvents: 'auto' }}
         >
-          {isExpanded ? (
-            <X className="h-6 w-6 text-warm-cream" />
-          ) : (
-            <FileText className="h-6 w-6 text-champagne-gold" />
-          )}
+          <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
 
         {/* Subtle Pulse Animation when idle */}
-        {!isExpanded && (
-          <div className="absolute inset-0 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
-        )}
+        <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
       </div>
 
       {/* Create Card Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={cn(
+          "max-w-4xl max-h-[90vh] overflow-y-auto",
+          creationMode === 'voice' ? "bg-gray-900 text-white border-gray-700" : ""
+        )}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={cn(
+              "flex items-center gap-2",
+              creationMode === 'voice' ? "text-yellow-400" : ""
+            )}>
               {creationMode === 'voice' ? <Mic className="h-5 w-5" /> : <Edit3 className="h-5 w-5" />}
               Créer une nouvelle carte - Mode {creationMode === 'voice' ? 'Vocal' : 'Édition'}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className={cn(
+            "space-y-6",
+            creationMode === 'voice' ? "text-white" : ""
+          )}>
             {/* Title Field */}
             <div className="space-y-3">
               <label className="text-sm font-medium">Titre de la carte</label>
