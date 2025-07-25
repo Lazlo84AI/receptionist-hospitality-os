@@ -107,13 +107,17 @@ export function VoiceCommandButton() {
   };
 
   const handleVoiceModeClick = () => {
-    console.log('Basculer vers mode vocal - Fermeture édition + Ouverture vocal');
+    console.log('🎤 DÉBUT - Basculer vers mode vocal');
+    console.log('🎤 État actuel:', { showCreateModal, creationMode });
+    
     // État 3 : Fermer modal édition et ouvrir modal vocale
     setShowCreateModal(false);
+    setCreationMode('voice');
+    
     setTimeout(() => {
-      setCreationMode('voice');
+      console.log('🎤 OUVERTURE - Modal vocale');
       setShowCreateModal(true);
-    }, 100);
+    }, 150);
   };
 
   const resetForm = () => {
@@ -317,29 +321,49 @@ export function VoiceCommandButton() {
       }}>
         <DialogContent className={cn(
           "max-w-4xl max-h-[90vh] overflow-y-auto",
-          creationMode === 'voice' ? "bg-gray-900 text-white border-gray-700" : ""
+          creationMode === 'voice' ? "bg-palace-navy text-warm-cream border-champagne-gold/20" : "bg-background"
         )}>
           <DialogHeader>
             <DialogTitle className={cn(
-              "flex items-center gap-2",
-              creationMode === 'voice' ? "text-yellow-400" : ""
+              "flex items-center gap-2 text-lg font-semibold",
+              creationMode === 'voice' ? "text-champagne-gold" : "text-foreground"
             )}>
-              {creationMode === 'voice' ? <Mic className="h-5 w-5" /> : <Edit3 className="h-5 w-5" />}
+              {creationMode === 'voice' ? (
+                <Mic className="h-5 w-5 text-champagne-gold" />
+              ) : (
+                <Edit3 className="h-5 w-5" />
+              )}
               Créer une nouvelle carte - Mode {creationMode === 'voice' ? 'Vocal' : 'Édition'}
             </DialogTitle>
           </DialogHeader>
           
           <div className={cn(
             "space-y-6",
-            creationMode === 'voice' ? "text-white" : ""
+            creationMode === 'voice' ? "text-warm-cream" : "text-foreground"
           )}>
+            {creationMode === 'voice' && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-champagne-gold/10 border border-champagne-gold/20">
+                <span className="text-champagne-gold">💡</span>
+                <span className="text-sm text-champagne-gold">
+                  Décrivez précisément pour une meilleure compréhension
+                </span>
+              </div>
+            )}
             {/* Title Field */}
             <div className="space-y-3">
-              <label className="text-sm font-medium">Titre de la carte</label>
+              <label className={cn(
+                "text-sm font-medium",
+                creationMode === 'voice' ? "text-champagne-gold" : "text-foreground"
+              )}>
+                Titre de la carte
+              </label>
               <Input 
                 placeholder="Titre descriptif de la carte"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                className={cn(
+                  creationMode === 'voice' ? "bg-palace-navy/50 border-champagne-gold/30 text-warm-cream placeholder:text-warm-cream/60" : ""
+                )}
               />
             </div>
 
