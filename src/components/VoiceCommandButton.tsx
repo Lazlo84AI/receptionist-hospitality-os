@@ -250,25 +250,41 @@ export function VoiceCommandButton() {
 
       {/* Creation Button System */}
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
-        {/* Voice Mode Button - Only visible when modal is open */}
-        {showCreateModal && (
+        {/* Voice Mode Button - Only visible when edit modal is open */}
+        {showCreateModal && creationMode === 'edit' && (
+          <Button
+            onClick={() => {
+              console.log('Clic sur bouton Vocal - Mode Nuit');
+              handleModeSelection('voice');
+            }}
+            className={cn(
+              "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
+              "bg-champagne-gold hover:bg-champagne-gold/90 border-2 border-palace-navy",
+              "shadow-lg mb-20"
+            )}
+          >
+            <Mic className="h-6 w-6 text-palace-navy" />
+          </Button>
+        )}
+
+        {/* Voice Mode Button with animation when voice mode is active */}
+        {showCreateModal && creationMode === 'voice' && (
           <div className="relative">
             <Button
               onClick={() => {
-                console.log('Clic sur bouton Vocal - Mode Nuit');
-                handleModeSelection('voice');
+                console.log('Bouton vocal actif');
               }}
               className={cn(
                 "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
                 "bg-champagne-gold hover:bg-champagne-gold/90 border-2 border-palace-navy",
-                "shadow-lg mb-[5cm]"
+                "shadow-lg mb-20"
               )}
             >
               <Mic className="h-6 w-6 text-palace-navy" />
             </Button>
             
-            {/* Pulse Animation for Voice Button when modal is open */}
-            <div className="absolute -bottom-[5cm] right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
+            {/* Pulse Animation for Voice Button when voice mode is active */}
+            <div className="absolute -bottom-20 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
           </div>
         )}
 
@@ -283,21 +299,31 @@ export function VoiceCommandButton() {
           className={cn(
             "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
             "bg-palace-navy hover:bg-palace-navy/90 border-2 border-champagne-gold/50 hover:border-champagne-gold",
-            "shadow-lg"
+            "shadow-lg",
+            // Disabled style when voice mode is active
+            creationMode === 'voice' ? "opacity-75 cursor-not-allowed" : ""
           )}
           style={{ pointerEvents: 'auto' }}
+          disabled={creationMode === 'voice'}
         >
           <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
 
-        {/* Pulse Animation for Main Button - only when modal is closed */}
-        {!showCreateModal && (
+        {/* Pulse Animation for Main Button - only when no modal or edit mode */}
+        {(!showCreateModal || (showCreateModal && creationMode === 'edit')) && (
           <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
         )}
       </div>
 
       {/* Create Card Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+      <Dialog open={showCreateModal} onOpenChange={(open) => {
+        setShowCreateModal(open);
+        if (!open) {
+          // Reset to initial state when closing modal
+          setCreationMode(null);
+          resetForm();
+        }
+      }}>
         <DialogContent className={cn(
           "max-w-4xl max-h-[90vh] overflow-y-auto",
           creationMode === 'voice' ? "bg-gray-900 text-white border-gray-700" : ""
