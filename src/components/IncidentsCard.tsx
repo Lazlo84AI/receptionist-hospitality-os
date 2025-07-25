@@ -483,6 +483,7 @@ export function IncidentsCard() {
         </DialogContent>
       </Dialog>
 
+      {/* Reminder Modal */}
       <ReminderModal
         isOpen={showReminderDialog}
         onClose={() => setShowReminderDialog(false)}

@@ -701,6 +701,7 @@ export function ClientRequestsCard() {
         </DialogContent>
       </Dialog>
 
+      {/* Reminder Modal */}
       <ReminderModal
         isOpen={isReminderModalOpen}
         onClose={() => setIsReminderModalOpen(false)}
