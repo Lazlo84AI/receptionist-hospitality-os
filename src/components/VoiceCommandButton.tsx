@@ -86,6 +86,7 @@ export function VoiceCommandButton() {
   };
 
   const handleModeSelection = (mode: 'edit' | 'voice') => {
+    console.log('Mode sélectionné:', mode); // Debug log
     setCreationMode(mode);
     setShowCreateModal(true);
     setIsExpanded(false);
