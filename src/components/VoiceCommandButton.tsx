@@ -12,7 +12,9 @@ import {
   User,
   Calendar,
   CheckSquare,
-  Bell
+  Bell,
+  Paperclip,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -68,6 +70,7 @@ const rooms = Array.from({ length: 30 }, (_, i) => i + 1);
 const commonAreas = [
   'Lobby', 'Restaurant', 'Terrasse', 'Cuisine', 'Accueil', 'Lounge', 'Spa'
 ];
+const corridors = Array.from({ length: 5 }, (_, i) => `Couloir ${i + 1}`);
 
 export function VoiceCommandButton() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -75,7 +78,9 @@ export function VoiceCommandButton() {
   const [creationMode, setCreationMode] = useState<'edit' | 'voice' | null>(null);
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
   const [checklists, setChecklists] = useState<Array<{ id: string; title: string }>>([]);
+  const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number }>>([]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -371,11 +376,11 @@ export function VoiceCommandButton() {
                 {/* Location Module for Client Requests */}
                 <div className="space-y-3">
                   <label className="text-sm font-medium">Localisation</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 h-48">
                     {/* Rooms */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 h-full">
                       <h4 className="text-sm font-medium">Chambres</h4>
-                      <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                      <div className="grid grid-cols-6 gap-2 h-full overflow-y-auto">
                         {rooms.map((room) => (
                           <Button
                             key={room}
@@ -388,18 +393,28 @@ export function VoiceCommandButton() {
                         ))}
                       </div>
                     </div>
-                    {/* Common Areas */}
-                    <div className="space-y-2">
+                    {/* Common Areas and Corridors */}
+                    <div className="space-y-2 h-full">
                       <h4 className="text-sm font-medium">Espaces communs</h4>
-                      <div className="space-y-2">
+                      <div className="space-y-2 h-full overflow-y-auto">
                         {commonAreas.map((area) => (
                           <Button
                             key={area}
                             variant={formData.location === area ? "default" : "outline"}
-                            className="w-full text-xs"
+                            className="w-1/2 text-xs"
                             onClick={() => setFormData(prev => ({ ...prev, location: area }))}
                           >
                             {area}
+                          </Button>
+                        ))}
+                        {corridors.map((corridor) => (
+                          <Button
+                            key={corridor}
+                            variant={formData.location === corridor ? "default" : "outline"}
+                            className="w-1/2 text-xs"
+                            onClick={() => setFormData(prev => ({ ...prev, location: corridor }))}
+                          >
+                            {corridor}
                           </Button>
                         ))}
                       </div>
@@ -603,6 +618,14 @@ export function VoiceCommandButton() {
                 <Bell className="h-4 w-4" />
                 Configurer un rappel
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAttachmentModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Paperclip className="h-4 w-4" />
+                Pièce jointe
+              </Button>
             </div>
 
             {/* Display Added Checklists */}
@@ -657,6 +680,93 @@ export function VoiceCommandButton() {
         onClose={() => setIsReminderModalOpen(false)}
         taskTitle={formData.title}
       />
+
+      {/* Attachment Modal */}
+      <Dialog open={isAttachmentModalOpen} onOpenChange={setIsAttachmentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Ajouter une pièce jointe
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Drag and Drop Zone */}
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center space-y-4 hover:border-primary/50 transition-colors">
+              <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Glissez-déposez vos fichiers ici</p>
+                <p className="text-xs text-muted-foreground">ou cliquez pour parcourir</p>
+              </div>
+              <Input
+                type="file"
+                className="hidden"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  files.forEach(file => {
+                    const newAttachment = {
+                      id: Date.now().toString() + Math.random(),
+                      name: file.name,
+                      size: file.size
+                    };
+                    setAttachments(prev => [...prev, newAttachment]);
+                  });
+                }}
+              />
+            </div>
+
+            {/* File List */}
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Fichiers sélectionnés :</p>
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      <span className="text-sm">{attachment.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({(attachment.size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAttachments(prev => prev.filter(a => a.id !== attachment.id))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAttachmentModalOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button 
+                onClick={() => {
+                  setIsAttachmentModalOpen(false);
+                  if (attachments.length > 0) {
+                    toast({
+                      title: "Pièces jointes ajoutées",
+                      description: `${attachments.length} fichier(s) ajouté(s) à la carte.`,
+                    });
+                  }
+                }}
+              >
+                Terminé
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
