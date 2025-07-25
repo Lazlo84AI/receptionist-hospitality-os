@@ -82,13 +82,14 @@ export function VoiceCommandButton() {
   const { toast } = useToast();
 
   const handleMainButtonClick = () => {
-    console.log('Clic sur le bouton principal, isExpanded avant:', isExpanded);
-    setIsExpanded(!isExpanded);
-    console.log('isExpanded après:', !isExpanded);
+    console.log('CLIC PRINCIPAL DÉTECTÉ!');
+    // Ouvrir directement la modal de création
+    setCreationMode('edit'); // Mode par défaut
+    setShowCreateModal(true);
   };
 
   const handleModeSelection = (mode: 'edit' | 'voice') => {
-    console.log('Mode sélectionné:', mode); // Debug log
+    console.log('Mode sélectionné:', mode); 
     setCreationMode(mode);
     setShowCreateModal(true);
     setIsExpanded(false);
