@@ -82,7 +82,9 @@ export function VoiceCommandButton() {
   const { toast } = useToast();
 
   const handleMainButtonClick = () => {
+    console.log('Clic sur le bouton principal, isExpanded avant:', isExpanded);
     setIsExpanded(!isExpanded);
+    console.log('isExpanded après:', !isExpanded);
   };
 
   const handleModeSelection = (mode: 'edit' | 'voice') => {
