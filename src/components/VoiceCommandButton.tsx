@@ -250,29 +250,13 @@ export function VoiceCommandButton() {
 
       {/* Creation Button System */}
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
-        {/* Voice Mode Button - Only visible when edit modal is open */}
-        {showCreateModal && creationMode === 'edit' && (
-          <Button
-            onClick={() => {
-              console.log('Clic sur bouton Vocal - Mode Nuit');
-              handleModeSelection('voice');
-            }}
-            className={cn(
-              "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
-              "bg-champagne-gold hover:bg-champagne-gold/90 border-2 border-palace-navy",
-              "shadow-lg mb-20"
-            )}
-          >
-            <Mic className="h-6 w-6 text-palace-navy" />
-          </Button>
-        )}
-
-        {/* Voice Mode Button with animation when voice mode is active */}
-        {showCreateModal && creationMode === 'voice' && (
+        {/* Voice Mode Button - Visible when modal is open */}
+        {showCreateModal && (
           <div className="relative">
             <Button
               onClick={() => {
-                console.log('Bouton vocal actif');
+                console.log('Clic sur bouton Vocal - Basculer vers mode vocal');
+                handleModeSelection('voice');
               }}
               className={cn(
                 "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
@@ -284,7 +268,9 @@ export function VoiceCommandButton() {
             </Button>
             
             {/* Pulse Animation for Voice Button when voice mode is active */}
-            <div className="absolute -bottom-20 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
+            {creationMode === 'voice' && (
+              <div className="absolute -bottom-20 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
+            )}
           </div>
         )}
 
@@ -294,7 +280,9 @@ export function VoiceCommandButton() {
             e.preventDefault();
             e.stopPropagation();
             console.log('CLIC DÉTECTÉ sur le bouton principal!');
-            handleMainButtonClick();
+            if (creationMode !== 'voice') {
+              handleMainButtonClick();
+            }
           }}
           className={cn(
             "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
@@ -304,7 +292,6 @@ export function VoiceCommandButton() {
             creationMode === 'voice' ? "opacity-75 cursor-not-allowed" : ""
           )}
           style={{ pointerEvents: 'auto' }}
-          disabled={creationMode === 'voice'}
         >
           <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
