@@ -250,39 +250,19 @@ export function VoiceCommandButton() {
 
       {/* Creation Button System */}
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
-        {/* Voice Mode Button (appears when modal is open) */}
-        {showCreateModal && (
-          <>
-            <Button
-              onClick={() => {
-                console.log('Clic sur bouton Vocal - Mode Nuit');
-                handleModeSelection('voice');
-              }}
-              className={cn(
-                "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
-                "bg-champagne-gold hover:bg-champagne-gold/90 border-2 border-palace-navy",
-                "shadow-lg"
-              )}
-              style={{ 
-                pointerEvents: 'auto',
-                transform: 'translateY(-20px)' // 5cm plus haut
-              }}
-            >
-              <Mic className="h-6 w-6 text-palace-navy" />
-            </Button>
-            
-            {/* Animation pour le bouton micro quand actif */}
-            {creationMode === 'voice' && (
-              <div 
-                className="absolute h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" 
-                style={{ 
-                  top: '-20px', // Aligné avec le bouton micro
-                  right: '0'
-                }}
-              />
-            )}
-          </>
-        )}
+        {/* Voice Mode Button (Night Mode) */}
+        <Button
+          onClick={() => {
+            console.log('Clic sur bouton Vocal - Mode Nuit');
+            handleModeSelection('voice');
+          }}
+          className={cn(
+            "h-14 w-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 transition-all duration-300",
+            "shadow-lg pointer-events-auto border-2 border-yellow-300"
+          )}
+        >
+          <Mic className="h-6 w-6" />
+        </Button>
 
         {/* Main Note Button */}
         <Button
@@ -302,10 +282,8 @@ export function VoiceCommandButton() {
           <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
 
-        {/* Animation pour le bouton carte (seulement quand modal fermée ou pas en mode vocal) */}
-        {(!showCreateModal || creationMode !== 'voice') && (
-          <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
-        )}
+        {/* Subtle Pulse Animation when idle */}
+        <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
       </div>
 
       {/* Create Card Modal */}
