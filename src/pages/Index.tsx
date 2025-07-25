@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
-import { QuickActionButton } from '@/components/QuickActionButton';
 import { IncidentsCard } from '@/components/IncidentsCard';
 import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { FollowUpsCard } from '@/components/FollowUpsCard';
-import { ShiftManagement } from '@/components/ShiftManagement';
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,12 +31,7 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Zone 3: Shift Management - Full Width */}
-          <div className="w-full mb-8">
-            <ShiftManagement />
-          </div>
-
-          {/* Zone 4: Follow-ups - Full Width */}
+          {/* Zone 3: Relances - Full Width */}
           <div className="w-full">
             <FollowUpsCard />
           </div>

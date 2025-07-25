@@ -4,37 +4,70 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { useTasks } from '@/hooks/useTasks';
-import { useUsers } from '@/hooks/useUsers';
 
-// Mock data removed - now using real Supabase data
+const followUps = [
+  {
+    id: 1,
+    title: 'Confirmation arrivée VIP',
+    location: 'Réception',
+    client: '',
+    statut: 'À traiter',
+    priority: 'urgence',
+    assignedTo: 'Réception : Leopold Bechu',
+    hoursElapsed: 3,
+    overdue: false
+  },
+  {
+    id: 2,
+    title: 'Message non lu WhatsApp',
+    location: 'Réception',
+    client: '',
+    statut: 'En cours',
+    priority: null,
+    assignedTo: 'Gouvernante : Marie Dubois',
+    hoursElapsed: 24,
+    overdue: true
+  },
+  {
+    id: 3,
+    title: 'Équipement manquant en chambre',
+    location: 'Chambre 450',
+    client: '',
+    statut: 'À traiter',
+    priority: 'urgence',
+    assignedTo: 'Prestataire : Jean Dupont',
+    hoursElapsed: 6,
+    overdue: false
+  },
+  {
+    id: 4,
+    title: 'Confirmation équipements massage',
+    location: 'Spa',
+    client: '',
+    statut: 'En cours',
+    priority: null,
+    assignedTo: 'Gouvernante : Marie Dubois',
+    hoursElapsed: 12,
+    overdue: false
+  },
+  {
+    id: 5,
+    title: 'Livraison arrangements floraux',
+    location: 'Lobby',
+    client: '',
+    statut: 'À traiter',
+    priority: 'urgence',
+    assignedTo: 'Prestataire : Jean Dupont',
+    hoursElapsed: 48,
+    overdue: true
+  }
+];
 
 export function FollowUpsCard() {
-  const { tasks: allTasks, loading, error } = useTasks();
-  const { users } = useUsers();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [selectedTask, setSelectedTask] = useState<(typeof followUps[0] & { description?: string; type?: string }) | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 2;
-  
-  // Filter and format tasks as follow-ups
-  const followUps = allTasks.map(task => {
-    const hoursElapsed = Math.floor((new Date().getTime() - new Date(task.created_at).getTime()) / (1000 * 60 * 60));
-    const isOverdue = hoursElapsed > 24 && task.status === 'pending';
-    
-    return {
-      id: task.id,
-      title: task.title,
-      location: task.location || 'Non spécifié',
-      client: '',
-      statut: task.status === 'pending' ? 'À traiter' : 'En cours',
-      priority: task.priority === 'critical' ? 'urgence' : null,
-      assignedTo: `${task.task_type === 'maintenance' ? 'Service Provider' : task.task_type === 'client_request' ? 'Reception' : 'Housekeeping'} : ${users.find(u => u.id === task.assigned_to)?.full_name || task.assigned_to || 'Unassigned'}`,
-      hoursElapsed,
-      overdue: isOverdue
-    };
-  });
-  
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
 
   const getStatusColor = (statut: string) => {
@@ -63,36 +96,14 @@ export function FollowUpsCard() {
     setCurrentIndex(Math.max(currentIndex - 1, 0));
   };
 
-  const handleTaskClick = (task: any) => {
-    // Find the original task from allTasks to get the full data
-    const originalTask = allTasks.find(t => t.id === task.id);
+  const handleTaskClick = (task: typeof followUps[0]) => {
     setSelectedTask({
       ...task,
-      description: originalTask?.description || 'Detailed description of the task to be performed.',
-      type: 'Follow-up'
+      description: 'Description détaillée de la tâche à effectuer.',
+      type: 'Relance'
     });
     setIsModalOpen(true);
   };
-
-  if (loading) {
-    return (
-      <div className="luxury-card p-8">
-        <div className="flex items-center justify-center h-48">
-          <div className="text-soft-pewter">Loading follow-ups...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="luxury-card p-8">
-        <div className="flex items-center justify-center h-48">
-          <div className="text-red-500">Erreur: {error}</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="luxury-card p-8">
@@ -103,7 +114,7 @@ export function FollowUpsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Follow-ups and tasks to do
+              Relances et tâches à faire
             </h2>
             <p className="text-sm text-soft-pewter">
               Suivi des échéances critiques

@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare, MoveUp } from 'lucide-react';
-import { useIncidents } from '@/hooks/useIncidents';
-import { useUsers } from '@/hooks/useUsers';
 import { ChecklistComponent } from './ChecklistComponent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,11 +18,91 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-// Using real Supabase data - no more mock data
+const incidents = [
+  {
+    id: 1,
+    title: 'Problème climatisation Suite Présidentielle',
+    status: 'À traiter',
+    type: 'Maintenance',
+    priority: 'URGENCE',
+    assignedTo: 'Jean Dupont',
+    avatar: 'JD',
+    timeElapsed: '2 jours',
+    description: 'Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir.',
+    room: 'Suite 301'
+  },
+  {
+    id: 2,
+    title: 'Réclamation client - Service petit-déjeuner',
+    status: 'En cours',
+    type: 'Client',
+    priority: 'NORMAL',
+    assignedTo: 'Sophie Martin',
+    avatar: 'SM',
+    timeElapsed: '4 heures',
+    description: 'Client mécontent de la qualité du service au petit-déjeuner.',
+    room: 'Chambre 205'
+  },
+  {
+    id: 3,
+    title: 'Absence imprevue équipe ménage',
+    status: 'En cours',
+    type: 'Équipe',
+    priority: 'URGENCE',
+    assignedTo: 'Marie Dubois',
+    avatar: 'MD',
+    timeElapsed: '1 jour',
+    description: 'Trois membres de l\'équipe ménage sont absents aujourd\'hui.',
+    room: 'Étages 2-4'
+  },
+  {
+    id: 4,
+    title: 'Fuite dans la salle de bain',
+    status: 'À traiter',
+    type: 'Maintenance',
+    priority: 'NORMAL',
+    assignedTo: 'Pierre Leroy',
+    avatar: 'PL',
+    timeElapsed: '6 heures',
+    description: 'Fuite détectée sous le lavabo de la chambre 107.',
+    room: 'Chambre 107'
+  }
+];
+
+const teamMembers = [
+  {
+    name: 'Jean Dupont',
+    role: 'Responsable Maintenance',
+    initials: 'JD',
+    bgColor: 'bg-blue-600'
+  },
+  {
+    name: 'Sophie Martin',
+    role: 'Responsable Réception',
+    initials: 'SM',
+    bgColor: 'bg-green-600'
+  },
+  {
+    name: 'Marie Dubois',
+    role: 'Gouvernante Générale',
+    initials: 'MD',
+    bgColor: 'bg-purple-600'
+  },
+  {
+    name: 'Pierre Leroy',
+    role: 'Technicien',
+    initials: 'PL',
+    bgColor: 'bg-orange-600'
+  },
+  {
+    name: 'Claire Rousseau',
+    role: 'Directrice',
+    initials: 'CR',
+    bgColor: 'bg-red-600'
+  }
+];
 
 export function IncidentsCard() {
-  const { incidents, loading, error } = useIncidents();
-  const { users } = useUsers();
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
   const [comment, setComment] = useState('');
@@ -72,52 +150,6 @@ export function IncidentsCard() {
     return 'text-gray-600';
   };
 
-  const getTimeElapsed = (createdAt: string) => {
-    const now = new Date();
-    const created = new Date(createdAt);
-    const diffInHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 24) {
-      return `${diffInHours}h`;
-    } else {
-      const days = Math.floor(diffInHours / 24);
-      return `${days} jour${days > 1 ? 's' : ''}`;
-    }
-  };
-
-  const formatPriority = (priority: string) => {
-    if (priority === 'critical') return 'URGENCE';
-    if (priority === 'urgent') return 'URGENT';
-    return priority.toUpperCase();
-  };
-
-  const formatStatus = (status: string) => {
-    if (status === 'pending') return 'À traiter';
-    if (status === 'in_progress') return 'En cours';
-    if (status === 'completed') return 'Résolu';
-    return status;
-  };
-
-  if (loading) {
-    return (
-      <div className="luxury-card p-6 col-span-full lg:col-span-2">
-        <div className="flex items-center justify-center h-48">
-          <div className="text-soft-pewter">Loading incidents...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="luxury-card p-6 col-span-full lg:col-span-2">
-        <div className="flex items-center justify-center h-48">
-          <div className="text-red-500">Erreur: {error}</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="luxury-card p-6 col-span-full lg:col-span-2">
@@ -128,7 +160,7 @@ export function IncidentsCard() {
             </div>
             <div>
               <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-                Ongoing Incidents
+                Incidents en Cours
               </h2>
               <p className="text-sm text-soft-pewter">
                 Suivi des situations prioritaires
@@ -141,69 +173,55 @@ export function IncidentsCard() {
         </div>
 
         <div className="space-y-4">
-          {incidents.map((incident) => {
-            const timeElapsed = getTimeElapsed(incident.created_at);
-            const formattedStatus = formatStatus(incident.status);
-            const formattedPriority = formatPriority(incident.priority);
-            
-            return (
-              <div
-                key={incident.id}
-                className="p-4 bg-muted/30 rounded-lg border border-border/50 hover-luxury cursor-pointer transition-all duration-300"
-                onClick={() => setSelectedIncident({
-                  ...incident,
-                  status: formattedStatus,
-                  priority: formattedPriority,
-                  timeElapsed,
-                  type: incident.incident_type,
-                  assignedTo: incident.assigned_to || 'Unassigned',
-                  room: incident.location_id || 'Not specified'
-                })}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-palace-navy mb-2">
-                      {incident.title}
-                    </h3>
-                     <div className="flex flex-wrap gap-2 mb-3">
-                        {formattedStatus === 'À traiter' ? (
-                          <Badge className={getStatusBadge(formattedStatus)}>
-                            {formattedStatus}
-                          </Badge>
-                        ) : (
-                          <Badge variant={getStatusBadge(formattedStatus) as any}>
-                            {formattedStatus}
-                          </Badge>
-                        )}
-                        {formattedPriority === 'URGENCE' && (
-                         <Badge className={getPriorityColor(formattedPriority)}>
-                           {formattedPriority}
-                         </Badge>
-                        )}
-                     </div>
-                  </div>
-                  <Button variant="ghost" size="sm" className="shrink-0">
-                    <Eye className="h-4 w-4" />
-                  </Button>
+          {incidents.map((incident) => (
+            <div
+              key={incident.id}
+              className="p-4 bg-muted/30 rounded-lg border border-border/50 hover-luxury cursor-pointer transition-all duration-300"
+              onClick={() => setSelectedIncident(incident)}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-palace-navy mb-2">
+                    {incident.title}
+                  </h3>
+                   <div className="flex flex-wrap gap-2 mb-3">
+                      {incident.status === 'À traiter' ? (
+                        <Badge className={getStatusBadge(incident.status)}>
+                          {incident.status}
+                        </Badge>
+                      ) : (
+                        <Badge variant={getStatusBadge(incident.status) as any}>
+                          {incident.status}
+                        </Badge>
+                      )}
+                      {incident.priority === 'URGENCE' && (
+                       <Badge className={getPriorityColor(incident.priority)}>
+                         {incident.priority}
+                       </Badge>
+                      )}
+                   </div>
                 </div>
+                <Button variant="ghost" size="sm" className="shrink-0">
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-soft-pewter">Assigné à:</span>
-                    <span className="text-sm font-medium text-palace-navy">
-                      {incident.incident_type === 'maintenance' ? 'Service Provider' : incident.incident_type === 'client' ? 'Reception' : 'Team'} : {users.find(u => u.id === incident.assigned_to)?.full_name || incident.assigned_to || 'Unassigned'}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-soft-pewter" />
-                    <span className={cn("font-medium", getTimeColor(timeElapsed))}>
-                      Depuis {timeElapsed}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-soft-pewter">Assigné à:</span>
+                  <span className="text-sm font-medium text-palace-navy">
+                    {incident.type === 'Maintenance' ? 'Prestataire' : incident.type === 'Client' ? 'Réception' : 'Gouvernante'} : {incident.assignedTo}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-soft-pewter" />
+                  <span className={cn("font-medium", getTimeColor(incident.timeElapsed))}>
+                    Depuis {incident.timeElapsed}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
         <div className="mt-6 pt-4 border-t border-border/20">
@@ -212,15 +230,15 @@ export function IncidentsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'open').length} open</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'À traiter').length} à traiter</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'in_progress').length} in progress</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'En cours').length} en cours</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'resolved').length} resolved</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'Résolu').length} résolus</span>
               </div>
             </div>
           </div>
@@ -232,7 +250,7 @@ export function IncidentsCard() {
         <DialogContent className="max-w-2xl luxury-card">
           <DialogHeader>
             <DialogTitle className="font-playfair text-xl text-palace-navy">
-              Incident Details
+              Détails de l'Incident
             </DialogTitle>
           </DialogHeader>
           {selectedIncident && (
