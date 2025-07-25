@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChecklistModal } from '@/components/modals/ChecklistModal';
+import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { ReminderModal } from '@/components/modals/ReminderModal';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +75,7 @@ export function VoiceCommandButton() {
   const [creationMode, setCreationMode] = useState<'edit' | 'voice' | null>(null);
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [checklists, setChecklists] = useState<Array<{ id: string; title: string }>>([]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -121,6 +123,19 @@ export function VoiceCommandButton() {
       recipient: '',
       dueDate: null,
     });
+    setChecklists([]);
+  };
+
+  const handleAddChecklist = (title: string) => {
+    const newChecklist = {
+      id: Date.now().toString(),
+      title: title,
+    };
+    setChecklists(prev => [...prev, newChecklist]);
+  };
+
+  const handleDeleteChecklist = (checklistId: string) => {
+    setChecklists(prev => prev.filter(checklist => checklist.id !== checklistId));
   };
 
   const handleCreateCard = async () => {
@@ -553,6 +568,20 @@ export function VoiceCommandButton() {
               </Button>
             </div>
 
+            {/* Display Added Checklists */}
+            {checklists.length > 0 && (
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground">Checklists ajoutées</div>
+                {checklists.map((checklist) => (
+                  <ChecklistComponent
+                    key={checklist.id}
+                    title={checklist.title}
+                    onDelete={() => handleDeleteChecklist(checklist.id)}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button 
@@ -582,7 +611,7 @@ export function VoiceCommandButton() {
       <ChecklistModal
         isOpen={isChecklistModalOpen}
         onClose={() => setIsChecklistModalOpen(false)}
-        onAdd={() => console.log('Adding checklist item')}
+        onAdd={handleAddChecklist}
       />
 
       {/* Reminder Modal */}
