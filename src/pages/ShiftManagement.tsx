@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
+import { TaskDetailModal } from '@/components/modals/TaskDetailModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,11 +16,29 @@ import {
   Wrench,
   Calendar,
   User,
-  MapPin
+  MapPin,
+  GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  useDroppable,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TaskItem {
   id: string;
@@ -71,112 +90,167 @@ const getTypeConfig = (type: string) => {
   }
 };
 
-const TaskCard = ({ task, onStatusChange }: { task: TaskItem; onStatusChange: (taskId: string, newStatus: string) => void }) => {
+const SortableTaskCard = ({ 
+  task, 
+  onStatusChange, 
+  onCardClick 
+}: { 
+  task: TaskItem; 
+  onStatusChange: (taskId: string, newStatus: string) => void;
+  onCardClick: (task: TaskItem) => void;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   const typeConfig = getTypeConfig(task.type);
   const TypeIcon = typeConfig.icon;
 
   return (
-    <Card className="mb-4 transition-all duration-200 hover:shadow-md cursor-grab">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className={cn("p-1.5 rounded-full", typeConfig.color)}>
-              <TypeIcon className="h-4 w-4" />
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "mb-4 transition-all duration-200",
+        isDragging ? "opacity-50" : "opacity-100"
+      )}
+    >
+      <Card className="transition-all duration-200 hover:shadow-md cursor-pointer group">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2 flex-1" onClick={() => onCardClick(task)}>
+              <div className={cn("p-1.5 rounded-full", typeConfig.color)}>
+                <TypeIcon className="h-4 w-4" />
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {typeConfig.label}
+              </Badge>
             </div>
-            <Badge variant="outline" className="text-xs">
-              {typeConfig.label}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {task.priority === 'urgent' && (
+                <Badge className="bg-urgence-red text-warm-cream">
+                  Urgent
+                </Badge>
+              )}
+              <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
           </div>
-          {task.priority === 'urgent' && (
-            <Badge className="bg-urgence-red text-warm-cream">
-              Urgent
-            </Badge>
-          )}
-        </div>
-        <CardTitle className="text-sm font-medium leading-5">
-          {task.title}
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="pt-0">
-        {task.description && (
-          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-            {task.description}
-          </p>
-        )}
+          <CardTitle 
+            className="text-sm font-medium leading-5 cursor-pointer"
+            onClick={() => onCardClick(task)}
+          >
+            {task.title}
+          </CardTitle>
+        </CardHeader>
         
-        <div className="space-y-2">
-          {task.guestName && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3 w-3" />
-              <span>{task.guestName}</span>
-            </div>
+        <CardContent className="pt-0">
+          {task.description && (
+            <p 
+              className="text-sm text-muted-foreground mb-3 line-clamp-2 cursor-pointer"
+              onClick={() => onCardClick(task)}
+            >
+              {task.description}
+            </p>
           )}
           
-          {task.roomNumber && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-              <span>Chambre {task.roomNumber}</span>
-            </div>
-          )}
-          
-          {task.location && !task.roomNumber && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-              <span>{task.location}</span>
-            </div>
-          )}
-          
-          {task.dueDate && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              <span>{new Date(task.dueDate).toLocaleDateString('fr-FR')}</span>
-            </div>
-          )}
-          
-          {task.recipient && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3 w-3" />
-              <span>→ {task.recipient}</span>
-            </div>
-          )}
-        </div>
+          <div className="space-y-2" onClick={() => onCardClick(task)}>
+            {task.guestName && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span>{task.guestName}</span>
+              </div>
+            )}
+            
+            {task.roomNumber && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                <span>Chambre {task.roomNumber}</span>
+              </div>
+            )}
+            
+            {task.location && !task.roomNumber && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                <span>{task.location}</span>
+              </div>
+            )}
+            
+            {task.dueDate && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>{new Date(task.dueDate).toLocaleDateString('fr-FR')}</span>
+              </div>
+            )}
+            
+            {task.recipient && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span>→ {task.recipient}</span>
+              </div>
+            )}
+          </div>
 
-        {/* Status change buttons */}
-        <div className="flex gap-2 mt-4">
-          {task.status === 'pending' && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => onStatusChange(task.id, 'in_progress')}
-              className="flex-1 text-xs"
-            >
-              Démarrer
-            </Button>
-          )}
-          {task.status === 'in_progress' && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => onStatusChange(task.id, 'completed')}
-              className="flex-1 text-xs"
-            >
-              Terminer
-            </Button>
-          )}
-          {task.status === 'completed' && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => onStatusChange(task.id, 'in_progress')}
-              className="flex-1 text-xs"
-            >
-              Rouvrir
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          {/* Status change buttons */}
+          <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+            {task.status === 'pending' && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(task.id, 'in_progress');
+                }}
+                className="flex-1 text-xs"
+              >
+                Démarrer
+              </Button>
+            )}
+            {task.status === 'in_progress' && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(task.id, 'completed');
+                }}
+                className="flex-1 text-xs"
+              >
+                Terminer
+              </Button>
+            )}
+            {task.status === 'completed' && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(task.id, 'in_progress');
+                }}
+                className="flex-1 text-xs"
+              >
+                Rouvrir
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
@@ -184,18 +258,25 @@ const KanbanColumn = ({
   title, 
   tasks, 
   status, 
-  onStatusChange 
+  onStatusChange,
+  onCardClick
 }: { 
   title: string; 
   tasks: TaskItem[]; 
   status: string;
   onStatusChange: (taskId: string, newStatus: string) => void;
+  onCardClick: (task: TaskItem) => void;
 }) => {
   const filteredTasks = tasks.filter(task => task.status === status);
+  const taskIds = filteredTasks.map(task => task.id);
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${status}`,
+  });
 
   return (
     <div className="flex-1">
-      <div className="bg-muted/50 rounded-lg p-4 h-full">
+      <div className="bg-muted/50 rounded-lg p-4 h-full min-h-[600px]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-lg">{title}</h3>
           <Badge variant="secondary" className="text-sm">
@@ -203,20 +284,32 @@ const KanbanColumn = ({
           </Badge>
         </div>
         
-        <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-          {filteredTasks.map(task => (
-            <TaskCard 
-              key={task.id} 
-              task={task} 
-              onStatusChange={onStatusChange}
-            />
-          ))}
-          
-          {filteredTasks.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">Aucune tâche</p>
-            </div>
+        <div
+          ref={setNodeRef}
+          className={cn(
+            "min-h-[500px] rounded-lg transition-colors duration-200",
+            isOver && "bg-muted/80"
           )}
+        >
+          <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
+              {filteredTasks.map(task => (
+                <SortableTaskCard 
+                  key={task.id} 
+                  task={task} 
+                  onStatusChange={onStatusChange}
+                  onCardClick={onCardClick}
+                />
+              ))}
+              
+              {filteredTasks.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">Aucune tâche</p>
+                  <p className="text-xs mt-1">Glissez une carte ici</p>
+                </div>
+              )}
+            </div>
+          </SortableContext>
         </div>
       </div>
     </div>
@@ -227,12 +320,67 @@ const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
   const { toast } = useToast();
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   // Load tasks from Supabase
   useEffect(() => {
     loadTasks();
   }, []);
+
+  const handleCardClick = (task: TaskItem) => {
+    setSelectedTask(task);
+    setIsTaskDetailOpen(true);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = tasks.find(t => t.id === active.id);
+    setDraggedTask(task || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setDraggedTask(null);
+    
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const overId = over.id as string;
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    let newStatus: string;
+
+    // Check if dropped on a column
+    if (overId.startsWith('column-')) {
+      newStatus = overId.replace('column-', '');
+    } else {
+      // If dropped on another task, get the status of that task's column
+      const overTask = tasks.find(t => t.id === overId);
+      if (overTask) {
+        newStatus = overTask.status;
+      } else {
+        return;
+      }
+    }
+
+    if (task.status !== newStatus) {
+      handleStatusChange(taskId, newStatus);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -454,31 +602,64 @@ const ShiftManagement = () => {
           </div>
 
           {/* Kanban Board */}
-          <div className="grid grid-cols-3 gap-6">
-            <KanbanColumn
-              title="À traiter"
-              tasks={tasks}
-              status="pending"
-              onStatusChange={handleStatusChange}
-            />
-            
-            <KanbanColumn
-              title="En cours"
-              tasks={tasks}
-              status="in_progress"
-              onStatusChange={handleStatusChange}
-            />
-            
-            <KanbanColumn
-              title="Résolu"
-              tasks={tasks}
-              status="completed"
-              onStatusChange={handleStatusChange}
-            />
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-3 gap-6">
+              <KanbanColumn
+                title="À traiter"
+                tasks={tasks}
+                status="pending"
+                onStatusChange={handleStatusChange}
+                onCardClick={handleCardClick}
+              />
+              
+              <KanbanColumn
+                title="En cours"
+                tasks={tasks}
+                status="in_progress"
+                onStatusChange={handleStatusChange}
+                onCardClick={handleCardClick}
+              />
+              
+              <KanbanColumn
+                title="Résolu"
+                tasks={tasks}
+                status="completed"
+                onStatusChange={handleStatusChange}
+                onCardClick={handleCardClick}
+              />
+            </div>
+
+            <DragOverlay>
+              {draggedTask ? (
+                <div className="rotate-3 scale-105">
+                  <SortableTaskCard
+                    task={draggedTask}
+                    onStatusChange={() => {}}
+                    onCardClick={() => {}}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
 
         </div>
       </main>
+      
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={isTaskDetailOpen}
+        onClose={() => {
+          setIsTaskDetailOpen(false);
+          setSelectedTask(null);
+        }}
+        onStatusChange={handleStatusChange}
+      />
       
       {/* Floating Voice Command Button */}
       <VoiceCommandButton />
