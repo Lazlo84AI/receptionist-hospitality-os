@@ -217,15 +217,18 @@ export function VoiceCommandButton() {
       )}
 
       {/* Creation Button System */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-[9999]">
         {/* Expanded Sub-Buttons */}
         {isExpanded && (
           <div className="absolute bottom-16 right-0 mb-4 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
             <Button
-              onClick={() => handleModeSelection('edit')}
+              onClick={() => {
+                console.log('Clic sur bouton Édition');
+                handleModeSelection('edit');
+              }}
               className={cn(
                 "h-12 px-4 bg-palace-navy text-warm-cream border border-champagne-gold/30 hover:bg-champagne-gold hover:text-palace-navy transition-all duration-300",
-                "shadow-lg"
+                "shadow-lg pointer-events-auto"
               )}
             >
               <Edit3 className="h-5 w-5 mr-2" />
@@ -234,10 +237,13 @@ export function VoiceCommandButton() {
               </span>
             </Button>
             <Button
-              onClick={() => handleModeSelection('voice')}
+              onClick={() => {
+                console.log('Clic sur bouton Vocal');
+                handleModeSelection('voice');
+              }}
               className={cn(
                 "h-12 px-4 bg-palace-navy text-warm-cream border border-champagne-gold/30 hover:bg-champagne-gold hover:text-palace-navy transition-all duration-300",
-                "shadow-lg"
+                "shadow-lg pointer-events-auto"
               )}
             >
               <Mic className="h-5 w-5 mr-2" />
@@ -250,14 +256,20 @@ export function VoiceCommandButton() {
 
         {/* Main Creation Button */}
         <Button
-          onClick={handleMainButtonClick}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('CLIC DÉTECTÉ sur le bouton principal!');
+            handleMainButtonClick();
+          }}
           className={cn(
-            "h-16 w-16 rounded-full transition-all duration-500",
+            "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
             isExpanded
               ? "bg-urgence-red hover:bg-urgence-red/90 rotate-45 border-2 border-urgence-red"
               : "bg-palace-navy hover:bg-palace-navy/90 border-2 border-champagne-gold/50 hover:border-champagne-gold",
             "shadow-lg"
           )}
+          style={{ pointerEvents: 'auto' }}
         >
           {isExpanded ? (
             <X className="h-6 w-6 text-warm-cream" />
@@ -268,7 +280,7 @@ export function VoiceCommandButton() {
 
         {/* Subtle Pulse Animation when idle */}
         {!isExpanded && (
-          <div className="absolute inset-0 rounded-full border-2 border-champagne-gold/20 animate-ping" />
+          <div className="absolute inset-0 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
         )}
       </div>
 
