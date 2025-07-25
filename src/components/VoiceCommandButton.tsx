@@ -23,6 +23,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChecklistModal } from '@/components/modals/ChecklistModal';
 import { ReminderModal } from '@/components/modals/ReminderModal';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 const categories = [
@@ -64,14 +66,20 @@ export function VoiceCommandButton() {
   
   // Form state
   const [formData, setFormData] = useState({
+    title: '',
     category: '',
     originType: '',
     priority: 'normal',
     service: '',
     assignedMember: '',
     location: '',
-    description: ''
+    description: '',
+    guestName: '', // For special requests
+    roomNumber: '', // For special requests
+    recipient: '', // For follow-ups
+    dueDate: null as Date | null,
   });
+  const { toast } = useToast();
 
   const handleMainButtonClick = () => {
     setIsExpanded(!isExpanded);
@@ -85,22 +93,114 @@ export function VoiceCommandButton() {
 
   const resetForm = () => {
     setFormData({
+      title: '',
       category: '',
       originType: '',
       priority: 'normal',
       service: '',
       assignedMember: '',
       location: '',
-      description: ''
+      description: '',
+      guestName: '',
+      roomNumber: '',
+      recipient: '',
+      dueDate: null,
     });
   };
 
-  const handleCreateCard = () => {
-    console.log('Creating card with data:', formData);
-    console.log('Creation mode:', creationMode);
-    // Here you would typically save to database
-    setShowCreateModal(false);
-    resetForm();
+  const handleCreateCard = async () => {
+    try {
+      let result;
+      
+      // Create object based on category
+      switch (formData.category) {
+        case 'incident':
+          result = await supabase
+            .from('incidents')
+            .insert({
+              title: formData.title || 'Nouvel incident',
+              description: formData.description,
+              incident_type: formData.originType,
+              priority: formData.priority,
+              status: 'open',
+              // assigned_to: would need user ID mapping
+              // created_by: would need current user ID
+              // location_id: would need location mapping
+            });
+          break;
+          
+        case 'client_request':
+          result = await supabase
+            .from('special_requests')
+            .insert({
+              guest_name: formData.guestName || 'Client',
+              room_number: formData.roomNumber || formData.location,
+              request_type: formData.originType,
+              request_details: formData.description,
+              preparation_status: 'to_prepare',
+              arrival_date: new Date().toISOString().split('T')[0],
+              // assigned_to: would need user ID mapping
+              // created_by: would need current user ID
+            });
+          break;
+          
+        case 'follow_up':
+          result = await supabase
+            .from('follow_ups')
+            .insert({
+              title: formData.title || 'Nouvelle relance',
+              recipient: formData.recipient || formData.assignedMember,
+              follow_up_type: formData.originType,
+              notes: formData.description,
+              status: 'pending',
+              due_date: formData.dueDate?.toISOString() || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              // assigned_to: would need user ID mapping
+              // created_by: would need current user ID
+            });
+          break;
+          
+        case 'internal_task':
+          result = await supabase
+            .from('tasks')
+            .insert({
+              title: formData.title || 'Nouvelle tâche',
+              description: formData.description,
+              task_type: formData.originType,
+              priority: formData.priority,
+              status: 'pending',
+              location: formData.location,
+              department: formData.service,
+              due_date: formData.dueDate?.toISOString(),
+              // assigned_to: would need user ID mapping
+              // created_by: would need current user ID
+            });
+          break;
+          
+        default:
+          throw new Error('Catégorie invalide');
+      }
+
+      if (result?.error) {
+        throw result.error;
+      }
+
+      toast({
+        title: "Succès",
+        description: "La carte a été créée avec succès !",
+        variant: "default",
+      });
+
+      setShowCreateModal(false);
+      resetForm();
+      
+    } catch (error) {
+      console.error('Error creating card:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la création de la carte.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -180,6 +280,16 @@ export function VoiceCommandButton() {
           </DialogHeader>
           
           <div className="space-y-6">
+            {/* Title Field */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Titre de la carte</label>
+              <Input 
+                placeholder="Titre descriptif de la carte"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+
             {/* Category Selection */}
             <div className="space-y-3">
               <label className="text-sm font-medium">Catégorie de la carte</label>
@@ -204,6 +314,40 @@ export function VoiceCommandButton() {
               </div>
             </div>
 
+            {/* Conditional Fields for Client Requests */}
+            {formData.category === 'client_request' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Nom du client</label>
+                  <Input 
+                    placeholder="Nom du client"
+                    value={formData.guestName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Numéro de chambre</label>
+                  <Input 
+                    placeholder="Ex: 101"
+                    value={formData.roomNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Conditional Fields for Follow-ups */}
+            {formData.category === 'follow_up' && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Destinataire de la relance</label>
+                <Input 
+                  placeholder="Nom du destinataire"
+                  value={formData.recipient}
+                  onChange={(e) => setFormData(prev => ({ ...prev, recipient: e.target.value }))}
+                />
+              </div>
+            )}
+
             {/* Origin Type */}
             <div className="space-y-3">
               <label className="text-sm font-medium">Type d'origine</label>
@@ -219,24 +363,26 @@ export function VoiceCommandButton() {
               </Select>
             </div>
 
-            {/* Priority Level */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Niveau de priorité</label>
-              <div className="flex gap-3">
-                {priorityLevels.map((priority) => (
-                  <Button
-                    key={priority.id}
-                    variant={formData.priority === priority.id ? "default" : "outline"}
-                    onClick={() => setFormData(prev => ({ ...prev, priority: priority.id }))}
-                    className={cn(
-                      formData.priority === priority.id ? priority.color : ""
-                    )}
-                  >
-                    {priority.label}
-                  </Button>
-                ))}
+            {/* Priority Level (only for incidents and tasks) */}
+            {(formData.category === 'incident' || formData.category === 'internal_task') && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Niveau de priorité</label>
+                <div className="flex gap-3">
+                  {priorityLevels.map((priority) => (
+                    <Button
+                      key={priority.id}
+                      variant={formData.priority === priority.id ? "default" : "outline"}
+                      onClick={() => setFormData(prev => ({ ...prev, priority: priority.id }))}
+                      className={cn(
+                        formData.priority === priority.id ? priority.color : ""
+                      )}
+                    >
+                      {priority.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Assignment */}
             <div className="grid grid-cols-2 gap-4">
@@ -263,48 +409,70 @@ export function VoiceCommandButton() {
               </div>
             </div>
 
-            {/* Location */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Localisation</label>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Rooms */}
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Chambres</h4>
-                  <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
-                    {rooms.map((room) => (
-                      <Button
-                        key={room}
-                        variant={formData.location === `Chambre ${room}` ? "default" : "outline"}
-                        className="h-8 w-12 text-xs"
-                        onClick={() => setFormData(prev => ({ ...prev, location: `Chambre ${room}` }))}
-                      >
-                        {room}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                {/* Common Areas */}
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Espaces communs</h4>
+            {/* Location (not for client requests as they have room number) */}
+            {formData.category !== 'client_request' && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Localisation</label>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Rooms */}
                   <div className="space-y-2">
-                    {commonAreas.map((area) => (
-                      <Button
-                        key={area}
-                        variant={formData.location === area ? "default" : "outline"}
-                        className="w-full text-xs"
-                        onClick={() => setFormData(prev => ({ ...prev, location: area }))}
-                      >
-                        {area}
-                      </Button>
-                    ))}
+                    <h4 className="text-sm font-medium">Chambres</h4>
+                    <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                      {rooms.map((room) => (
+                        <Button
+                          key={room}
+                          variant={formData.location === `Chambre ${room}` ? "default" : "outline"}
+                          className="h-8 w-12 text-xs"
+                          onClick={() => setFormData(prev => ({ ...prev, location: `Chambre ${room}` }))}
+                        >
+                          {room}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Common Areas */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Espaces communs</h4>
+                    <div className="space-y-2">
+                      {commonAreas.map((area) => (
+                        <Button
+                          key={area}
+                          variant={formData.location === area ? "default" : "outline"}
+                          className="w-full text-xs"
+                          onClick={() => setFormData(prev => ({ ...prev, location: area }))}
+                        >
+                          {area}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Due Date for Follow-ups and Tasks */}
+            {(formData.category === 'follow_up' || formData.category === 'internal_task') && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Date d'échéance</label>
+                <Input 
+                  type="datetime-local"
+                  value={formData.dueDate ? formData.dueDate.toISOString().slice(0, 16) : ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    dueDate: e.target.value ? new Date(e.target.value) : null 
+                  }))}
+                />
+              </div>
+            )}
 
             {/* Description */}
             <div className="space-y-3">
-              <label className="text-sm font-medium">Description personnalisée</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Description personnalisée</label>
+                <span className="text-xs text-muted-foreground">
+                  💡 Décrivez précisément pour une meilleure compréhension
+                </span>
+              </div>
               <Textarea 
                 placeholder="Décrivez précisément la situation ou la demande..."
                 value={formData.description}
@@ -343,7 +511,12 @@ export function VoiceCommandButton() {
               </Button>
               <Button 
                 onClick={handleCreateCard}
-                disabled={!formData.category || !formData.description}
+                disabled={
+                  !formData.category || 
+                  !formData.description || 
+                  (formData.category === 'client_request' && (!formData.guestName || !formData.roomNumber)) ||
+                  (formData.category === 'follow_up' && !formData.recipient)
+                }
                 className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90"
               >
                 Créer la carte
