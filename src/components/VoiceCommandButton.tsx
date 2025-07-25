@@ -250,7 +250,7 @@ export function VoiceCommandButton() {
 
       {/* Creation Button System */}
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
-        {/* Voice Mode Button - Visible when modal is open */}
+        {/* Voice Mode Button - Visible when any modal is open */}
         {showCreateModal && (
           <div className="relative">
             <Button
@@ -267,7 +267,7 @@ export function VoiceCommandButton() {
               <Mic className="h-6 w-6 text-palace-navy" />
             </Button>
             
-            {/* Pulse Animation for Voice Button when voice mode is active */}
+            {/* Pulse Animation for Voice Button - ONLY when voice mode is active */}
             {creationMode === 'voice' && (
               <div className="absolute -bottom-20 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
             )}
@@ -280,6 +280,7 @@ export function VoiceCommandButton() {
             e.preventDefault();
             e.stopPropagation();
             console.log('CLIC DÉTECTÉ sur le bouton principal!');
+            // Ne fonctionne que si on n'est pas en mode vocal
             if (creationMode !== 'voice') {
               handleMainButtonClick();
             }
@@ -288,15 +289,16 @@ export function VoiceCommandButton() {
             "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
             "bg-palace-navy hover:bg-palace-navy/90 border-2 border-champagne-gold/50 hover:border-champagne-gold",
             "shadow-lg",
-            // Disabled style when voice mode is active
-            creationMode === 'voice' ? "opacity-75 cursor-not-allowed" : ""
+            // Styles différents selon l'état
+            creationMode === 'voice' ? "opacity-75" : ""
           )}
           style={{ pointerEvents: 'auto' }}
         >
           <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
 
-        {/* Pulse Animation for Main Button - only when no modal or edit mode */}
+        {/* Pulse Animation for Main Button */}
+        {/* État 1: Pas de modal ouverte OU État 2: Modal édition ouverte */}
         {(!showCreateModal || (showCreateModal && creationMode === 'edit')) && (
           <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
         )}
