@@ -334,9 +334,9 @@ const ShiftManagement = () => {
     })
   );
 
-  // Load tasks from Supabase
+  // Initialize tasks with dashboard data
   useEffect(() => {
-    loadTasks();
+    initializeTasks();
   }, []);
 
   const handleCardClick = (task: TaskItem) => {
@@ -382,85 +382,155 @@ const ShiftManagement = () => {
     }
   };
 
-  const loadTasks = async () => {
-    try {
-      // Load incidents
-      const { data: incidents } = await supabase
-        .from('incidents')
-        .select('*')
-        .eq('status', 'open');
+  const initializeTasks = () => {
+    // Incidents from dashboard
+    const incidents = [
+      {
+        id: '1',
+        title: 'Problème climatisation Suite Présidentielle',
+        type: 'incident' as const,
+        priority: 'urgent' as const,
+        status: 'pending' as const,
+        description: 'Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir.',
+        location: 'Suite 301',
+        assignedTo: 'Jean Dupont'
+      },
+      {
+        id: '2',
+        title: 'Réclamation client - Service petit-déjeuner',
+        type: 'incident' as const,
+        priority: 'normal' as const,
+        status: 'in_progress' as const,
+        description: 'Client mécontent de la qualité du service au petit-déjeuner.',
+        location: 'Chambre 205',
+        assignedTo: 'Sophie Martin'
+      },
+      {
+        id: '3',
+        title: 'Absence imprevue équipe ménage',
+        type: 'incident' as const,
+        priority: 'urgent' as const,
+        status: 'in_progress' as const,
+        description: 'Trois membres de l\'équipe ménage sont absents aujourd\'hui.',
+        location: 'Étages 2-4',
+        assignedTo: 'Marie Dubois'
+      },
+      {
+        id: '4',
+        title: 'Fuite dans la salle de bain',
+        type: 'incident' as const,
+        priority: 'normal' as const,
+        status: 'pending' as const,
+        description: 'Fuite détectée sous le lavabo de la chambre 107.',
+        location: 'Chambre 107',
+        assignedTo: 'Pierre Leroy'
+      }
+    ];
 
-      // Load special requests  
-      const { data: requests } = await supabase
-        .from('special_requests')
-        .select('*')
-        .neq('preparation_status', 'completed');
+    // Client requests from dashboard
+    const clientRequests = [
+      {
+        id: '5',
+        title: 'Champagne Dom Pérignon et roses rouges',
+        type: 'client_request' as const,
+        priority: 'urgent' as const,
+        status: 'pending' as const,
+        description: 'Charles et Emily Anderson célèbrent leurs 25 ans de mariage. Charles est amateur de grands crus et Emily adore les roses.',
+        guestName: 'M. et Mme Anderson',
+        roomNumber: 'Suite 201',
+        assignedTo: 'Claire Petit'
+      },
+      {
+        id: '6',
+        title: 'Lit bébé et produits hypoallergéniques',
+        type: 'client_request' as const,
+        priority: 'normal' as const,
+        status: 'in_progress' as const,
+        description: 'Pierre et Léa Dubois voyagent avec leur bébé de 8 mois, Lucas, qui fait ses premières vacances.',
+        guestName: 'Famille Dubois',
+        roomNumber: 'Chambre 305',
+        assignedTo: 'Marie Rousseau'
+      },
+      {
+        id: '7',
+        title: 'Bureau adapté télétravail + silence',
+        type: 'client_request' as const,
+        priority: 'normal' as const,
+        status: 'completed' as const,
+        description: 'Dr. James Williams, chirurgien cardiaque de Londres, doit finaliser une publication médicale importante.',
+        guestName: 'Dr. Williams',
+        roomNumber: 'Suite 102',
+        assignedTo: 'Sophie Bernard'
+      },
+      {
+        id: '8',
+        title: 'Repas végétalien + yoga mat',
+        type: 'client_request' as const,
+        priority: 'urgent' as const,
+        status: 'pending' as const,
+        description: 'Isabella Martinez, professeure de yoga et influenceuse wellness, revient d\'un voyage spirituel de 3 mois à Bali.',
+        guestName: 'Mlle Martinez',
+        roomNumber: 'Chambre 208',
+        assignedTo: 'Claire Petit'
+      }
+    ];
 
-      // Load follow ups
-      const { data: followUps } = await supabase
-        .from('follow_ups')
-        .select('*')
-        .eq('status', 'pending');
+    // Follow ups from dashboard
+    const followUps = [
+      {
+        id: '9',
+        title: 'Confirmation arrivée VIP',
+        type: 'follow_up' as const,
+        priority: 'urgent' as const,
+        status: 'pending' as const,
+        description: 'Confirmation arrivée VIP à effectuer.',
+        location: 'Réception',
+        assignedTo: 'Leopold Bechu'
+      },
+      {
+        id: '10',
+        title: 'Message non lu WhatsApp',
+        type: 'follow_up' as const,
+        priority: 'normal' as const,
+        status: 'in_progress' as const,
+        description: 'Message WhatsApp en attente de réponse.',
+        location: 'Réception',
+        assignedTo: 'Marie Dubois'
+      },
+      {
+        id: '11',
+        title: 'Équipement manquant en chambre',
+        type: 'follow_up' as const,
+        priority: 'urgent' as const,
+        status: 'pending' as const,
+        description: 'Équipement manquant en chambre 450.',
+        location: 'Chambre 450',
+        assignedTo: 'Jean Dupont'
+      },
+      {
+        id: '12',
+        title: 'Confirmation équipements massage',
+        type: 'follow_up' as const,
+        priority: 'normal' as const,
+        status: 'in_progress' as const,
+        description: 'Confirmation des équipements de massage au spa.',
+        location: 'Spa',
+        assignedTo: 'Marie Dubois'
+      },
+      {
+        id: '13',
+        title: 'Livraison arrangements floraux',
+        type: 'follow_up' as const,
+        priority: 'urgent' as const,
+        status: 'pending' as const,
+        description: 'Livraison d\'arrangements floraux pour le lobby.',
+        location: 'Lobby',
+        assignedTo: 'Jean Dupont'
+      }
+    ];
 
-      // Load tasks
-      const { data: internalTasks } = await supabase
-        .from('tasks')
-        .select('*')
-        .neq('status', 'completed');
-
-      const allTasks: TaskItem[] = [
-        ...(incidents || []).map(incident => ({
-          id: incident.id,
-          title: incident.title,
-          type: 'incident' as const,
-          priority: (incident.priority as 'normal' | 'urgent') || 'normal',
-          status: (incident.status === 'open' ? 'pending' : 
-                  incident.status === 'in_progress' ? 'in_progress' : 'completed') as 'pending' | 'in_progress' | 'completed',
-          description: incident.description,
-        })),
-        ...(requests || []).map(request => ({
-          id: request.id,
-          title: `Demande - ${request.guest_name}`,
-          type: 'client_request' as const,
-          priority: 'normal' as const,
-          status: (request.preparation_status === 'to_prepare' ? 'pending' : 
-                  request.preparation_status === 'in_progress' ? 'in_progress' : 'completed') as 'pending' | 'in_progress' | 'completed',
-          description: request.request_details,
-          guestName: request.guest_name,
-          roomNumber: request.room_number,
-        })),
-        ...(followUps || []).map(followUp => ({
-          id: followUp.id,
-          title: followUp.title,
-          type: 'follow_up' as const,
-          priority: 'normal' as const,
-          status: 'pending' as const,
-          description: followUp.notes,
-          recipient: followUp.recipient,
-          dueDate: followUp.due_date,
-        })),
-        ...(internalTasks || []).map(task => ({
-          id: task.id,
-          title: task.title,
-          type: 'internal_task' as const,
-          priority: (task.priority as 'normal' | 'urgent') || 'normal',
-          status: (task.status === 'pending' ? 'pending' : 
-                  task.status === 'in_progress' ? 'in_progress' : 'completed') as 'pending' | 'in_progress' | 'completed',
-          description: task.description,
-          location: task.location,
-          dueDate: task.due_date,
-        }))
-      ];
-
-      setTasks(allTasks);
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les tâches",
-        variant: "destructive",
-      });
-    }
+    const allTasks: TaskItem[] = [...incidents, ...clientRequests, ...followUps];
+    setTasks(allTasks);
   };
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
