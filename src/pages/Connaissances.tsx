@@ -47,7 +47,7 @@ const Connaissances = () => {
   const modules: Module[] = [
     {
       id: '1',
-      title: 'Adapting behavior to client situations',
+      title: 'Adapting Your Behavior to Guest Situations',
       progress: 75,
       totalActivities: 4,
       completedActivities: 3,
@@ -60,45 +60,45 @@ const Connaissances = () => {
     },
     {
       id: '2',
-      title: 'Règles d\'hygiène chambre',
+      title: 'Room Hygiene Procedures',
       progress: 60,
       totalActivities: 5,
       completedActivities: 3,
       activities: [
-        { id: '1', title: 'Préparation avant nettoyage', completed: true },
-        { id: '2', title: 'Protocoles de désinfection', completed: true },
-        { id: '3', title: 'Vérifications post-nettoyage', completed: true },
-        { id: '4', title: 'Gestion des produits chimiques', completed: false },
-        { id: '5', title: 'Standards qualité', completed: false }
+        { id: '1', title: 'Pre-cleaning preparation', completed: true },
+        { id: '2', title: 'Disinfection protocols', completed: true },
+        { id: '3', title: 'Post-cleaning verification', completed: true },
+        { id: '4', title: 'Chemical product management', completed: false },
+        { id: '5', title: 'Quality standards', completed: false }
       ]
     },
     {
       id: '3',
-      title: 'Service en salle',
+      title: 'In-room Dining Service',
       progress: 40,
       totalActivities: 5,
       completedActivities: 2,
       activities: [
-        { id: '1', title: 'Accueil et placement clients', completed: true },
-        { id: '2', title: 'Prise de commande room service', completed: true },
-        { id: '3', title: 'Service à table', completed: false },
-        { id: '4', title: 'Gestion des réclamations', completed: false },
-        { id: '5', title: 'Encaissement et facturation', completed: false }
+        { id: '1', title: 'Guest reception and seating', completed: true },
+        { id: '2', title: 'Room service order taking', completed: true },
+        { id: '3', title: 'Table service', completed: false },
+        { id: '4', title: 'Complaint management', completed: false },
+        { id: '5', title: 'Payment and billing', completed: false }
       ]
     },
     {
       id: '4',
-      title: 'Règles de sécurité de nuit',
+      title: 'Night Shift Safety Rules',
       progress: 20,
       totalActivities: 6,
       completedActivities: 1,
       activities: [
-        { id: '1', title: 'Rondes de sécurité', completed: true },
-        { id: '2', title: 'Gestion des accès', completed: false },
-        { id: '3', title: 'Procédures d\'urgence', completed: false },
-        { id: '4', title: 'Surveillance vidéo', completed: false },
-        { id: '5', title: 'Communication avec les autorités', completed: false },
-        { id: '6', title: 'Rapport d\'incidents', completed: false }
+        { id: '1', title: 'Security rounds', completed: true },
+        { id: '2', title: 'Access management', completed: false },
+        { id: '3', title: 'Emergency procedures', completed: false },
+        { id: '4', title: 'Video surveillance', completed: false },
+        { id: '5', title: 'Communication with authorities', completed: false },
+        { id: '6', title: 'Incident reporting', completed: false }
       ]
     }
   ];
@@ -106,49 +106,49 @@ const Connaissances = () => {
   const questions: Question[] = [
     {
       id: '1',
-      title: 'Activité 1 sur 4',
-      question: 'Un client se plaint bruyamment à la réception car sa chambre n\'a pas été faite. Quelle est la meilleure réponse à lui apporter ?',
-      instruction: 'Sélectionnez la meilleure réponse.',
+      title: 'Activity 1 of 4',
+      question: 'A guest complains loudly at reception because their room has not been serviced. What is the best response to give them?',
+      instruction: 'Select the best answer.',
       type: 'qcu',
       options: [
-        'Je vous invite à repasser plus tard, nous sommes débordés.',
-        'Je comprends votre frustration, je m\'en occupe immédiatement.',
-        'C\'est sûrement une erreur de votre part.',
-        'C\'est normal, nous avons eu un manque de personnel.'
+        'I invite you to come back later, we are overwhelmed.',
+        'I understand your frustration, I will take care of it immediately.',
+        'It\'s surely an error on your part.',
+        'It\'s normal, we had a staff shortage.'
       ],
       correctAnswers: [1],
-      explanation: 'La réponse correcte montre de l\'empathie et propose une solution immédiate.'
+      explanation: 'The correct answer shows empathy and offers an immediate solution.'
     },
     {
       id: '2',
-      title: 'Activité 2 sur 4',
-      question: 'Quelles sont les bonnes pratiques avant de faire une chambre client ?',
-      instruction: 'Sélectionnez toutes les réponses correctes.',
+      title: 'Activity 2 of 4',
+      question: 'What are the best practices before cleaning a guest room?',
+      instruction: 'Select all correct answers.',
       type: 'qcm',
       options: [
-        'Se désinfecter les mains',
-        'Vérifier si le client est présent',
-        'Ouvrir la fenêtre et aérer',
-        'Commencer par vider la poubelle',
-        'Entrer sans frapper'
+        'Disinfect hands',
+        'Check if the guest is present',
+        'Open the window and air out',
+        'Start by emptying the trash',
+        'Enter without knocking'
       ],
       correctAnswers: [0, 1, 2],
-      explanation: 'Les bonnes pratiques incluent l\'hygiène, le respect de la vie privée et l\'aération.'
+      explanation: 'Best practices include hygiene, respect for privacy, and airing out the room.'
     },
     {
       id: '3',
-      title: 'Activité 3 sur 4',
-      question: 'Lorsqu\'un client demande un plat non disponible sur la carte du room service, que faites-vous ?',
-      instruction: 'Sélectionnez la meilleure réponse.',
+      title: 'Activity 3 of 4',
+      question: 'When a guest requests a dish not available on the room service menu, what do you do?',
+      instruction: 'Select the best answer.',
       type: 'qcu',
       options: [
-        'Je propose une alternative équivalente immédiatement.',
-        'Je dis que ce n\'est pas possible et je raccroche.',
-        'Je demande au client d\'appeler plus tard.',
-        'Je transfère l\'appel sans explication.'
+        'I immediately suggest an equivalent alternative.',
+        'I say it\'s not possible and hang up.',
+        'I ask the guest to call back later.',
+        'I transfer the call without explanation.'
       ],
       correctAnswers: [0],
-      explanation: 'Toujours proposer une alternative pour satisfaire le client.'
+      explanation: 'Always suggest an alternative to satisfy the guest.'
     }
   ];
 
@@ -204,7 +204,7 @@ const Connaissances = () => {
             Manage Your Training
           </h1>
           <p className="text-gray-600 text-lg">
-            Become better every day
+            Improve every day on the job
           </p>
         </div>
         
@@ -229,7 +229,7 @@ const Connaissances = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h4 className="font-medium text-sm mb-3">Progress by theme:</h4>
+                    <h4 className="font-medium text-sm mb-3">Progress by Module:</h4>
                     {modules.map((module) => (
                       <div key={module.id} className="space-y-2 mb-4">
                         <div className="flex justify-between items-center">
@@ -242,7 +242,7 @@ const Connaissances = () => {
                   </div>
                   <Button className="w-full" size="sm">
                     <Award className="h-4 w-4 mr-2" />
-                    View my progress
+                    View My Progress
                   </Button>
                 </CardContent>
               </Card>
@@ -258,13 +258,13 @@ const Connaissances = () => {
                        <h1 className="text-2xl font-playfair font-bold text-palace-navy mb-2">
                          👋 Welcome to the hotel team!
                        </h1>
-                       <p className="text-muted-foreground mb-4">
-                         14/15 modules completed • 1000 points to earn
-                       </p>
+                        <p className="text-muted-foreground mb-4">
+                          14/15 modules completed · 1000 points to unlock
+                        </p>
                       <div className="flex items-center gap-4">
                         <Badge variant="secondary" className="bg-success-green/10 text-success-green">
                           <Star className="h-3 w-3 mr-1" />
-                          Niveau Expert
+                          Expert Level
                         </Badge>
                         <span className="text-sm text-muted-foreground">950/1000 points</span>
                       </div>
@@ -276,7 +276,7 @@ const Connaissances = () => {
 
               {/* Capsules récentes */}
               <div>
-                <h2 className="text-xl font-semibold mb-4">Formations en cours</h2>
+                <h2 className="text-xl font-semibold mb-4">Modules In Progress</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {modules.slice(0, 4).map((module) => (
                     <Card 
@@ -298,7 +298,7 @@ const Connaissances = () => {
                                 variant={module.progress === 100 ? "default" : "secondary"}
                                 className="text-xs"
                               >
-                                {module.progress === 100 ? "Terminé" : module.progress > 0 ? "En cours" : "Nouveau"}
+                                {module.progress === 100 ? "Completed" : module.progress > 0 ? "In Progress" : "New"}
                               </Badge>
                             </div>
                             <Progress value={module.progress} className="h-1" />
@@ -312,7 +312,7 @@ const Connaissances = () => {
 
               {/* Sessions à venir */}
               <div>
-                <h2 className="text-xl font-semibold mb-4">Sessions à venir</h2>
+                <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
@@ -320,17 +320,17 @@ const Connaissances = () => {
                         <Play className="h-6 w-6 text-urgence-red" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-medium mb-1">Atelier : Réagir face à un client mécontent</h3>
+                        <h3 className="font-medium mb-1">Workshop: Handling an Angry Guest</h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          <span>Dans 6 heures</span>
+                          <span>Starts in 6 hours</span>
                           <Badge variant="outline" className="text-xs">
-                            Formation en groupe
+                            Group Training
                           </Badge>
                         </div>
                       </div>
                       <Button size="sm" variant="outline">
-                        S'inscrire
+                        Sign up
                       </Button>
                     </div>
                   </CardContent>
@@ -339,9 +339,9 @@ const Connaissances = () => {
 
               {/* Mes capsules */}
               <div>
-                <h2 className="text-xl font-semibold mb-4">Mes capsules par thème</h2>
+                <h2 className="text-xl font-semibold mb-4">My Modules by Category</h2>
                 <div className="grid gap-4">
-                  {['Accueil client', 'Service d\'étage', 'Normes de sécurité'].map((theme, index) => (
+                  {['Guest Reception', 'Housekeeping Service', 'Safety Standards'].map((theme, index) => (
                     <Card key={theme}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -351,7 +351,7 @@ const Connaissances = () => {
                             </div>
                             <div>
                               <h3 className="font-medium">{theme}</h3>
-                              <p className="text-sm text-muted-foreground">{3 + index} capsules disponibles</p>
+                              <p className="text-sm text-muted-foreground">{3 + index} modules available</p>
                             </div>
                           </div>
                           <Button size="sm" variant="ghost">
@@ -374,13 +374,13 @@ const Connaissances = () => {
                 <CardHeader>
                   <CardTitle className="text-lg">{selectedModule.title}</CardTitle>
                   <div className="text-sm text-muted-foreground">
-                    Notion complétée {selectedModule.completedActivities} sur {selectedModule.totalActivities}
+                    Completed {selectedModule.completedActivities} of {selectedModule.totalActivities} activities
                   </div>
                   <Progress value={selectedModule.progress} className="mt-2" />
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <h4 className="font-medium text-sm mb-2">Étapes/activités :</h4>
+                    <h4 className="font-medium text-sm mb-2">Steps/Activities:</h4>
                     {selectedModule.activities.map((activity, index) => (
                       <div key={activity.id} className="flex items-center gap-2">
                         {activity.completed ? (
@@ -407,7 +407,7 @@ const Connaissances = () => {
                     className="w-full mt-4"
                     onClick={() => setSelectedModule(null)}
                   >
-                    Voir les activités
+                    View Activities
                   </Button>
                 </CardContent>
               </Card>
@@ -416,7 +416,7 @@ const Connaissances = () => {
               <div className="bg-muted rounded-lg p-6 text-center">
                 <div className="text-4xl mb-2">🏨</div>
                 <p className="text-sm text-muted-foreground">
-                  Illustration du module
+                  Module illustration
                 </p>
               </div>
             </div>
@@ -432,11 +432,11 @@ const Connaissances = () => {
                       onClick={() => setSelectedModule(null)}
                       className="text-muted-foreground"
                     >
-                      ← Retour
+                      ← Back
                     </Button>
                   </div>
                   <Badge variant="outline" className="w-fit">
-                    {currentQuestion.type === 'qcu' ? 'Question à Choix Unique' : 'Question à Choix Multiple'}
+                    {currentQuestion.type === 'qcu' ? 'Single Choice Question' : 'Multiple Choice Question'}
                   </Badge>
                 </CardHeader>
                 
@@ -499,7 +499,7 @@ const Connaissances = () => {
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4" />
                         <span className="font-medium">
-                          {isCorrect ? "Bonne réponse !" : "Réponse incorrecte"}
+                          {isCorrect ? "Correct answer!" : "Incorrect answer"}
                         </span>
                       </div>
                       <p className="text-sm">{currentQuestion.explanation}</p>
@@ -513,7 +513,7 @@ const Connaissances = () => {
                         disabled={selectedAnswers.length === 0}
                         className="px-8"
                       >
-                        Valider
+                        Validate
                       </Button>
                     ) : (
                       <Button 
@@ -521,7 +521,7 @@ const Connaissances = () => {
                         className="px-8"
                         disabled={currentActivity >= questions.length - 1}
                       >
-                        Continuer
+                        Continue
                       </Button>
                     )}
                   </div>
