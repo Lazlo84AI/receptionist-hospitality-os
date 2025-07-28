@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { Header } from '@/components/Header';
 
 const MesShifts = () => {
   const [expandedShift, setExpandedShift] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const shiftsData = [
     {
@@ -84,13 +86,15 @@ const MesShifts = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-champagne-gold/20 bg-palace-navy/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-playfair font-semibold text-warm-cream">
+      <Header onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+      
+      {/* Title Section with white background */}
+      <div className="bg-white border-b border-champagne-gold/20">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <h1 className="text-2xl font-playfair font-semibold text-palace-navy">
             Mes Shifts
           </h1>
-          <p className="text-soft-pewter text-sm mt-1">
+          <p className="text-palace-navy/70 text-sm mt-1">
             Historique de vos trois derniers shifts
           </p>
         </div>
@@ -100,13 +104,13 @@ const MesShifts = () => {
       <div className="max-w-7xl mx-auto p-6">
         <div className="space-y-6">
           {shiftsData.map((shift) => (
-            <Card key={shift.id} className="border border-champagne-gold/20">
+            <Card key={shift.id} className="bg-palace-navy/95 border border-champagne-gold/20">
               <Collapsible 
                 open={expandedShift === shift.id}
                 onOpenChange={() => setExpandedShift(expandedShift === shift.id ? null : shift.id)}
               >
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-palace-navy/5 transition-colors">
+                  <CardHeader className="cursor-pointer hover:bg-palace-navy/80 transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-warm-cream flex items-center gap-3">
@@ -117,7 +121,7 @@ const MesShifts = () => {
                           {shift.horaires}
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="text-champagne-gold hover:text-warm-cream">
                         {expandedShift === shift.id ? (
                           <ChevronDown className="h-4 w-4" />
                         ) : (
@@ -129,14 +133,14 @@ const MesShifts = () => {
                 </CollapsibleTrigger>
 
                 <CollapsibleContent>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-6 bg-palace-navy">
                     {/* Note vocale */}
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-warm-cream flex items-center gap-2">
                         <Mic className="h-4 w-4 text-champagne-gold" />
                         Note vocale
                       </h3>
-                      <div className="bg-palace-navy/10 border border-champagne-gold/20 rounded-lg p-4">
+                      <div className="bg-palace-navy/50 border border-champagne-gold/20 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline" className="border-champagne-gold/30 text-champagne-gold">
                             {shift.noteVocale.duree}
@@ -154,7 +158,7 @@ const MesShifts = () => {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {shift.cartes.map((carte, index) => (
-                          <div key={index} className="bg-palace-navy/10 border border-champagne-gold/20 rounded-lg p-4">
+                          <div key={index} className="bg-palace-navy/50 border border-champagne-gold/20 rounded-lg p-4">
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <Badge variant="outline" className="border-champagne-gold/30 text-champagne-gold text-xs">
@@ -184,7 +188,7 @@ const MesShifts = () => {
                       </h3>
                       <div className="space-y-3">
                         {shift.questionnaires.map((questionnaire, index) => (
-                          <div key={index} className="bg-palace-navy/10 border border-champagne-gold/20 rounded-lg p-4">
+                          <div key={index} className="bg-palace-navy/50 border border-champagne-gold/20 rounded-lg p-4">
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="font-medium text-warm-cream">{questionnaire.nom}</h4>
