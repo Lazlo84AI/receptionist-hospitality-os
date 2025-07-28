@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { TaskDetailModal } from '@/components/modals/TaskDetailModal';
 import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
+import ShiftStartModal from '@/components/modals/ShiftStartModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -207,48 +208,6 @@ const SortableTaskCard = ({
             )}
           </div>
 
-          {/* Status change buttons */}
-          <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-            {task.status === 'pending' && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(task.id, 'in_progress');
-                }}
-                className="flex-1 text-xs"
-              >
-                Démarrer
-              </Button>
-            )}
-            {task.status === 'in_progress' && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(task.id, 'completed');
-                }}
-                className="flex-1 text-xs"
-              >
-                Terminer
-              </Button>
-            )}
-            {task.status === 'completed' && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(task.id, 'in_progress');
-                }}
-                className="flex-1 text-xs"
-              >
-                Rouvrir
-              </Button>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -324,6 +283,7 @@ const ShiftManagement = () => {
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
+  const [isShiftStartOpen, setIsShiftStartOpen] = useState(false);
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
   const { toast } = useToast();
 
@@ -594,12 +554,7 @@ const ShiftManagement = () => {
   const handleShiftAction = (action: 'start' | 'improve' | 'close') => {
     switch (action) {
       case 'start':
-        setShiftStatus('active');
-        toast({
-          title: "Shift démarré",
-          description: "Votre shift a été démarré avec succès",
-          variant: "default",
-        });
+        setIsShiftStartOpen(true);
         break;
       case 'improve':
         toast({
@@ -612,6 +567,15 @@ const ShiftManagement = () => {
         setIsShiftCloseOpen(true);
         break;
     }
+  };
+
+  const handleShiftStarted = () => {
+    setShiftStatus('active');
+    toast({
+      title: "Shift démarré",
+      description: "Votre shift a été démarré avec succès",
+      variant: "default",
+    });
   };
 
   return (
@@ -728,6 +692,14 @@ const ShiftManagement = () => {
         onStatusChange={handleStatusChange}
       />
       
+      {/* Shift Start Modal */}
+      <ShiftStartModal
+        isOpen={isShiftStartOpen}
+        onClose={() => setIsShiftStartOpen(false)}
+        tasks={tasks}
+        onShiftStarted={handleShiftStarted}
+      />
+      
       {/* Shift Close Modal */}
       <ShiftCloseModal
         isOpen={isShiftCloseOpen}
@@ -736,8 +708,8 @@ const ShiftManagement = () => {
         onCardClick={handleCardClick}
       />
       
-      {/* Floating Voice Command Button - masqué si modal de fin de shift ouverte */}
-      {!isShiftCloseOpen && <VoiceCommandButton />}
+      {/* Floating Voice Command Button - masqué si modal ouverte */}
+      {!isShiftCloseOpen && !isShiftStartOpen && <VoiceCommandButton />}
     </div>
   );
 };
