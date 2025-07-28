@@ -114,15 +114,15 @@ export function FollowUpsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Relances et tâches à faire
+              Follow-ups and Tasks
             </h2>
             <p className="text-sm text-soft-pewter">
-              Suivi des échéances critiques
+              Critical deadline tracking
             </p>
           </div>
         </div>
         <span className="text-sm text-soft-pewter font-medium">
-          {overdueCount} en retard
+          {overdueCount} overdue
         </span>
       </div>
 
@@ -192,7 +192,7 @@ export function FollowUpsCard() {
             {/* Dernière ligne: Assignation à gauche, horloge à droite */}
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-soft-pewter">Assigné à : </span>
+                <span className="text-sm text-soft-pewter">Assigned to: </span>
                 <span className="text-sm font-medium text-palace-navy">
                   {item.assignedTo}
                 </span>
@@ -216,19 +216,19 @@ export function FollowUpsCard() {
 
       <div className="mt-6 pt-4 border-t border-border/20">
         <div className="flex flex-col items-center text-sm space-y-3">
-          <span className="text-soft-pewter">Statuts aujourd'hui:</span>
+          <span className="text-soft-pewter">Today's Status:</span>
           <div className="flex space-x-4">
             <div className="flex items-center space-x-1">
               <div className="h-2 w-2 rounded-full bg-urgence-red" />
-              <span className="text-xs">{overdueCount} en retard</span>
+              <span className="text-xs">{overdueCount} overdue</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-xs">{followUps.filter(item => item.statut === 'À traiter').length} à traiter</span>
+              <span className="text-xs">{followUps.filter(item => item.statut === 'À traiter').length} to process</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="h-2 w-2 rounded-full bg-palace-navy" />
-              <span className="text-xs">{followUps.filter(item => item.statut === 'En cours').length} en cours</span>
+              <span className="text-xs">{followUps.filter(item => item.statut === 'En cours').length} in progress</span>
             </div>
           </div>
         </div>

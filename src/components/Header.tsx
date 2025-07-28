@@ -86,7 +86,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
-              <span>Mes statistiques</span>
+              <span>My Statistics</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -94,7 +94,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
               onClick={() => navigate('/mes-shifts')}
             >
               <Calendar className="h-4 w-4" />
-              <span>Mes shifts</span>
+              <span>My Shifts</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

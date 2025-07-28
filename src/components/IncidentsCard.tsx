@@ -190,10 +190,10 @@ export function IncidentsCard() {
             </div>
             <div>
               <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-                Incidents en Cours
+                Ongoing Incidents
               </h2>
               <p className="text-sm text-soft-pewter">
-                Suivi des situations prioritaires
+                Priority situations tracking
               </p>
             </div>
           </div>
@@ -238,7 +238,7 @@ export function IncidentsCard() {
 
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-soft-pewter">Assigné à:</span>
+                  <span className="text-sm text-soft-pewter">Assigned to:</span>
                   <span className="text-sm font-medium text-palace-navy">
                     {incident.type === 'Maintenance' ? 'Prestataire' : incident.type === 'Client' ? 'Réception' : 'Gouvernante'} : {incident.assignedTo}
                   </span>
@@ -256,19 +256,19 @@ export function IncidentsCard() {
 
         <div className="mt-6 pt-4 border-t border-border/20">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-soft-pewter">Statuts aujourd'hui:</span>
+            <span className="text-soft-pewter">Today's Status:</span>
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'À traiter').length} à traiter</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'À traiter').length} to process</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'En cours').length} en cours</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'En cours').length} in progress</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'Résolu').length} résolus</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'Résolu').length} resolved</span>
               </div>
             </div>
           </div>

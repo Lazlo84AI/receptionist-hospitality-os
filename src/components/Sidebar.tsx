@@ -17,10 +17,10 @@ interface SidebarProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
-  { icon: RefreshCw, label: 'Gestion de votre shift', href: '/shift' },
-  { icon: BookOpen, label: 'Connaissances', href: '/connaissances' },
+  { icon: RefreshCw, label: 'Shift Management', href: '/shift' },
+  { icon: BookOpen, label: 'Knowledge Base', href: '/connaissances' },
   { icon: Search, label: 'Assistant', href: '/assistant' },
-  { icon: LogOut, label: 'Déconnexion', href: '/logout', danger: true },
+  { icon: LogOut, label: 'Sign Out', href: '/logout', danger: true },
 ];
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {

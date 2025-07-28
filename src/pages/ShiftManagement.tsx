@@ -569,8 +569,8 @@ const ShiftManagement = () => {
   const handleShiftStarted = () => {
     setShiftStatus('active');
     toast({
-      title: "Shift démarré",
-      description: "Votre shift a été démarré avec succès",
+      title: "Shift Started",
+      description: "Your shift has been started successfully",
       variant: "default",
     });
   };
@@ -590,10 +590,10 @@ const ShiftManagement = () => {
           {/* Page Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-playfair font-bold text-foreground mb-2">
-              Gestion de votre shift
+              Shift Management
             </h1>
             <p className="text-muted-foreground">
-              Gérez vos tâches et activités durant votre shift
+              Manage your tasks and activities during your shift
             </p>
           </div>
 
@@ -606,7 +606,7 @@ const ShiftManagement = () => {
               variant={shiftStatus === 'active' ? 'secondary' : 'default'}
             >
               <PlayCircle className="h-5 w-5 mr-2" />
-              {shiftStatus === 'active' ? 'Shift actif' : 'Démarrage de shift'}
+              {shiftStatus === 'active' ? 'Active Shift' : 'Start Shift'}
             </Button>
             
             <Button

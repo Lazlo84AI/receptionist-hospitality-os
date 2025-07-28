@@ -201,7 +201,7 @@ const Connaissances = () => {
         {/* Header Section */}
         <div className="text-left mb-8 bg-white rounded-lg p-6 shadow-sm border border-champagne-gold/20">
           <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
-            Gérez vos formations
+            Manage Your Training
           </h1>
           <p className="text-gray-600 text-lg">
             Devenez meilleur au quotidien

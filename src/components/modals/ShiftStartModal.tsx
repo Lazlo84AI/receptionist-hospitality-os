@@ -174,7 +174,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
           <div className="p-6 border-b bg-background">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">
-                Démarrage de shift : Veuillez passer en revue la to do
+                Shift Start: Please review the to-do list
               </h2>
               <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="h-4 w-4" />

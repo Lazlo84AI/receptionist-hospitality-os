@@ -22,8 +22,8 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           {/* Dashboard Title */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard : Les priorités</h1>
-            <p className="text-muted-foreground text-lg">ayant le plus gros impact sur l'expérience client.</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard: Top Priorities</h1>
+            <p className="text-muted-foreground text-lg">with the highest impact on customer experience.</p>
           </div>
 
           {/* Dashboard Grid - Row 1: 50/50 Layout */}

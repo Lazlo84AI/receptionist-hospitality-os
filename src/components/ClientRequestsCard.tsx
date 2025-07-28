@@ -318,7 +318,7 @@ export function ClientRequestsCard() {
           </div>
           <div>
             <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Demandes Clients
+              Client Requests
             </h2>
             <p className="text-sm text-soft-pewter capitalize">
               {today}
@@ -326,7 +326,7 @@ export function ClientRequestsCard() {
           </div>
         </div>
         <span className="text-sm text-soft-pewter font-medium">
-          {clientRequests.length} demandes
+          {clientRequests.length} requests
         </span>
       </div>
 
@@ -373,7 +373,7 @@ export function ClientRequestsCard() {
 
             <div className="flex items-center justify-between pt-3 border-t border-border/20">
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-soft-pewter">Assigné à :</span>
+                <span className="text-sm text-soft-pewter">Assigned to:</span>
                 <span className="text-sm font-bold text-palace-navy">
                   Gouvernante : {request.gouvernante}
                 </span>
@@ -389,11 +389,11 @@ export function ClientRequestsCard() {
 
       <div className="mt-6 pt-4 border-t border-border/20">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-soft-pewter">Statuts aujourd'hui:</span>
+          <span className="text-soft-pewter">Today's Status:</span>
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{clientRequests.filter(r => r.status === 'À traiter').length} à traiter</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'À traiter').length} to process</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
@@ -412,7 +412,7 @@ export function ClientRequestsCard() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-playfair font-semibold text-palace-navy">
-              Demande client
+              Client Request
             </DialogTitle>
           </DialogHeader>
 

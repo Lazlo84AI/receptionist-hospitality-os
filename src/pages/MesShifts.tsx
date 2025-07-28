@@ -94,7 +94,7 @@ const MesShifts = () => {
       <div className="bg-white border-b border-champagne-gold/20">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <h1 className="text-2xl font-playfair font-semibold text-palace-navy">
-            Mes Shifts
+            My Shifts
           </h1>
           <p className="text-palace-navy/70 text-sm mt-1">
             Historique de vos trois derniers shifts
