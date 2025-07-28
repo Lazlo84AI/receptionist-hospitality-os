@@ -87,8 +87,8 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
-        <div className="flex flex-col h-full">
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+        <div className="flex flex-col max-h-[90vh]">
           {/* Header */}
           <div className="p-6 border-b bg-background">
             <div>
