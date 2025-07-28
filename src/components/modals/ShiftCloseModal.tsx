@@ -18,6 +18,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EditTaskModal } from './EditTaskModal';
 
 interface TaskItem {
   id: string;
@@ -78,7 +79,8 @@ const getTypeConfig = (type: string) => {
 
 export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCloseModalProps) => {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
-  const [isCardEditable, setIsCardEditable] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
@@ -86,20 +88,19 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
   const handlePrevious = () => {
     if (currentTaskIndex > 0) {
       setCurrentTaskIndex(currentTaskIndex - 1);
-      setIsCardEditable(false);
     }
   };
 
   const handleNext = () => {
     if (currentTaskIndex < totalTasks - 1) {
       setCurrentTaskIndex(currentTaskIndex + 1);
-      setIsCardEditable(false);
     }
   };
 
   const handleCardEdit = () => {
-    if (onCardClick && currentTask) {
-      onCardClick(currentTask);
+    if (currentTask) {
+      setEditingTask(currentTask);
+      setIsEditModalOpen(true);
     }
   };
 
@@ -107,12 +108,17 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
     // Passer à la carte suivante quand on valide, ou au dernier écran si on est à la fin
     if (currentTaskIndex < totalTasks - 1) {
       setCurrentTaskIndex(currentTaskIndex + 1);
-      setIsCardEditable(false);
     } else if (currentTaskIndex === totalTasks - 1) {
       // Passer au dernier écran (note vocale)
       setCurrentTaskIndex(totalTasks);
-      setIsCardEditable(false);
     }
+  };
+
+  const handleSaveTask = (updatedTask: TaskItem) => {
+    // Ici vous pouvez gérer la sauvegarde de la tâche modifiée
+    console.log('Task updated:', updatedTask);
+    setIsEditModalOpen(false);
+    setEditingTask(null);
   };
 
   const handleVoiceNote = () => {
@@ -310,6 +316,19 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                 <Edit3 className="h-6 w-6" />
               </Button>
             </div>
+          )}
+
+          {/* Edit Task Modal */}
+          {editingTask && (
+            <EditTaskModal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setEditingTask(null);
+              }}
+              task={editingTask}
+              onSave={handleSaveTask}
+            />
           )}
         </div>
       </DialogContent>
