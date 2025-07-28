@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Circle, BookOpen, ArrowRight } from 'lucide-react';
+import { CheckCircle, Circle, BookOpen, ArrowRight, User, Star, Clock, Play, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Activity {
@@ -48,13 +48,57 @@ const Connaissances = () => {
     {
       id: '1',
       title: 'Adapter son comportement à la situation client',
-      progress: 33,
-      totalActivities: 3,
-      completedActivities: 1,
+      progress: 75,
+      totalActivities: 4,
+      completedActivities: 3,
       activities: [
         { id: '1', title: 'Comprendre les priorités clients', completed: true },
-        { id: '2', title: 'Adapter son langage au client', completed: false },
-        { id: '3', title: 'Réagir face à une plainte', completed: false }
+        { id: '2', title: 'Adapter son langage au client', completed: true },
+        { id: '3', title: 'Réagir face à une plainte', completed: true },
+        { id: '4', title: 'Gérer les situations d\'urgence', completed: false }
+      ]
+    },
+    {
+      id: '2',
+      title: 'Règles d\'hygiène chambre',
+      progress: 60,
+      totalActivities: 5,
+      completedActivities: 3,
+      activities: [
+        { id: '1', title: 'Préparation avant nettoyage', completed: true },
+        { id: '2', title: 'Protocoles de désinfection', completed: true },
+        { id: '3', title: 'Vérifications post-nettoyage', completed: true },
+        { id: '4', title: 'Gestion des produits chimiques', completed: false },
+        { id: '5', title: 'Standards qualité', completed: false }
+      ]
+    },
+    {
+      id: '3',
+      title: 'Service en salle',
+      progress: 40,
+      totalActivities: 5,
+      completedActivities: 2,
+      activities: [
+        { id: '1', title: 'Accueil et placement clients', completed: true },
+        { id: '2', title: 'Prise de commande room service', completed: true },
+        { id: '3', title: 'Service à table', completed: false },
+        { id: '4', title: 'Gestion des réclamations', completed: false },
+        { id: '5', title: 'Encaissement et facturation', completed: false }
+      ]
+    },
+    {
+      id: '4',
+      title: 'Règles de sécurité de nuit',
+      progress: 20,
+      totalActivities: 6,
+      completedActivities: 1,
+      activities: [
+        { id: '1', title: 'Rondes de sécurité', completed: true },
+        { id: '2', title: 'Gestion des accès', completed: false },
+        { id: '3', title: 'Procédures d\'urgence', completed: false },
+        { id: '4', title: 'Surveillance vidéo', completed: false },
+        { id: '5', title: 'Communication avec les autorités', completed: false },
+        { id: '6', title: 'Rapport d\'incidents', completed: false }
       ]
     }
   ];
@@ -154,70 +198,163 @@ const Connaissances = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="container mx-auto px-6 py-8">
+        <div className="flex gap-6">
         {!selectedModule ? (
-          // Vue liste des modules
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-playfair font-bold text-palace-navy mb-2">
-                Connaissances
-              </h1>
-              <p className="text-muted-foreground">
-                Développez vos compétences hôtelières avec nos modules de formation interactifs
-              </p>
+          // Vue dashboard principale
+          <>
+            {/* Barre latérale gauche - Profil & Suivi */}
+            <div className="w-1/4 space-y-6">
+              {/* Profil apprenant */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-champagne-gold/20 rounded-full flex items-center justify-center">
+                      <User className="h-6 w-6 text-champagne-gold" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm">Marie Dubois</CardTitle>
+                      <p className="text-xs text-muted-foreground">Réceptionniste</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-sm mb-3">Progrès par thème :</h4>
+                    {modules.map((module) => (
+                      <div key={module.id} className="space-y-2 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">{module.title}</span>
+                          <span className="text-xs font-medium">{module.progress}%</span>
+                        </div>
+                        <Progress value={module.progress} className="h-2" />
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full" size="sm">
+                    <Award className="h-4 w-4 mr-2" />
+                    Voir mes progrès
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="grid gap-6">
-              {modules.map((module) => (
-                <Card 
-                  key={module.id} 
-                  className="cursor-pointer hover:shadow-lg transition-all duration-200"
-                  onClick={() => handleModuleSelect(module)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl mb-2">{module.title}</CardTitle>
-                        <div className="flex items-center gap-4 mb-4">
-                          <Badge variant="secondary">
-                            {module.completedActivities} sur {module.totalActivities} complétées
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {module.progress}% terminé
-                          </span>
-                        </div>
-                        <Progress value={module.progress} className="mb-4" />
+            {/* Zone centrale */}
+            <div className="flex-1 space-y-6">
+              {/* Bandeau d'accueil */}
+              <Card className="bg-gradient-to-r from-champagne-gold/10 to-palace-navy/10">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-playfair font-bold text-palace-navy mb-2">
+                        👋 Bienvenue dans l'équipe hôtelière !
+                      </h1>
+                      <p className="text-muted-foreground mb-4">
+                        14/15 capsules complétées • 1000 points à gagner
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <Badge variant="secondary" className="bg-success-green/10 text-success-green">
+                          <Star className="h-3 w-3 mr-1" />
+                          Niveau Expert
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">950/1000 points</span>
                       </div>
-                      <BookOpen className="h-8 w-8 text-palace-navy ml-4" />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-muted-foreground mb-2">Activités :</h4>
-                      {module.activities.map((activity) => (
-                        <div key={activity.id} className="flex items-center gap-2">
-                          {activity.completed ? (
-                            <CheckCircle className="h-4 w-4 text-success-green" />
-                          ) : (
-                            <Circle className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className={cn(
-                            "text-sm",
-                            activity.completed ? "text-success-green" : "text-muted-foreground"
-                          )}>
-                            {activity.title}
-                          </span>
+                    <div className="text-6xl opacity-20">🏨</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Capsules récentes */}
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Formations en cours</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {modules.slice(0, 4).map((module) => (
+                    <Card 
+                      key={module.id} 
+                      className="cursor-pointer hover:shadow-lg transition-all duration-200"
+                      onClick={() => handleModuleSelect(module)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                            <BookOpen className="h-6 w-6 text-palace-navy" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-medium text-sm mb-1">{module.title}</h3>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">7 min</span>
+                              <Badge 
+                                variant={module.progress === 100 ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {module.progress === 100 ? "Terminé" : module.progress > 0 ? "En cours" : "Nouveau"}
+                              </Badge>
+                            </div>
+                            <Progress value={module.progress} className="h-1" />
+                          </div>
                         </div>
-                      ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sessions à venir */}
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Sessions à venir</h2>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-urgence-red/10 rounded-lg flex items-center justify-center">
+                        <Play className="h-6 w-6 text-urgence-red" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium mb-1">Atelier : Réagir face à un client mécontent</h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>Dans 6 heures</span>
+                          <Badge variant="outline" className="text-xs">
+                            Formation en groupe
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline">
+                        S'inscrire
+                      </Button>
                     </div>
-                    <Button className="mt-4 w-full" variant="outline">
-                      Voir les activités
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              </div>
+
+              {/* Mes capsules */}
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Mes capsules par thème</h2>
+                <div className="grid gap-4">
+                  {['Accueil client', 'Service d\'étage', 'Normes de sécurité'].map((theme, index) => (
+                    <Card key={theme}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-palace-navy/10 rounded-lg flex items-center justify-center">
+                              <BookOpen className="h-4 w-4 text-palace-navy" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">{theme}</h3>
+                              <p className="text-sm text-muted-foreground">{3 + index} capsules disponibles</p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost">
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           // Vue activité avec question
           <div className="flex gap-6 max-w-7xl mx-auto">
@@ -383,6 +520,7 @@ const Connaissances = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
