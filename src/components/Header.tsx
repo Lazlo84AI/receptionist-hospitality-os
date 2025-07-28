@@ -51,12 +51,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <Menu className="h-6 w-6" />
       </Button>
 
-      {/* Center: Dashboard Title */}
-      <div className="flex-1 text-left ml-4">
-        <h1 className="text-lg font-playfair font-semibold text-warm-cream">
-          Dashboard
-        </h1>
-      </div>
 
       {/* Right: Time, Date & User */}
       <div className="flex items-center space-x-4">
