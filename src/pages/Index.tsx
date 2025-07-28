@@ -20,6 +20,8 @@ const Index = () => {
       {/* Main Content */}
       <main className="p-8">
         <div className="max-w-7xl mx-auto">
+          {/* Dashboard Title */}
+          <h1 className="text-2xl font-bold text-left mb-6">Dashboard : Les priorités</h1>
 
           {/* Dashboard Grid - Row 1: 50/50 Layout */}
           <div className="flex flex-row space-x-8 mb-8">
