@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mic, Send, FileText, X } from 'lucide-react';
+import { Mic, Send, FileText, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,20 +25,19 @@ const Assistant = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-champagne-gold/20 bg-palace-navy/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-playfair font-semibold text-warm-cream">
-            Assistant Intelligent
-          </h1>
-          <p className="text-soft-pewter text-sm mt-1">
-            Posez vos questions et obtenez des réponses instantanées
-          </p>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
+        {/* Header Section */}
+        <div className="text-center mb-8 bg-white rounded-lg p-6 shadow-sm border border-champagne-gold/20">
+          <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
+            Assistant Intelligent
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Posez vos questions et obtenez des réponses instantanées
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           {/* Left Side - Input */}
@@ -54,12 +53,12 @@ const Assistant = () => {
               <div className="flex justify-center">
                 <Button
                   onClick={handleVoiceInput}
-                  variant={isRecording ? "destructive" : "outline"}
+                  variant={isRecording ? "destructive" : "default"}
                   size="lg"
                   className={`rounded-full h-16 w-16 ${
                     isRecording 
                       ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
-                      : 'border-champagne-gold/30 hover:border-champagne-gold text-warm-cream'
+                      : 'bg-champagne-gold hover:bg-champagne-gold/90 text-palace-navy border-none'
                   }`}
                 >
                   <Mic className="h-6 w-6" />
@@ -105,10 +104,18 @@ const Assistant = () => {
             <CardContent>
               {response ? (
                 <div className="space-y-4">
-                  <div className="bg-palace-navy/10 border border-champagne-gold/20 rounded-lg p-4">
-                    <p className="text-warm-cream leading-relaxed">
-                      {response}
-                    </p>
+                  <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-blue-500 text-white p-2 rounded-full">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-blue-900 mb-2">Réponse de l'Assistant</h3>
+                        <p className="text-gray-800 leading-relaxed">
+                          {response}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   
                   {/* PDF Link */}
@@ -124,10 +131,11 @@ const Assistant = () => {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="text-soft-pewter">
+                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                  <div className="text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Posez une question pour recevoir une réponse personnalisée</p>
+                    <p className="text-lg font-medium mb-2">En attente de votre question</p>
+                    <p className="text-sm">Posez une question pour recevoir une réponse personnalisée</p>
                   </div>
                 </div>
               )}

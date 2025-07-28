@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Menu, User, Clock, BarChart3, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -11,6 +12,7 @@ interface HeaderProps {
 
 export function Header({ onMenuToggle }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const navigate = useNavigate();
 
   // Update time every minute
   useState(() => {
@@ -93,7 +95,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <span>Mes statistiques</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex items-center space-x-2">
+            <DropdownMenuItem 
+              className="flex items-center space-x-2 cursor-pointer"
+              onClick={() => navigate('/mes-shifts')}
+            >
               <Calendar className="h-4 w-4" />
               <span>Mes shifts</span>
             </DropdownMenuItem>
