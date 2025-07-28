@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
-import TaskDetailModal from '@/components/modals/TaskDetailModal';
+import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
 import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
 import ShiftStartModal from '@/components/modals/ShiftStartModal';
 import { Button } from '@/components/ui/button';
@@ -678,13 +678,18 @@ const ShiftManagement = () => {
         </div>
       </main>
       
-      {/* Task Detail Modal */}
-      <TaskDetailModal
+      {/* Enhanced Task Detail Modal */}
+      <EnhancedTaskDetailModal
         task={selectedTask}
         isOpen={isTaskDetailOpen}
         onClose={() => {
           setIsTaskDetailOpen(false);
           setSelectedTask(null);
+        }}
+        onUpdateTask={(updatedTask) => {
+          setTasks(prev => prev.map(t => 
+            t.id === updatedTask.id ? updatedTask : t
+          ));
         }}
       />
       
