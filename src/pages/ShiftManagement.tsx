@@ -733,10 +733,11 @@ const ShiftManagement = () => {
         isOpen={isShiftCloseOpen}
         onClose={() => setIsShiftCloseOpen(false)}
         tasks={tasks}
+        onCardClick={handleCardClick}
       />
       
-      {/* Floating Voice Command Button */}
-      <VoiceCommandButton />
+      {/* Floating Voice Command Button - masqué si modal de fin de shift ouverte */}
+      {!isShiftCloseOpen && <VoiceCommandButton />}
     </div>
   );
 };
