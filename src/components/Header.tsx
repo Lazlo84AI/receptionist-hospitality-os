@@ -52,9 +52,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </Button>
 
       {/* Center: Dashboard Title */}
-      <div className="flex items-center">
+      <div className="flex-1 text-left ml-4">
         <h1 className="text-lg font-playfair font-semibold text-warm-cream">
-          Tableau de bord : Vue réception
+          Dashboard
         </h1>
       </div>
 

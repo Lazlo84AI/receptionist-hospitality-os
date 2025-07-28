@@ -198,6 +198,16 @@ const Connaissances = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="container mx-auto px-6 py-8">
+        {/* Header Section */}
+        <div className="text-left mb-8 bg-white rounded-lg p-6 shadow-sm border border-champagne-gold/20">
+          <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
+            Gérez vos formations
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Devenez meilleur au quotidien
+          </p>
+        </div>
+        
         <div className="flex gap-6">
         {!selectedModule ? (
           // Vue dashboard principale

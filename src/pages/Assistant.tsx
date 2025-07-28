@@ -34,7 +34,7 @@ const Assistant = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         {/* Header Section */}
-        <div className="text-center mb-8 bg-white rounded-lg p-6 shadow-sm border border-champagne-gold/20">
+        <div className="text-left mb-8 bg-white rounded-lg p-6 shadow-sm border border-champagne-gold/20">
           <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
             Assistant Intelligent
           </h1>
