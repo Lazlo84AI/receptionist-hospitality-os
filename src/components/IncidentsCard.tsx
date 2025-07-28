@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare, MoveUp } from 'lucide-react';
+import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare, MoveUp, Paperclip } from 'lucide-react';
 import { ChecklistComponent } from './ChecklistComponent';
 import { ReminderModal } from './modals/ReminderModal';
 import { Badge } from '@/components/ui/badge';
@@ -115,6 +115,42 @@ export function IncidentsCard() {
   const [showEscaladeDialog, setShowEscaladeDialog] = useState(false);
   const [selectedEscaladeMember, setSelectedEscaladeMember] = useState('');
   const [escaladeMethod, setEscaladeMethod] = useState('mail');
+  
+  // États pour l'historique et les actions
+  const [activities, setActivities] = useState([
+    {
+      id: 1,
+      type: 'comment',
+      user: 'Jean Dupont',
+      action: 'a laissé un commentaire',
+      content: 'Problème résolu, climatisation réparée',
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
+    },
+    {
+      id: 2,
+      type: 'reminder',
+      user: 'Sophie Martin',
+      action: 'a programmé un reminder',
+      content: 'Vérification tous les vendredis à 16h pour la maintenance préventive',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    },
+    {
+      id: 3,
+      type: 'checklist',
+      user: 'Marie Dubois',
+      action: 'a complété une tâche de la checklist',
+      content: 'Vérification du système de chauffage',
+      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000)
+    },
+    {
+      id: 4,
+      type: 'escalation',
+      user: 'Pierre Leroy',
+      action: 'a escaladé par email',
+      content: 'Envoi au responsable technique pour intervention urgente',
+      timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000)
+    }
+  ]);
   
   // États pour les fonctionnalités
   const [checklistTitle, setChecklistTitle] = useState('Checklist');
@@ -293,7 +329,7 @@ export function IncidentsCard() {
               </div>
 
               {/* Barre d'outils Trello */}
-              <div className="flex space-x-3">
+              <div className="flex flex-wrap gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -329,6 +365,14 @@ export function IncidentsCard() {
                 >
                   <MoveUp className="h-4 w-4 text-palace-navy" />
                   <span className="text-sm text-palace-navy">Escalade</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                >
+                  <Paperclip className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Attachment</span>
                 </Button>
               </div>
 
@@ -377,45 +421,57 @@ export function IncidentsCard() {
                   />
                 </div>
 
+                {/* Affichage des reminders actifs */}
+                {activities.filter(a => a.type === 'reminder').length > 0 && (
+                  <div className="mb-4">
+                    <h5 className="font-medium text-palace-navy mb-2">Reminders configurés :</h5>
+                    {activities.filter(a => a.type === 'reminder').map((reminder) => (
+                      <div key={reminder.id} className="bg-blue-50 p-3 rounded-lg mb-2">
+                        <p className="text-sm text-palace-navy">{reminder.content}</p>
+                        <p className="text-xs text-soft-pewter mt-1">
+                          Configuré par {reminder.user} - {new Date(reminder.timestamp).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Historique d'activité */}
                 {showActivityDetails && (
                   <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-600 text-white text-xs">
-                          XX
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-3">
-                        <div className="bg-muted/50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-palace-navy">Commentaire laissé</span>
-                            <span className="text-xs text-soft-pewter">il y a 4 heures</span>
-                          </div>
-                          <p className="text-sm">lol</p>
-                          <div className="flex space-x-3 mt-2 text-xs text-soft-pewter">
-                            <button className="hover:text-palace-navy">Modifier</button>
-                            <span>|</span>
-                            <button className="hover:text-palace-navy">Supprimer</button>
-                          </div>
-                        </div>
-
-                        <div className="text-sm text-soft-pewter">
-                          <span className="font-medium">Nom utilisateur</span> a marqué cette carte comme inachevée
-                          <span className="text-xs ml-2">il y a 4 heures</span>
-                        </div>
-
-                        <div className="text-sm text-soft-pewter">
-                          <span className="font-medium">Nom utilisateur</span> a marqué cette carte comme étant terminée
-                          <span className="text-xs ml-2">il y a 4 heures</span>
-                        </div>
-
-                        <div className="text-sm text-soft-pewter">
-                          <span className="font-medium">Nom utilisateur</span> a ajouté cette carte à Aujourd'hui
-                          <span className="text-xs ml-2">il y a 4 heures</span>
+                    <h5 className="font-medium text-palace-navy">Activités récentes :</h5>
+                    {activities.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-600 text-white text-xs">
+                            {activity.user.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          {activity.type === 'comment' ? (
+                            <div className="bg-muted/50 p-3 rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-palace-navy">Commentaire laissé</span>
+                                <span className="text-xs text-soft-pewter">
+                                  {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} heures
+                                </span>
+                              </div>
+                              <p className="text-sm">{activity.content}</p>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-soft-pewter">
+                              <span className="font-medium">{activity.user}</span> {activity.action}
+                              <span className="text-xs ml-2">
+                                il y a {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} heures
+                              </span>
+                              {activity.content && (
+                                <div className="text-xs text-palace-navy mt-1">{activity.content}</div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 )}
               </div>

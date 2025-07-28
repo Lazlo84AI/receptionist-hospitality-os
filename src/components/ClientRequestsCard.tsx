@@ -1,4 +1,4 @@
-import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus, Search } from 'lucide-react';
+import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus, Search, Paperclip } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -121,6 +121,70 @@ export function ClientRequestsCard() {
   const [isEscaladeModalOpen, setIsEscaladeModalOpen] = useState(false);
   const [escaladeChannel, setEscaladeChannel] = useState<'email' | 'whatsapp' | null>(null);
   const [escaladeMemberSearchQuery, setEscaladeMemberSearchQuery] = useState('');
+
+  // États pour l'historique et les actions
+  const [activities, setActivities] = useState([
+    {
+      id: 1,
+      type: 'comment',
+      user: 'Sophie Martin',
+      action: 'a laissé un commentaire',
+      content: 'Champagne livré et installé en chambre',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000)
+    },
+    {
+      id: 2,
+      type: 'reminder',
+      user: 'Claire Petit',
+      action: 'a programmé un reminder',
+      content: 'Suivi qualité VIP tous les dimanche à 10h',
+      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+    },
+    {
+      id: 3,
+      type: 'checklist',
+      user: 'Marie Rousseau',
+      action: 'a complété une tâche de la checklist',
+      content: 'Installation du lit bébé terminée',
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
+    },
+    {
+      id: 4,
+      type: 'escalation',
+      user: 'Sophie Bernard',
+      action: 'a escaladé par WhatsApp',
+      content: 'Contact direct avec le concierge pour bureau ergonomique',
+      timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000)
+    }
+  ]);
+
+  // Fonction pour ajouter une assignation
+  const handleMemberAssignment = (member: any) => {
+    setSelectedRequest({
+      ...selectedRequest,
+      gouvernante: member.name
+    });
+    setActivities([{
+      id: Date.now(),
+      type: 'assignment',
+      user: 'Système',
+      action: 'a assigné la demande à',
+      content: member.name,
+      timestamp: new Date()
+    }, ...activities]);
+  };
+
+  // Fonction pour ajouter une escalade
+  const handleEscalation = (channel: string, member?: string) => {
+    setActivities([{
+      id: Date.now(),
+      type: 'escalation',
+      user: 'Utilisateur actuel',
+      action: `a escaladé par ${channel}`,
+      content: member ? `Contact avec ${member}` : `Escalade via ${channel}`,
+      timestamp: new Date()
+    }, ...activities]);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -391,7 +455,7 @@ export function ClientRequestsCard() {
               </div>
 
               {/* Barre d'actions rapides */}
-              <div className="flex items-center space-x-4 p-4 bg-muted/20 rounded-lg">
+              <div className="flex flex-wrap gap-2 p-4 bg-muted/20 rounded-lg">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -427,6 +491,14 @@ export function ClientRequestsCard() {
                 >
                   <TrendingUp className="h-4 w-4" />
                   <span>Escalade</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center space-x-2"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  <span>Attachment</span>
                 </Button>
               </div>
 
