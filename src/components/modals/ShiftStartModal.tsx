@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -18,10 +20,15 @@ import {
   Clock, 
   Wrench,
   Check,
-  Eye
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  CheckSquare,
+  MoveUp,
+  Paperclip
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import TaskDetailModal from './TaskDetailModal';
 
 interface TaskItem {
   id: string;
@@ -93,6 +100,8 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(180); // 3 minutes example
   const [showTaskDetail, setShowTaskDetail] = useState(false);
+  const [showActivityDetails, setShowActivityDetails] = useState(false);
+  const [comment, setComment] = useState('');
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
@@ -412,11 +421,217 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
         </div>
       </DialogContent>
       
-      <TaskDetailModal
-        isOpen={showTaskDetail}
-        onClose={() => setShowTaskDetail(false)}
-        task={currentTask}
-      />
+      {/* Modal de détails - même vue que dans le dashboard */}
+      <Dialog open={showTaskDetail} onOpenChange={setShowTaskDetail}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-xl text-palace-navy">
+              Détails de la tâche
+            </DialogTitle>
+          </DialogHeader>
+          {currentTask && (
+            <div className="space-y-6">
+              {/* Task Header */}
+              <div className="flex items-start gap-3">
+                <div className={cn("p-3 rounded-full", typeConfig?.color)}>
+                  {TypeIcon && <TypeIcon className="h-6 w-6" />}
+                </div>
+                <div className="flex-1">
+                  <Badge variant="outline" className="mb-2">
+                    {typeConfig?.label}
+                  </Badge>
+                  <h3 className="text-xl font-semibold mb-2">{currentTask.title}</h3>
+                  {currentTask.priority === 'urgent' && (
+                    <Badge className="bg-urgence-red text-warm-cream">
+                      Urgent
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {currentTask.description && (
+                <div>
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {currentTask.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Task Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentTask.guestName && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Client</p>
+                      <p className="text-muted-foreground">{currentTask.guestName}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.roomNumber && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Chambre</p>
+                      <p className="text-muted-foreground">{currentTask.roomNumber}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.location && !currentTask.roomNumber && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Localisation</p>
+                      <p className="text-muted-foreground">{currentTask.location}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.assignedTo && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Assigné à</p>
+                      <p className="text-muted-foreground">{currentTask.assignedTo}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.dueDate && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Échéance</p>
+                      <p className="text-muted-foreground">
+                        {new Date(currentTask.dueDate).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {currentTask.recipient && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Destinataire</p>
+                      <p className="text-muted-foreground">{currentTask.recipient}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status */}
+              <div>
+                <h4 className="font-medium mb-2">Statut</h4>
+                <Badge variant={currentTask.status === 'completed' ? 'default' : 'secondary'}>
+                  {currentTask.status === 'pending' && 'En attente'}
+                  {currentTask.status === 'in_progress' && 'En cours'}
+                  {currentTask.status === 'completed' && 'Terminé'}
+                </Badge>
+              </div>
+
+              {/* Barre d'outils */}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Reminder</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <CheckSquare className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Checklist</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Membres</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <MoveUp className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Escalade</span>
+                </Button>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Paperclip className="h-4 w-4 text-palace-navy" />
+                  <span className="text-sm text-palace-navy">Attachment</span>
+                </Button>
+              </div>
+
+              {/* Commentaires et activité */}
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <MessageCircle className="h-5 w-5 text-palace-navy" />
+                    <h4 className="font-semibold text-palace-navy">Commentaires et activité</h4>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowActivityDetails(!showActivityDetails)}
+                    className="text-sm"
+                  >
+                    {showActivityDetails ? (
+                      <>
+                        <ChevronUp className="h-4 w-4 mr-1" />
+                        Masquer les détails
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        Afficher les détails
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Zone de commentaire */}
+                <div className="mb-4">
+                  <Textarea
+                    placeholder="Écrivez un commentaire…"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                </div>
+
+                {/* Historique d'activité */}
+                {showActivityDetails && (
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-blue-600 text-white text-xs">
+                          JD
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-3">
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-palace-navy">Commentaire laissé</span>
+                            <span className="text-xs text-soft-pewter">il y a 2 heures</span>
+                          </div>
+                          <p className="text-sm">Tâche en cours de traitement</p>
+                        </div>
+
+                        <div className="text-sm text-soft-pewter">
+                          <span className="font-medium">Jean Dupont</span> a marqué cette carte comme en cours
+                          <span className="text-xs ml-2">il y a 3 heures</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button variant="outline" onClick={() => setShowTaskDetail(false)}>
+                  Fermer
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
