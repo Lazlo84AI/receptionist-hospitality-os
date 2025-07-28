@@ -202,36 +202,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Text Transcript */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Transcription</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm leading-relaxed space-y-3">
-                        <p>
-                          Bonjour à l'équipe du shift suivant. Voici les points importants à retenir pour votre service :
-                        </p>
-                        <p>
-                          La climatisation de la Suite Présidentielle est toujours en panne. Le technicien doit passer ce matin vers 9h. 
-                          Il faudra accompagner M. Anderson qui occupe la suite.
-                        </p>
-                        <p>
-                          Pour la famille Dubois en chambre 305, le lit bébé a été installé mais ils ont demandé des produits 
-                          hypoallergéniques supplémentaires pour leur enfant.
-                        </p>
-                        <p>
-                          Dr. Williams en Suite 102 a exprimé sa satisfaction pour l'aménagement bureau. Il souhaite prolonger 
-                          son séjour de deux nuits supplémentaires.
-                        </p>
-                        <p>
-                          L'équipe de ménage est en effectif réduit aujourd'hui. Priorisez les chambres VIP et les départs prévus.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Audio Player */}
+                  {/* Audio Player - Left side */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Lecteur audio</CardTitle>
@@ -265,6 +236,51 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                             )}
                           </Button>
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Text Transcript - Right side with scroll */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Transcription texte de la note vocale</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="max-h-64 overflow-y-auto text-sm leading-relaxed space-y-3 pr-2">
+                        <p>
+                          Bonjour à l'équipe du shift suivant. Voici les points importants à retenir pour votre service :
+                        </p>
+                        <p>
+                          La climatisation de la Suite Présidentielle est toujours en panne. Le technicien doit passer ce matin vers 9h. 
+                          Il faudra accompagner M. Anderson qui occupe la suite. Attention, c'est un client VIP très exigeant qui a déjà 
+                          exprimé son mécontentement hier soir.
+                        </p>
+                        <p>
+                          Pour la famille Dubois en chambre 305, le lit bébé a été installé mais ils ont demandé des produits 
+                          hypoallergéniques supplémentaires pour leur enfant. Marie de l'équipe ménage a les coordonnées du 
+                          fournisseur spécialisé.
+                        </p>
+                        <p>
+                          Dr. Williams en Suite 102 a exprimé sa satisfaction pour l'aménagement bureau. Il souhaite prolonger 
+                          son séjour de deux nuits supplémentaires. Sa réservation doit être modifiée et il faut vérifier la 
+                          disponibilité avec la réservation.
+                        </p>
+                        <p>
+                          L'équipe de ménage est en effectif réduit aujourd'hui. Priorisez les chambres VIP et les départs prévus. 
+                          Attention, trois membres de l'équipe sont absents pour cause de maladie.
+                        </p>
+                        <p>
+                          Le système de réservation a eu quelques bugs hier après-midi. Vérifiez bien toutes les réservations 
+                          du jour et n'hésitez pas à appeler le service technique si quelque chose semble anormal.
+                        </p>
+                        <p>
+                          Il y a également eu un problème avec l'ascenseur principal. Il a été réparé mais gardez un œil dessus 
+                          et prévenez immédiatement la maintenance si vous entendez des bruits inhabituels.
+                        </p>
+                        <p>
+                          N'oubliez pas que nous avons un groupe de 15 personnes qui arrive cet après-midi pour un événement 
+                          d'entreprise. Ils ont des exigences spécifiques pour le cocktail de bienvenue.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
