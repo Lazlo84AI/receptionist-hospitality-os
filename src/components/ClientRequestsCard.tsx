@@ -19,55 +19,55 @@ import { ReminderModal } from './modals/ReminderModal';
 const clientRequests = [
   {
     id: 1,
-    clientName: 'M. et Mme Anderson',
+    clientName: 'Mr. and Mrs. Anderson',
     room: 'Suite 201',
-    request: 'Champagne Dom Pérignon et roses rouges',
-    occasion: 'Anniversaire de mariage',
+    request: 'Champagne Dom Pérignon and red roses',
+    occasion: 'Wedding anniversary',
     status: 'To Process',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     daysSince: 2,
     priority: 'URGENCE',
-    description: 'Charles et Emily Anderson célèbrent leurs 25 ans de mariage. Charles est amateur de grands crus et Emily adore les roses. Ils ont mentionné que leur lune de miel était à Champagne, ils seront touchés par ce clin d\'œil.'
+    description: 'Charles and Emily Anderson are celebrating their 25th wedding anniversary. Charles is a wine enthusiast and Emily loves roses. They mentioned their honeymoon was in Champagne, they will be touched by this reference.'
   },
   {
     id: 2,
-    clientName: 'Famille Dubois',
-    room: 'Chambre 305',
-    request: 'Lit bébé et produits hypoallergéniques',
-    occasion: 'Voyage en famille',
+    clientName: 'Dubois Family',
+    room: 'Room 305',
+    request: 'Baby crib and hypoallergenic products',
+    occasion: 'Family trip',
     status: 'In Progress',
     gouvernante: 'Marie Rousseau',
     avatar: 'MR',
     daysSince: 1,
     priority: 'NORMAL',
-    description: 'Pierre et Léa Dubois voyagent avec leur bébé de 8 mois, Lucas, qui fait ses premières vacances. Léa a mentionné que Lucas a une peau sensible suite à un eczéma. Très attentifs au bien-être de leur enfant, ils apprécieront notre attention aux détails.'
+    description: 'Pierre and Léa Dubois are traveling with their 8-month-old baby, Lucas, on his first vacation. Léa mentioned that Lucas has sensitive skin due to eczema. Very attentive to their child\'s well-being, they will appreciate our attention to detail.'
   },
   {
     id: 3,
     clientName: 'Dr. Williams',
     room: 'Suite 102',
     request: 'Adapted workspace for remote work + silence',
-    occasion: 'Séjour d\'affaires',
+    occasion: 'Business stay',
     status: 'Resolved',
     gouvernante: 'Sophie Bernard',
     avatar: 'SB',
     daysSince: 0,
     priority: 'NORMAL',
-    description: 'Dr. James Williams, chirurgien cardiaque de Londres, doit finaliser une publication médicale importante pendant son séjour. Il travaille souvent tard le soir et apprécie le calme absolu. Grand amateur de café italien, il sera ravi de notre sélection.'
+    description: 'Dr. James Williams, a cardiac surgeon from London, needs to complete an important medical publication during his stay. He often works late at night and appreciates absolute silence. A great lover of Italian coffee, he will be delighted with our selection.'
   },
   {
     id: 4,
-    clientName: 'Mlle Martinez',
-    room: 'Chambre 208',
-    request: 'Repas végétalien + yoga mat',
-    occasion: 'Retraite wellness',
+    clientName: 'Ms. Martinez',
+    room: 'Room 208',
+    request: 'Vegan meals + yoga mat',
+    occasion: 'Wellness retreat',
     status: 'To Process',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     daysSince: 1,
     priority: 'URGENCE',
-    description: 'Isabella Martinez, professeure de yoga et influenceuse wellness, revient d\'un voyage spirituel de 3 mois à Bali. Passionnée de méditation et de cuisine ayurvédique, elle documente son séjour pour ses 50k followers. Une attention particulière l\'enchantera.'
+    description: 'Isabella Martinez, yoga teacher and wellness influencer, is returning from a 3-month spiritual journey to Bali. Passionate about meditation and Ayurvedic cuisine, she documents her stay for her 50k followers. Special attention will enchant her.'
   }
 ];
 
@@ -128,32 +128,32 @@ export function ClientRequestsCard() {
       id: 1,
       type: 'comment',
       user: 'Sophie Martin',
-      action: 'a laissé un commentaire',
-      content: 'Champagne livré et installé en chambre',
+      action: 'left a comment',
+      content: 'Champagne delivered and installed in room',
       timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000)
     },
     {
       id: 2,
       type: 'reminder',
       user: 'Claire Petit',
-      action: 'a programmé un reminder',
-      content: 'Suivi qualité VIP tous les dimanche à 10h',
+      action: 'scheduled a reminder',
+      content: 'VIP quality follow-up every Sunday at 10am',
       timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
     },
     {
       id: 3,
       type: 'checklist',
       user: 'Marie Rousseau',
-      action: 'a complété une tâche de la checklist',
-      content: 'Installation du lit bébé terminée',
+      action: 'completed a checklist task',
+      content: 'Baby crib installation completed',
       timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
     },
     {
       id: 4,
       type: 'escalation',
       user: 'Sophie Bernard',
-      action: 'a escaladé par WhatsApp',
-      content: 'Contact direct avec le concierge pour bureau ergonomique',
+      action: 'escalated via WhatsApp',
+      content: 'Direct contact with concierge for ergonomic desk',
       timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000)
     }
   ]);
