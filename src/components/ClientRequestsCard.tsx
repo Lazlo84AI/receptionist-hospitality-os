@@ -23,7 +23,7 @@ const clientRequests = [
     room: 'Suite 201',
     request: 'Champagne Dom Pérignon et roses rouges',
     occasion: 'Anniversaire de mariage',
-    status: 'À traiter',
+    status: 'To Process',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     daysSince: 2,
@@ -36,7 +36,7 @@ const clientRequests = [
     room: 'Chambre 305',
     request: 'Lit bébé et produits hypoallergéniques',
     occasion: 'Voyage en famille',
-    status: 'En cours',
+    status: 'In Progress',
     gouvernante: 'Marie Rousseau',
     avatar: 'MR',
     daysSince: 1,
@@ -47,9 +47,9 @@ const clientRequests = [
     id: 3,
     clientName: 'Dr. Williams',
     room: 'Suite 102',
-    request: 'Bureau adapté télétravail + silence',
+    request: 'Adapted workspace for remote work + silence',
     occasion: 'Séjour d\'affaires',
-    status: 'Résolu',
+    status: 'Resolved',
     gouvernante: 'Sophie Bernard',
     avatar: 'SB',
     daysSince: 0,
@@ -62,7 +62,7 @@ const clientRequests = [
     room: 'Chambre 208',
     request: 'Repas végétalien + yoga mat',
     occasion: 'Retraite wellness',
-    status: 'À traiter',
+    status: 'To Process',
     gouvernante: 'Claire Petit',
     avatar: 'CP',
     daysSince: 1,
@@ -188,9 +188,9 @@ export function ClientRequestsCard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'À traiter': return 'bg-green-500 text-white';
-      case 'En cours': return 'bg-palace-navy text-white';
-      case 'Résolu': return '';
+      case 'To Process': return 'bg-green-500 text-white';
+      case 'In Progress': return 'bg-palace-navy text-white';
+      case 'Resolved': return '';
       default: return 'bg-muted text-soft-pewter border-border';
     }
   };
@@ -207,9 +207,9 @@ export function ClientRequestsCard() {
   };
 
   const getDaysSinceText = (days: number) => {
-    if (days === 0) return "Aujourd'hui";
-    if (days === 1) return "Depuis 1 jour";
-    return `Depuis ${days} jours`;
+    if (days === 0) return "Today";
+    if (days === 1) return "1 day ago";
+    return `${days} days ago`;
   };
 
   // Checklist functions
@@ -358,13 +358,13 @@ export function ClientRequestsCard() {
                 </p>
                 
                 <div className="flex items-center space-x-2 mb-3">
-                  {request.status !== 'Résolu' && (
+                  {request.status !== 'Resolved' && (
                     <Badge className={getStatusColor(request.status)}>
                       {request.status}
                     </Badge>
                   )}
-                  {request.status === 'Résolu' && (
-                    <span className="text-soft-pewter">Résolu</span>
+                  {request.status === 'Resolved' && (
+                    <span className="text-soft-pewter">Resolved</span>
                   )}
                   {getPriorityBadge(request.priority)}
                 </div>
@@ -393,15 +393,15 @@ export function ClientRequestsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{clientRequests.filter(r => r.status === 'À traiter').length} to process</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'To Process').length} to process</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">1 en cours</span>
+                <span className="text-xs">1 in progress</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">1 préparé</span>
+                <span className="text-xs">1 prepared</span>
               </div>
             </div>
         </div>

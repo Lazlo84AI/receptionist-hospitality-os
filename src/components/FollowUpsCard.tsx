@@ -11,7 +11,7 @@ const followUps = [
     title: 'Confirmation arrivée VIP',
     location: 'Réception',
     client: '',
-    statut: 'À traiter',
+    statut: 'To Process',
     priority: 'urgence',
     assignedTo: 'Réception : Leopold Bechu',
     hoursElapsed: 3,
@@ -22,7 +22,7 @@ const followUps = [
     title: 'Message non lu WhatsApp',
     location: 'Réception',
     client: '',
-    statut: 'En cours',
+    statut: 'In Progress',
     priority: null,
     assignedTo: 'Gouvernante : Marie Dubois',
     hoursElapsed: 24,
@@ -33,7 +33,7 @@ const followUps = [
     title: 'Équipement manquant en chambre',
     location: 'Chambre 450',
     client: '',
-    statut: 'À traiter',
+    statut: 'To Process',
     priority: 'urgence',
     assignedTo: 'Prestataire : Jean Dupont',
     hoursElapsed: 6,
@@ -44,7 +44,7 @@ const followUps = [
     title: 'Confirmation équipements massage',
     location: 'Spa',
     client: '',
-    statut: 'En cours',
+    statut: 'In Progress',
     priority: null,
     assignedTo: 'Gouvernante : Marie Dubois',
     hoursElapsed: 12,
@@ -55,7 +55,7 @@ const followUps = [
     title: 'Livraison arrangements floraux',
     location: 'Lobby',
     client: '',
-    statut: 'À traiter',
+    statut: 'To Process',
     priority: 'urgence',
     assignedTo: 'Prestataire : Jean Dupont',
     hoursElapsed: 48,
@@ -71,17 +71,17 @@ export function FollowUpsCard() {
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
 
   const getStatusColor = (statut: string) => {
-    if (statut === 'À traiter') return 'bg-green-500 text-white';
-    if (statut === 'En cours') return 'bg-palace-navy text-white';
+    if (statut === 'To Process') return 'bg-green-500 text-white';
+    if (statut === 'In Progress') return 'bg-palace-navy text-white';
     return 'bg-muted text-soft-pewter border-border';
   };
 
   const formatElapsedTime = (hours: number) => {
     if (hours < 24) {
-      return `Depuis ${hours}h`;
+      return `${hours}h ago`;
     } else {
       const days = Math.floor(hours / 24);
-      return `Depuis ${days}j`;
+      return `${days}d ago`;
     }
   };
 
@@ -224,11 +224,11 @@ export function FollowUpsCard() {
             </div>
             <div className="flex items-center space-x-1">
               <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-xs">{followUps.filter(item => item.statut === 'À traiter').length} to process</span>
+              <span className="text-xs">{followUps.filter(item => item.statut === 'To Process').length} to process</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="h-2 w-2 rounded-full bg-palace-navy" />
-              <span className="text-xs">{followUps.filter(item => item.statut === 'En cours').length} in progress</span>
+              <span className="text-xs">{followUps.filter(item => item.statut === 'In Progress').length} in progress</span>
             </div>
           </div>
         </div>

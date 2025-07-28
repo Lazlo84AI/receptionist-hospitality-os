@@ -22,51 +22,51 @@ import { cn } from '@/lib/utils';
 const incidents = [
   {
     id: 1,
-    title: 'Problème climatisation Suite Présidentielle',
-    status: 'À traiter',
+    title: 'Presidential Suite Air Conditioning Issue',
+    status: 'To Process',
     type: 'Maintenance',
     priority: 'URGENCE',
     assignedTo: 'Jean Dupont',
     avatar: 'JD',
-    timeElapsed: '2 jours',
-    description: 'Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir.',
+    timeElapsed: '2 days',
+    description: 'The Presidential Suite air conditioning system has not been working since last night.',
     room: 'Suite 301'
   },
   {
     id: 2,
-    title: 'Réclamation client - Service petit-déjeuner',
-    status: 'En cours',
+    title: 'Client Complaint - Breakfast Service',
+    status: 'In Progress',
     type: 'Client',
     priority: 'NORMAL',
     assignedTo: 'Sophie Martin',
     avatar: 'SM',
-    timeElapsed: '4 heures',
-    description: 'Client mécontent de la qualité du service au petit-déjeuner.',
-    room: 'Chambre 205'
+    timeElapsed: '4 hours',
+    description: 'Client dissatisfied with breakfast service quality.',
+    room: 'Room 205'
   },
   {
     id: 3,
-    title: 'Absence imprevue équipe ménage',
-    status: 'En cours',
+    title: 'Unexpected Housekeeping Team Absence',
+    status: 'In Progress',
     type: 'Équipe',
     priority: 'URGENCE',
     assignedTo: 'Marie Dubois',
     avatar: 'MD',
-    timeElapsed: '1 jour',
-    description: 'Trois membres de l\'équipe ménage sont absents aujourd\'hui.',
-    room: 'Étages 2-4'
+    timeElapsed: '1 day',
+    description: 'Three housekeeping team members are absent today.',
+    room: 'Floors 2-4'
   },
   {
     id: 4,
-    title: 'Fuite dans la salle de bain',
-    status: 'À traiter',
+    title: 'Bathroom Leak',
+    status: 'To Process',
     type: 'Maintenance',
     priority: 'NORMAL',
     assignedTo: 'Pierre Leroy',
     avatar: 'PL',
-    timeElapsed: '6 heures',
-    description: 'Fuite détectée sous le lavabo de la chambre 107.',
-    room: 'Chambre 107'
+    timeElapsed: '6 hours',
+    description: 'Leak detected under the sink in room 107.',
+    room: 'Room 107'
   }
 ];
 
@@ -160,9 +160,9 @@ export function IncidentsCard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'À traiter': return 'bg-green-500 text-white';
-      case 'En cours': return 'default';
-      case 'Résolu': return 'secondary';
+      case 'To Process': return 'bg-green-500 text-white';
+      case 'In Progress': return 'default';
+      case 'Resolved': return 'secondary';
       default: return 'outline';
     }
   };
@@ -215,7 +215,7 @@ export function IncidentsCard() {
                     {incident.title}
                   </h3>
                    <div className="flex flex-wrap gap-2 mb-3">
-                      {incident.status === 'À traiter' ? (
+                      {incident.status === 'To Process' ? (
                         <Badge className={getStatusBadge(incident.status)}>
                           {incident.status}
                         </Badge>
@@ -260,15 +260,15 @@ export function IncidentsCard() {
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'À traiter').length} to process</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'To Process').length} to process</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'En cours').length} in progress</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'In Progress').length} in progress</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">{incidents.filter(i => i.status === 'Résolu').length} resolved</span>
+                <span className="text-xs">{incidents.filter(i => i.status === 'Resolved').length} resolved</span>
               </div>
             </div>
           </div>
@@ -290,7 +290,7 @@ export function IncidentsCard() {
                   {selectedIncident.title}
                 </h3>
                 <div className="flex flex-wrap gap-2 mb-4">
-                 {selectedIncident.status === 'À traiter' ? (
+                 {selectedIncident.status === 'To Process' ? (
                    <Badge className={getStatusBadge(selectedIncident.status)}>
                      {selectedIncident.status}
                    </Badge>
