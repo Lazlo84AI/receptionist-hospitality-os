@@ -14,73 +14,73 @@ const MesShifts = () => {
   const shiftsData = [
     {
       id: 1,
-      date: "27 Janvier 2025",
-      horaires: "06h00 - 14h00",
+      date: "27 January 2025",
+      horaires: "06:00 AM - 02:00 PM",
       noteVocale: {
         duree: "3 min 45s",
-        contenu: "Shift calme, 3 arrivées VIP prévues à 15h. Problème climatisation chambre 205 résolu."
+        contenu: "Quiet shift, 3 VIP arrivals scheduled at 3 PM. Air conditioning problem in room 205 resolved."
       },
       cartes: [
-        { type: "Incident", titre: "Climatisation chambre 205", statut: "Résolu", priorite: "Haute" },
-        { type: "Demande client", titre: "Room service chambre 312", statut: "Terminé", priorite: "Normale" },
-        { type: "Maintenance", titre: "Vérification ascenseur", statut: "En cours", priorite: "Normale" }
+        { type: "Incident", titre: "Room 205 air conditioning", statut: "Resolved", priorite: "High" },
+        { type: "Client request", titre: "Room service room 312", statut: "Completed", priorite: "Normal" },
+        { type: "Maintenance", titre: "Elevator check", statut: "In progress", priorite: "Normal" }
       ],
       questionnaires: [
-        { nom: "Service client excellence", score: "18/20", date: "27/01 - 13h30" },
-        { nom: "Procédures check-in", score: "20/20", date: "27/01 - 08h15" }
+        { nom: "Customer service excellence", score: "18/20", date: "27/01 - 1:30 PM" },
+        { nom: "Check-in procedures", score: "20/20", date: "27/01 - 8:15 AM" }
       ]
     },
     {
       id: 2,
-      date: "25 Janvier 2025",
-      horaires: "14h00 - 22h00",
+      date: "25 January 2025",
+      horaires: "02:00 PM - 10:00 PM",
       noteVocale: {
         duree: "2 min 12s",
-        contenu: "Soirée chargée, groupe de 15 personnes arrivé. Problème mineur avec le système de cartes."
+        contenu: "Busy evening, group of 15 people arrived. Minor problem with card system."
       },
       cartes: [
-        { type: "Incident", titre: "Système cartes défaillant", statut: "Résolu", priorite: "Critique" },
-        { type: "Demande client", titre: "Lit bébé chambre 158", statut: "Terminé", priorite: "Normale" },
-        { type: "Réservation", titre: "Groupe 15 pers - check-in", statut: "Terminé", priorite: "Haute" }
+        { type: "Incident", titre: "Card system failure", statut: "Resolved", priorite: "Critical" },
+        { type: "Client request", titre: "Baby crib room 158", statut: "Completed", priorite: "Normal" },
+        { type: "Reservation", titre: "Group 15 people - check-in", statut: "Completed", priorite: "High" }
       ],
       questionnaires: [
-        { nom: "Gestion des groupes", score: "17/20", date: "25/01 - 21h45" }
+        { nom: "Group management", score: "17/20", date: "25/01 - 9:45 PM" }
       ]
     },
     {
       id: 3,
-      date: "23 Janvier 2025",
-      horaires: "22h00 - 06h00",
+      date: "23 January 2025",
+      horaires: "10:00 PM - 06:00 AM (next day)",
       noteVocale: {
         duree: "1 min 58s",
-        contenu: "Shift de nuit tranquille. Deux arrivées tardives. Rondes de sécurité effectuées."
+        contenu: "Quiet night shift. Two late arrivals. Security rounds completed."
       },
       cartes: [
-        { type: "Sécurité", titre: "Ronde de nuit 1", statut: "Terminé", priorite: "Normale" },
-        { type: "Sécurité", titre: "Ronde de nuit 2", statut: "Terminé", priorite: "Normale" },
-        { type: "Demande client", titre: "Réveil 5h30 chambre 89", statut: "Programmé", priorite: "Normale" }
+        { type: "Security", titre: "Night round 1", statut: "Completed", priorite: "Normal" },
+        { type: "Security", titre: "Night round 2", statut: "Completed", priorite: "Normal" },
+        { type: "Client request", titre: "5:30 AM wake-up call room 89", statut: "Scheduled", priorite: "Normal" }
       ],
       questionnaires: [
-        { nom: "Sécurité de nuit", score: "19/20", date: "23/01 - 05h30" },
-        { nom: "Procédures d'urgence", score: "20/20", date: "23/01 - 03h15" }
+        { nom: "Night security", score: "19/20", date: "23/01 - 5:30 AM" },
+        { nom: "Emergency procedures", score: "20/20", date: "23/01 - 3:15 AM" }
       ]
     }
   ];
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critique': return 'bg-red-500';
-      case 'Haute': return 'bg-orange-500';
-      case 'Normale': return 'bg-blue-500';
+      case 'Critical': return 'bg-red-500';
+      case 'High': return 'bg-orange-500';
+      case 'Normal': return 'bg-blue-500';
       default: return 'bg-gray-500';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Résolu': case 'Terminé': return 'bg-green-500';
-      case 'En cours': return 'bg-yellow-500';
-      case 'Programmé': return 'bg-blue-500';
+      case 'Resolved': case 'Completed': return 'bg-green-500';
+      case 'In progress': return 'bg-yellow-500';
+      case 'Scheduled': return 'bg-blue-500';
       default: return 'bg-gray-500';
     }
   };
@@ -97,7 +97,7 @@ const MesShifts = () => {
             My Shifts
           </h1>
           <p className="text-palace-navy/70 text-sm mt-1">
-            Historique de vos trois derniers shifts
+            History of your last three shifts
           </p>
         </div>
       </div>
@@ -117,7 +117,7 @@ const MesShifts = () => {
                       <div>
                         <CardTitle className="text-warm-cream flex items-center gap-3">
                           <FileText className="h-5 w-5 text-champagne-gold" />
-                          Shift du {shift.date}
+                          Shift on {shift.date}
                         </CardTitle>
                         <p className="text-soft-pewter text-sm mt-1">
                           {shift.horaires}
@@ -140,7 +140,7 @@ const MesShifts = () => {
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-warm-cream flex items-center gap-2">
                         <Mic className="h-4 w-4 text-champagne-gold" />
-                        Note vocale
+                        Voice note
                       </h3>
                       <div className="bg-palace-navy/50 border border-champagne-gold/20 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -156,7 +156,7 @@ const MesShifts = () => {
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-warm-cream flex items-center gap-2">
                         <FileText className="h-4 w-4 text-champagne-gold" />
-                        Cartes et détails
+                        Cards and details
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {shift.cartes.map((carte, index) => (
@@ -173,8 +173,8 @@ const MesShifts = () => {
                               </div>
                               <h4 className="font-medium text-warm-cream text-sm">{carte.titre}</h4>
                               <div className="flex justify-between text-xs">
-                                <span className="text-soft-pewter">Priorité: {carte.priorite}</span>
-                                <span className="text-soft-pewter">Statut: {carte.statut}</span>
+                                <span className="text-soft-pewter">Priority: {carte.priorite}</span>
+                                <span className="text-soft-pewter">Status: {carte.statut}</span>
                               </div>
                             </div>
                           </div>
@@ -186,7 +186,7 @@ const MesShifts = () => {
                     <div className="space-y-3">
                       <h3 className="text-lg font-semibold text-warm-cream flex items-center gap-2">
                         <ClipboardCheck className="h-4 w-4 text-champagne-gold" />
-                        Questionnaires répondus
+                        Completed questionnaires
                       </h3>
                       <div className="space-y-3">
                         {shift.questionnaires.map((questionnaire, index) => (
