@@ -90,7 +90,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
       <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b bg-background flex items-center justify-between">
+          <div className="p-6 border-b bg-background">
             <div>
               <h2 className="text-2xl font-playfair font-bold">
                 Modifier la carte
@@ -99,19 +99,12 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                 Tous les champs sont modifiables – N'oubliez pas de sauvegarder
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="p-2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-3xl mx-auto space-y-6">
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6">
+              <div className="max-w-3xl mx-auto space-y-6">
               
               {/* Titre */}
               <div className="space-y-2">
@@ -328,6 +321,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                     </p>
                   </CardContent>
                 </Card>
+              </div>
               </div>
             </div>
           </div>
