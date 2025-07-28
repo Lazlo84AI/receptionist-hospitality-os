@@ -558,11 +558,7 @@ const ShiftManagement = () => {
         setIsShiftStartOpen(true);
         break;
       case 'improve':
-        toast({
-          title: "Amélioration",
-          description: "Fonctionnalité d'amélioration en cours de développement",
-          variant: "default",
-        });
+        window.location.href = '/connaissances';
         break;
       case 'close':
         setIsShiftCloseOpen(true);

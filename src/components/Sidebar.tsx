@@ -18,7 +18,7 @@ interface SidebarProps {
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: RefreshCw, label: 'Gestion de son shift', href: '/shift' },
-  { icon: BookOpen, label: 'Base de Connaissance', href: '/knowledge' },
+  { icon: BookOpen, label: 'Connaissances', href: '/connaissances' },
   { icon: Settings, label: 'Paramètres', href: '/settings' },
   { icon: LogOut, label: 'Déconnexion', href: '/logout', danger: true },
 ];
