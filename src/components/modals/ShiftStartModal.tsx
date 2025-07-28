@@ -64,25 +64,25 @@ const getTypeConfig = (type: string) => {
       return { 
         icon: Users, 
         color: 'bg-champagne-gold text-palace-navy',
-        label: 'Demande client' 
+        label: 'Client Request' 
       };
     case 'follow_up':
       return { 
         icon: Clock, 
         color: 'bg-palace-navy text-warm-cream',
-        label: 'Relance' 
+        label: 'Follow-up' 
       };
     case 'internal_task':
       return { 
         icon: Wrench, 
         color: 'bg-muted text-muted-foreground',
-        label: 'Tâche interne' 
+        label: 'Internal Task' 
       };
     default:
       return { 
         icon: Wrench, 
         color: 'bg-muted text-muted-foreground',
-        label: 'Tâche' 
+        label: 'Task' 
       };
   }
 };
@@ -184,7 +184,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
             {currentStep === 'tasks' && (
               <div className="mt-4 flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">
-                  Carte {currentTaskIndex + 1} sur {totalTasks}
+                  Card {currentTaskIndex + 1} of {totalTasks}
                 </div>
                 <div className="flex-1 bg-muted h-2 rounded-full overflow-hidden">
                   <div 
@@ -203,10 +203,10 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
               <div className="space-y-6">
                 <div className="text-center mb-8">
                   <h3 className="text-lg font-semibold mb-2">
-                    Note vocale de votre prédécesseur
+                    Voice Note from Your Predecessor
                   </h3>
                   <p className="text-muted-foreground">
-                    Écoutez les informations importantes de l'équipe précédente
+                    Listen to key information from the previous team
                   </p>
                 </div>
 
@@ -214,7 +214,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   {/* Audio Player - Left side */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Lecteur audio</CardTitle>
+                      <CardTitle className="text-base">Audio Player</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
@@ -252,43 +252,41 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   {/* Text Transcript - Right side with scroll */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Transcription texte de la note vocale</CardTitle>
+                      <CardTitle className="text-base">Transcription of the Voice Note</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="max-h-64 overflow-y-auto text-sm leading-relaxed space-y-3 pr-2">
                         <p>
-                          Bonjour à l'équipe du shift suivant. Voici les points importants à retenir pour votre service :
+                          Hello to the next shift team. Here are the key points to remember for your service:
                         </p>
                         <p>
-                          La climatisation de la Suite Présidentielle est toujours en panne. Le technicien doit passer ce matin vers 9h. 
-                          Il faudra accompagner M. Anderson qui occupe la suite. Attention, c'est un client VIP très exigeant qui a déjà 
-                          exprimé son mécontentement hier soir.
+                          The air conditioning in the Presidential Suite is still out of order. The technician is scheduled to come at 9 AM. 
+                          Mr. Anderson, who is staying in the suite, will need to be assisted. Note that he is a very demanding VIP guest who already 
+                          expressed dissatisfaction last night.
                         </p>
                         <p>
-                          Pour la famille Dubois en chambre 305, le lit bébé a été installé mais ils ont demandé des produits 
-                          hypoallergéniques supplémentaires pour leur enfant. Marie de l'équipe ménage a les coordonnées du 
-                          fournisseur spécialisé.
+                          In Room 305, the Dubois family has a baby crib set up, but they've requested additional hypoallergenic products 
+                          for their child. Marie from the housekeeping team has the contact details for the specialized supplier.
                         </p>
                         <p>
-                          Dr. Williams en Suite 102 a exprimé sa satisfaction pour l'aménagement bureau. Il souhaite prolonger 
-                          son séjour de deux nuits supplémentaires. Sa réservation doit être modifiée et il faut vérifier la 
-                          disponibilité avec la réservation.
+                          Dr. Williams in Suite 102 expressed satisfaction with the office setup. He wants to extend his stay by two 
+                          additional nights. His reservation needs to be modified and availability must be checked with reservations.
                         </p>
                         <p>
-                          L'équipe de ménage est en effectif réduit aujourd'hui. Priorisez les chambres VIP et les départs prévus. 
-                          Attention, trois membres de l'équipe sont absents pour cause de maladie.
+                          The housekeeping team is short-staffed today. Prioritize VIP rooms and scheduled departures. 
+                          Please note, three team members are absent due to illness.
                         </p>
                         <p>
-                          Le système de réservation a eu quelques bugs hier après-midi. Vérifiez bien toutes les réservations 
-                          du jour et n'hésitez pas à appeler le service technique si quelque chose semble anormal.
+                          The reservation system had some bugs yesterday afternoon. Please double-check all day's reservations 
+                          and don't hesitate to call technical support if anything seems unusual.
                         </p>
                         <p>
-                          Il y a également eu un problème avec l'ascenseur principal. Il a été réparé mais gardez un œil dessus 
-                          et prévenez immédiatement la maintenance si vous entendez des bruits inhabituels.
+                          There was also an issue with the main elevator. It has been fixed but keep an eye on it 
+                          and immediately notify maintenance if you hear any unusual noises.
                         </p>
                         <p>
-                          N'oubliez pas que nous avons un groupe de 15 personnes qui arrive cet après-midi pour un événement 
-                          d'entreprise. Ils ont des exigences spécifiques pour le cocktail de bienvenue.
+                          Don't forget that we have a group of 15 people arriving this afternoon for a corporate event. 
+                          They have specific requirements for the welcome cocktail.
                         </p>
                       </div>
                     </CardContent>
@@ -297,7 +295,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
 
                 <div className="flex justify-center mt-8">
                   <Button onClick={handleStartTasks} className="px-8">
-                    Commencer la revue des cartes
+                    Start Reviewing the Task Cards
                   </Button>
                 </div>
               </div>
@@ -332,7 +330,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                         {readTasks.has(currentTask?.id || '') && (
                           <div className="flex items-center gap-1 text-green-600">
                             <Check className="h-4 w-4" />
-                            <span className="text-xs">Lu</span>
+                            <span className="text-xs">Read</span>
                           </div>
                         )}
                       </div>
@@ -357,7 +355,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                       {currentTask?.roomNumber && (
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>Chambre {currentTask.roomNumber}</span>
+                          <span>Room {currentTask.roomNumber}</span>
                         </div>
                       )}
                       
@@ -371,7 +369,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                       {currentTask?.assignedTo && (
                         <div className="flex items-center gap-2 text-sm">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <span>Assigné à {currentTask.assignedTo}</span>
+                          <span>Assigned to {currentTask.assignedTo}</span>
                         </div>
                       )}
                       
@@ -398,7 +396,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   disabled={currentTaskIndex === 0}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
-                  Précédent
+                  Previous
                 </Button>
 
                 <div className="flex items-center gap-4">
@@ -406,11 +404,11 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                     <>
                       <Button onClick={() => setShowTaskDetail(true)} variant="outline">
                         <Eye className="h-4 w-4 mr-1" />
-                        Voir les détails
+                        View Details
                       </Button>
                       <Button onClick={handleMarkAsRead} variant="default">
                         <Check className="h-4 w-4 mr-1" />
-                        Marquer comme lu
+                        Mark as Read
                       </Button>
                     </>
                   )}
@@ -426,7 +424,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-playfair text-xl text-palace-navy">
-              Détails de la tâche
+              Task Details
             </DialogTitle>
           </DialogHeader>
           {currentTask && (
