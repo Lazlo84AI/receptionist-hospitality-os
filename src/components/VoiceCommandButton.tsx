@@ -110,14 +110,8 @@ export function VoiceCommandButton() {
     console.log('🎤 DÉBUT - Basculer vers mode vocal');
     console.log('🎤 État actuel:', { showCreateModal, creationMode });
     
-    // État 3 : Fermer modal édition et ouvrir modal vocale
-    setShowCreateModal(false);
+    // Simplement basculer vers le mode vocal sans fermer la modal
     setCreationMode('voice');
-    
-    setTimeout(() => {
-      console.log('🎤 OUVERTURE - Modal vocale');
-      setShowCreateModal(true);
-    }, 150);
   };
 
   const resetForm = () => {
