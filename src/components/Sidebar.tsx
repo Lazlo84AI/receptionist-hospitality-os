@@ -4,7 +4,7 @@ import {
   LayoutDashboard, 
   RefreshCw, 
   BookOpen, 
-  Settings, 
+  Search, 
   LogOut,
   X
 } from 'lucide-react';
@@ -19,7 +19,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: RefreshCw, label: 'Gestion de son shift', href: '/shift' },
   { icon: BookOpen, label: 'Connaissances', href: '/connaissances' },
-  { icon: Settings, label: 'Paramètres', href: '/settings' },
+  { icon: Search, label: 'Assistant', href: '/assistant' },
   { icon: LogOut, label: 'Déconnexion', href: '/logout', danger: true },
 ];
 

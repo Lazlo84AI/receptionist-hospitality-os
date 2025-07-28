@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Menu, User, Clock } from 'lucide-react';
+import { Menu, User, Clock, BarChart3, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import hotelCrest from '@/assets/hotel-crest.jpg';
 
 interface HeaderProps {
@@ -71,18 +72,33 @@ export function Header({ onMenuToggle }: HeaderProps) {
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center space-x-2">
-          <div className="hidden md:block text-right">
-            <p className="text-sm font-medium text-warm-cream">Marie Dubois</p>
-            <p className="text-xs text-soft-pewter">Chef de Réception</p>
-          </div>
-          <Avatar className="h-10 w-10 ring-2 ring-champagne-gold/50">
-            <AvatarImage src="/api/placeholder/40/40" />
-            <AvatarFallback className="bg-champagne-gold text-palace-navy font-semibold">
-              MD
-            </AvatarFallback>
-          </Avatar>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center space-x-2 hover:bg-champagne-gold/10">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-medium text-warm-cream">Marie Dubois</p>
+                <p className="text-xs text-soft-pewter">Chef de Réception</p>
+              </div>
+              <Avatar className="h-10 w-10 ring-2 ring-champagne-gold/50">
+                <AvatarImage src="/api/placeholder/40/40" />
+                <AvatarFallback className="bg-champagne-gold text-palace-navy font-semibold">
+                  MD
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Mes statistiques</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="flex items-center space-x-2">
+              <Calendar className="h-4 w-4" />
+              <span>Mes shifts</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
