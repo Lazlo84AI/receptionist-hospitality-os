@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { TaskDetailModal } from '@/components/modals/TaskDetailModal';
+import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -322,6 +323,7 @@ const ShiftManagement = () => {
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
   const { toast } = useToast();
 
@@ -607,12 +609,7 @@ const ShiftManagement = () => {
         });
         break;
       case 'close':
-        setShiftStatus('closed');
-        toast({
-          title: "Shift clôturé",
-          description: "Votre shift a été clôturé avec succès",
-          variant: "default",
-        });
+        setIsShiftCloseOpen(true);
         break;
     }
   };
@@ -729,6 +726,13 @@ const ShiftManagement = () => {
           setSelectedTask(null);
         }}
         onStatusChange={handleStatusChange}
+      />
+      
+      {/* Shift Close Modal */}
+      <ShiftCloseModal
+        isOpen={isShiftCloseOpen}
+        onClose={() => setIsShiftCloseOpen(false)}
+        tasks={tasks}
       />
       
       {/* Floating Voice Command Button */}
