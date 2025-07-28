@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Header } from '@/components/Header';
+import { Sidebar } from '@/components/Sidebar';
 
 const MesShifts = () => {
   const [expandedShift, setExpandedShift] = useState<number | null>(null);
@@ -87,6 +88,7 @@ const MesShifts = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       {/* Title Section with white background */}
       <div className="bg-white border-b border-champagne-gold/20">
