@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
-import { TaskDetailModal } from '@/components/modals/TaskDetailModal';
+import TaskDetailModal from '@/components/modals/TaskDetailModal';
 import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
 import ShiftStartModal from '@/components/modals/ShiftStartModal';
 import { Button } from '@/components/ui/button';
@@ -284,6 +284,7 @@ const ShiftManagement = () => {
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
   const [isShiftStartOpen, setIsShiftStartOpen] = useState(false);
+  const [shiftActive, setShiftActive] = useState(false);
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
   const { toast } = useToast();
 
@@ -689,7 +690,6 @@ const ShiftManagement = () => {
           setIsTaskDetailOpen(false);
           setSelectedTask(null);
         }}
-        onStatusChange={handleStatusChange}
       />
       
       {/* Shift Start Modal */}

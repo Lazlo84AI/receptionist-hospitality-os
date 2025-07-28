@@ -17,9 +17,11 @@ import {
   Users, 
   Clock, 
   Wrench,
-  Check
+  Check,
+  Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import TaskDetailModal from './TaskDetailModal';
 
 interface TaskItem {
   id: string;
@@ -90,6 +92,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(180); // 3 minutes example
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
@@ -126,6 +129,16 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
     onShiftStarted();
     onClose();
   };
+
+  // Auto-close when all tasks are read
+  React.useEffect(() => {
+    if (allTasksRead && currentStep === 'tasks') {
+      const timer = setTimeout(() => {
+        handleFinishShift();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [allTasksRead, currentStep]);
 
   const toggleAudio = () => {
     setIsPlaying(!isPlaying);
@@ -365,24 +378,16 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
 
                 <div className="flex items-center gap-4">
                   {!readTasks.has(currentTask?.id || '') && (
-                    <Button onClick={handleMarkAsRead} variant="default">
-                      <Check className="h-4 w-4 mr-1" />
-                      Marquer comme lu
-                    </Button>
-                  )}
-
-                  {allTasksRead ? (
-                    <Button onClick={handleFinishShift} className="bg-green-600 hover:bg-green-700">
-                      Terminer la revue
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleNext}
-                      disabled={currentTaskIndex === totalTasks - 1}
-                    >
-                      Suivant
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
+                    <>
+                      <Button onClick={() => setShowTaskDetail(true)} variant="outline">
+                        <Eye className="h-4 w-4 mr-1" />
+                        Voir les détails
+                      </Button>
+                      <Button onClick={handleMarkAsRead} variant="default">
+                        <Check className="h-4 w-4 mr-1" />
+                        Marquer comme lu
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -390,6 +395,12 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
           )}
         </div>
       </DialogContent>
+      
+      <TaskDetailModal
+        isOpen={showTaskDetail}
+        onClose={() => setShowTaskDetail(false)}
+        task={currentTask}
+      />
     </Dialog>
   );
 };
