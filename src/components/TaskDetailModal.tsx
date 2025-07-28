@@ -80,7 +80,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
               <p className="text-foreground leading-relaxed">
-                {task.description || "Client mécontent de la qualité du service au petit-déjeuner."}
+                {task.description || "Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir."}
               </p>
             </div>
 
@@ -131,15 +131,15 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
               <div className="flex space-x-3">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-medium">SM</span>
+                    <span className="text-white text-xs font-medium">JD</span>
                   </div>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-foreground">Sophie Martin</span>
-                    <span className="text-sm text-muted-foreground">il y a 2 heures</span>
+                    <span className="font-medium text-foreground">Jean Dupont</span>
+                    <span className="text-sm text-muted-foreground">il y a 4 heures</span>
                   </div>
-                  <p className="text-foreground">Problème résolu avec le client, service amélioré</p>
+                  <p className="text-foreground">Problème résolu, climatisation réparée</p>
                 </div>
               </div>
             </div>
@@ -154,10 +154,10 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             
             <div className="bg-muted/30 rounded-lg p-4">
               <p className="text-foreground mb-2">
-                Vérification qualité service petit-déjeuner tous les matins à 7h30
+                Vérification tous les vendredis à 16h pour la maintenance préventive
               </p>
               <p className="text-sm text-muted-foreground">
-                Configuré par Sophie Martin – 27/07/2025
+                Configuré par Sophie Martin – 26/07/2025
               </p>
             </div>
           </div>
@@ -169,11 +169,11 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Sophie Martin a laissé un commentaire – il y a 2h</span>
+                <span>JD a laissé un commentaire – il y a 4h</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span>Sophie Martin a programmé un reminder – il y a 4h</span>
+                <span>Sophie Martin a programmé un reminder – il y a 48h</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -185,7 +185,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Pierre Leroy a escaladé par email – il y a 10h</span>
+                <span>Pierre Leroy a escaladé par email – il y a 12h</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

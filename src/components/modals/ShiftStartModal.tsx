@@ -534,93 +534,90 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                 </Badge>
               </div>
 
-              {/* Barre d'outils */}
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Reminder</span>
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <CheckSquare className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Checklist</span>
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Membres</span>
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <MoveUp className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Escalade</span>
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Paperclip className="h-4 w-4 text-palace-navy" />
-                  <span className="text-sm text-palace-navy">Attachment</span>
-                </Button>
-              </div>
-
-              {/* Commentaires et activité */}
+              {/* 💬 Bloc commentaires et activité */}
               <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <MessageCircle className="h-5 w-5 text-palace-navy" />
-                    <h4 className="font-semibold text-palace-navy">Commentaires et activité</h4>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowActivityDetails(!showActivityDetails)}
-                    className="text-sm"
-                  >
-                    {showActivityDetails ? (
-                      <>
-                        <ChevronUp className="h-4 w-4 mr-1" />
-                        Masquer les détails
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4 mr-1" />
-                        Afficher les détails
-                      </>
-                    )}
-                  </Button>
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Commentaires et activité</h4>
+                </div>
+                
+                {/* Zone commentaire (lecture seule) */}
+                <div className="mb-4 p-3 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
+                  <p className="text-sm text-muted-foreground italic">
+                    Zone de commentaire (consultation uniquement)
+                  </p>
                 </div>
 
-                {/* Zone de commentaire */}
-                <div className="mb-4">
-                  <Textarea
-                    placeholder="Écrivez un commentaire…"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="min-h-[80px]"
-                  />
-                </div>
-
-                {/* Historique d'activité */}
-                {showActivityDetails && (
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-600 text-white text-xs">
-                          JD
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-3">
-                        <div className="bg-muted/50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-palace-navy">Commentaire laissé</span>
-                            <span className="text-xs text-soft-pewter">il y a 2 heures</span>
-                          </div>
-                          <p className="text-sm">Tâche en cours de traitement</p>
-                        </div>
-
-                        <div className="text-sm text-soft-pewter">
-                          <span className="font-medium">Jean Dupont</span> a marqué cette carte comme en cours
-                          <span className="text-xs ml-2">il y a 3 heures</span>
-                        </div>
+                {/* Commentaires postés */}
+                <div className="space-y-3">
+                  <div className="flex space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-medium">JD</span>
                       </div>
                     </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-foreground">Jean Dupont</span>
+                        <span className="text-sm text-muted-foreground">il y a 4 heures</span>
+                      </div>
+                      <p className="text-foreground">Problème résolu, climatisation réparée</p>
+                    </div>
                   </div>
-                )}
+                </div>
+              </div>
+
+              {/* ⏰ Bloc Reminder(s) configuré(s) */}
+              <div className="border-t pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Reminder(s) configuré(s)</h4>
+                </div>
+                
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-foreground mb-2">
+                    Vérification tous les vendredis à 16h pour la maintenance préventive
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Configuré par Sophie Martin – 26/07/2025
+                  </p>
+                </div>
+              </div>
+
+              {/* 📜 Activités récentes (journal chronologique) */}
+              <div className="border-t pt-6">
+                <h4 className="font-medium text-foreground mb-4">Activités récentes</h4>
+                
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>JD a laissé un commentaire – il y a 4h</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span>Sophie Martin a programmé un reminder – il y a 48h</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Marie Dubois a complété une tâche de checklist – il y a 6h</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <span>Une pièce jointe a été ajoutée par Pierre Leroy – il y a 8h</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span>Pierre Leroy a escaladé par email – il y a 12h</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>Carte assignée à {currentTask.assignedTo} par Sophie Martin – il y a 1j</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                    <span>Checklist initiale ajoutée par Sophie Martin – il y a 1j</span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3">
