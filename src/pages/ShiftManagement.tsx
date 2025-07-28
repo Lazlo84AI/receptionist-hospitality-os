@@ -69,25 +69,25 @@ const getTypeConfig = (type: string) => {
       return { 
         icon: Users, 
         color: 'bg-champagne-gold text-palace-navy',
-        label: 'Demande client' 
+        label: 'Client Request' 
       };
     case 'follow_up':
       return { 
         icon: Clock, 
         color: 'bg-palace-navy text-warm-cream',
-        label: 'Relance' 
+        label: 'Follow-up' 
       };
     case 'internal_task':
       return { 
         icon: Wrench, 
         color: 'bg-muted text-muted-foreground',
-        label: 'Tâche interne' 
+        label: 'Internal Task' 
       };
     default:
       return { 
         icon: Wrench, 
         color: 'bg-muted text-muted-foreground',
-        label: 'Tâche' 
+        label: 'Task' 
       };
   }
 };
@@ -182,7 +182,7 @@ const SortableTaskCard = ({
             {task.roomNumber && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" />
-                <span>Chambre {task.roomNumber}</span>
+                <span>Room {task.roomNumber}</span>
               </div>
             )}
             
@@ -196,7 +196,7 @@ const SortableTaskCard = ({
             {task.dueDate && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                <span>{new Date(task.dueDate).toLocaleDateString('fr-FR')}</span>
+                <span>{new Date(task.dueDate).toLocaleDateString('en-US')}</span>
               </div>
             )}
             
@@ -264,8 +264,8 @@ const KanbanColumn = ({
               
               {filteredTasks.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Aucune tâche</p>
-                  <p className="text-xs mt-1">Glissez une carte ici</p>
+                  <p className="text-sm">No tasks</p>
+                  <p className="text-xs mt-1">Drag a card here</p>
                 </div>
               )}
             </div>
@@ -350,42 +350,42 @@ const ShiftManagement = () => {
     const incidents = [
       {
         id: '1',
-        title: 'Problème climatisation Suite Présidentielle',
+        title: 'Presidential Suite Air Conditioning Issue',
         type: 'incident' as const,
         priority: 'urgent' as const,
         status: 'pending' as const,
-        description: 'Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir.',
+        description: 'The Presidential Suite air conditioning system has not been working since last night.',
         location: 'Suite 301',
         assignedTo: 'Jean Dupont'
       },
       {
         id: '2',
-        title: 'Réclamation client - Service petit-déjeuner',
+        title: 'Client Complaint - Breakfast Service',
         type: 'incident' as const,
         priority: 'normal' as const,
         status: 'in_progress' as const,
-        description: 'Client mécontent de la qualité du service au petit-déjeuner.',
-        location: 'Chambre 205',
+        description: 'Client dissatisfied with breakfast service quality.',
+        location: 'Room 205',
         assignedTo: 'Sophie Martin'
       },
       {
         id: '3',
-        title: 'Absence imprevue équipe ménage',
+        title: 'Unexpected Housekeeping Team Absence',
         type: 'incident' as const,
         priority: 'urgent' as const,
         status: 'in_progress' as const,
-        description: 'Trois membres de l\'équipe ménage sont absents aujourd\'hui.',
-        location: 'Étages 2-4',
+        description: 'Three housekeeping team members are absent today.',
+        location: 'Floors 2-4',
         assignedTo: 'Marie Dubois'
       },
       {
         id: '4',
-        title: 'Fuite dans la salle de bain',
+        title: 'Bathroom Leak',
         type: 'incident' as const,
         priority: 'normal' as const,
         status: 'pending' as const,
-        description: 'Fuite détectée sous le lavabo de la chambre 107.',
-        location: 'Chambre 107',
+        description: 'Leak detected under the sink in room 107.',
+        location: 'Room 107',
         assignedTo: 'Pierre Leroy'
       }
     ];
@@ -538,15 +538,15 @@ const ShiftManagement = () => {
       ));
 
       toast({
-        title: "Succès",
-        description: "Statut mis à jour",
+        title: "Success",
+        description: "Status updated",
         variant: "default",
       });
     } catch (error) {
       console.error('Error updating task status:', error);
       toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le statut",
+        title: "Error",
+        description: "Unable to update status",
         variant: "destructive",
       });
     }
@@ -615,7 +615,7 @@ const ShiftManagement = () => {
               className="h-12 text-base"
             >
               <Target className="h-5 w-5 mr-2" />
-              Amélioration de votre travail
+              Work Improvement
             </Button>
             
             <Button
@@ -625,7 +625,7 @@ const ShiftManagement = () => {
               className="h-12 text-base"
             >
               <StopCircle className="h-5 w-5 mr-2" />
-              Clôture de shift
+              End Shift
             </Button>
           </div>
 
@@ -638,7 +638,7 @@ const ShiftManagement = () => {
           >
             <div className="grid grid-cols-3 gap-6">
               <KanbanColumn
-                title="À traiter"
+                title="To Process"
                 tasks={tasks}
                 status="pending"
                 onStatusChange={handleStatusChange}
@@ -646,7 +646,7 @@ const ShiftManagement = () => {
               />
               
               <KanbanColumn
-                title="En cours"
+                title="In Progress"
                 tasks={tasks}
                 status="in_progress"
                 onStatusChange={handleStatusChange}
@@ -654,7 +654,7 @@ const ShiftManagement = () => {
               />
               
               <KanbanColumn
-                title="Résolu"
+                title="Resolved"
                 tasks={tasks}
                 status="completed"
                 onStatusChange={handleStatusChange}

@@ -47,15 +47,15 @@ const Connaissances = () => {
   const modules: Module[] = [
     {
       id: '1',
-      title: 'Adapter son comportement à la situation client',
+      title: 'Adapting behavior to client situations',
       progress: 75,
       totalActivities: 4,
       completedActivities: 3,
       activities: [
-        { id: '1', title: 'Comprendre les priorités clients', completed: true },
-        { id: '2', title: 'Adapter son langage au client', completed: true },
-        { id: '3', title: 'Réagir face à une plainte', completed: true },
-        { id: '4', title: 'Gérer les situations d\'urgence', completed: false }
+        { id: '1', title: 'Understanding client priorities', completed: true },
+        { id: '2', title: 'Adapting language to the client', completed: true },
+        { id: '3', title: 'Reacting to a complaint', completed: true },
+        { id: '4', title: 'Managing emergency situations', completed: false }
       ]
     },
     {
@@ -204,7 +204,7 @@ const Connaissances = () => {
             Manage Your Training
           </h1>
           <p className="text-gray-600 text-lg">
-            Devenez meilleur au quotidien
+            Become better every day
           </p>
         </div>
         
@@ -223,13 +223,13 @@ const Connaissances = () => {
                     </div>
                     <div>
                       <CardTitle className="text-sm">Marie Dubois</CardTitle>
-                      <p className="text-xs text-muted-foreground">Réceptionniste</p>
+                      <p className="text-xs text-muted-foreground">Receptionist</p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h4 className="font-medium text-sm mb-3">Progrès par thème :</h4>
+                    <h4 className="font-medium text-sm mb-3">Progress by theme:</h4>
                     {modules.map((module) => (
                       <div key={module.id} className="space-y-2 mb-4">
                         <div className="flex justify-between items-center">
@@ -242,7 +242,7 @@ const Connaissances = () => {
                   </div>
                   <Button className="w-full" size="sm">
                     <Award className="h-4 w-4 mr-2" />
-                    Voir mes progrès
+                    View my progress
                   </Button>
                 </CardContent>
               </Card>
@@ -255,12 +255,12 @@ const Connaissances = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h1 className="text-2xl font-playfair font-bold text-palace-navy mb-2">
-                        👋 Bienvenue dans l'équipe hôtelière !
-                      </h1>
-                      <p className="text-muted-foreground mb-4">
-                        14/15 capsules complétées • 1000 points à gagner
-                      </p>
+                       <h1 className="text-2xl font-playfair font-bold text-palace-navy mb-2">
+                         👋 Welcome to the hotel team!
+                       </h1>
+                       <p className="text-muted-foreground mb-4">
+                         14/15 modules completed • 1000 points to earn
+                       </p>
                       <div className="flex items-center gap-4">
                         <Badge variant="secondary" className="bg-success-green/10 text-success-green">
                           <Star className="h-3 w-3 mr-1" />
