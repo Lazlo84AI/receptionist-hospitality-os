@@ -501,36 +501,9 @@ const ShiftManagement = () => {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
 
-      // Update in Supabase based on task type
-      switch (task.type) {
-        case 'incident':
-          await supabase
-            .from('incidents')
-            .update({ status: newStatus === 'completed' ? 'resolved' : newStatus })
-            .eq('id', taskId);
-          break;
-        case 'client_request':
-          await supabase
-            .from('special_requests')
-            .update({ 
-              preparation_status: newStatus === 'pending' ? 'to_prepare' :
-                                newStatus === 'in_progress' ? 'in_progress' : 'completed'
-            })
-            .eq('id', taskId);
-          break;
-        case 'follow_up':
-          await supabase
-            .from('follow_ups')
-            .update({ status: newStatus })
-            .eq('id', taskId);
-          break;
-        case 'internal_task':
-          await supabase
-            .from('tasks')
-            .update({ status: newStatus })
-            .eq('id', taskId);
-          break;
-      }
+      // Task status updates will be handled by the n8n workflow
+      // For now, just update local state
+      console.log(`Task ${taskId} status updated to ${newStatus}`);
 
       // Update local state
       setTasks(prev => prev.map(t => 

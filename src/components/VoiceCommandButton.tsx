@@ -146,78 +146,60 @@ export function VoiceCommandButton() {
 
   const handleCreateCard = async () => {
     try {
-      let result;
-      
-      // Create object based on category
-      switch (formData.category) {
-        case 'incident':
-          result = await supabase
-            .from('incidents')
-            .insert({
-              title: formData.title || 'Nouvel incident',
-              description: formData.description,
-              incident_type: formData.originType,
-              priority: formData.priority,
-              status: 'open',
-              // assigned_to: would need user ID mapping
-              // created_by: would need current user ID
-              // location_id: would need location mapping
-            });
-          break;
-          
-        case 'client_request':
-          result = await supabase
-            .from('special_requests')
-            .insert({
-              guest_name: formData.guestName || 'Client',
-              room_number: formData.roomNumber || formData.location,
-              request_type: formData.originType,
-              request_details: formData.description,
-              preparation_status: 'to_prepare',
-              arrival_date: new Date().toISOString().split('T')[0],
-              // assigned_to: would need user ID mapping
-              // created_by: would need current user ID
-            });
-          break;
-          
-        case 'follow_up':
-          result = await supabase
-            .from('follow_ups')
-            .insert({
-              title: formData.title || 'Nouvelle relance',
-              recipient: formData.recipient || formData.assignedMember,
-              follow_up_type: formData.originType,
-              notes: formData.description,
-              status: 'pending',
-              due_date: formData.dueDate?.toISOString() || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-              // assigned_to: would need user ID mapping
-              // created_by: would need current user ID
-            });
-          break;
-          
-        case 'internal_task':
-          result = await supabase
-            .from('tasks')
-            .insert({
-              title: formData.title || 'Nouvelle tâche',
-              description: formData.description,
-              task_type: formData.originType,
-              priority: formData.priority,
-              status: 'pending',
-              location: formData.location,
-              department: formData.service,
-              due_date: formData.dueDate?.toISOString(),
-              // assigned_to: would need user ID mapping
-              // created_by: would need current user ID
-            });
-          break;
-          
-        default:
-          throw new Error('Catégorie invalide');
-      }
+      // Prepare task data for n8n webhook
+      const taskData = {
+        title: formData.title || `New ${formData.category}`,
+        description: formData.description,
+        category: formData.category,
+        origin_type: formData.originType,
+        service: formData.service,
+        assigned_to: null, // Will be mapped by n8n workflow
+        collaborators: [],
+        created_by: null, // Will be set by n8n workflow
+        location: formData.location,
+        location_id: null, // Will be mapped by n8n workflow
+        incident_id: null,
+        priority: formData.priority || 'medium',
+        status: 'pending',
+        reminder_date: null, // Will be set separately via reminder modal
+        reminder_sent_at: null,
+        escalation_date: null,
+        escalated_at: null,
+        escalation_channel: null,
+        requires_validation: false,
+        validated_by: null,
+        validation_status: null,
+        validation_deadline: null,
+        checklist_items: checklists.map(checklist => ({
+          id: checklist.id,
+          title: checklist.title,
+          items: []
+        })),
+        attachment_url: null,
+        voice_note_url: null,
+        voice_transcript: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        completed_at: null,
+        // Additional fields for specific categories
+        guest_name: formData.guestName,
+        room_number: formData.roomNumber,
+        recipient: formData.recipient,
+        assigned_member: formData.assignedMember,
+        due_date: formData.dueDate?.toISOString() || null
+      };
 
-      if (result?.error) {
-        throw result.error;
+      // Send POST request to n8n webhook
+      const response = await fetch('https://primary-production-31bef.up.railway.app/webhook-test/send_data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       toast({
