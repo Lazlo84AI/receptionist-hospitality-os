@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FileText, 
   Edit3, 
@@ -27,7 +27,7 @@ import { ChecklistModal } from '@/components/modals/ChecklistModal';
 import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { ReminderModal } from '@/components/modals/ReminderModal';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { cn } from '@/lib/utils';
 
 const categories = [
@@ -55,23 +55,6 @@ const services = [
   { id: 'maintenance', label: 'Maintenance' },
 ];
 
-const hotelMembers = [
-  { id: '1', name: 'Jean Dupont', role: 'Réception', service: 'reception', initials: 'JD' },
-  { id: '2', name: 'Marie Dubois', role: 'Gouvernante', service: 'housekeeping', initials: 'MD' },
-  { id: '3', name: 'Pierre Leroy', role: 'Réception', service: 'reception', initials: 'PL' },
-  { id: '4', name: 'Claire Petit', role: 'Gouvernante', service: 'housekeeping', initials: 'CP' },
-  { id: '5', name: 'Wilfried de Renty', role: 'Direction', service: 'reception', initials: 'WR' },
-  { id: '6', name: 'Leopold Bechu', role: 'Réception', service: 'reception', initials: 'LB' },
-  { id: '7', name: 'Marc Martin', role: 'Maintenance', service: 'maintenance', initials: 'MM' },
-  { id: '8', name: 'Sophie Bernard', role: 'Maintenance', service: 'maintenance', initials: 'SB' },
-];
-
-const rooms = Array.from({ length: 30 }, (_, i) => i + 1);
-const commonAreas = [
-  'Lobby', 'Restaurant', 'Terrasse', 'Cuisine', 'Accueil', 'Lounge', 'Spa'
-];
-const corridors = Array.from({ length: 5 }, (_, i) => `Couloir ${i + 1}`);
-
 export function VoiceCommandButton() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -81,6 +64,30 @@ export function VoiceCommandButton() {
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
   const [checklists, setChecklists] = useState<Array<{ id: string; title: string }>>([]);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number }>>([]);
+  
+  // Fetch real-time data from database
+  const { profiles: hotelMembers, loading: profilesLoading } = useProfiles();
+  const { locations, loading: locationsLoading } = useLocations();
+  
+  // Derived location data from database
+  const rooms = locations
+    .filter(location => location.type === 'room')
+    .map(location => location.name)
+    .sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+    
+  const commonAreas = locations
+    .filter(location => location.type === 'common_area')
+    .map(location => location.name)
+    .sort();
+    
+  const corridors = locations
+    .filter(location => location.type === 'corridor')
+    .map(location => location.name)
+    .sort();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -465,10 +472,10 @@ export function VoiceCommandButton() {
                     </SelectTrigger>
                     <SelectContent>
                       {hotelMembers
-                        .filter(member => member.service === formData.service)
+                        .filter(member => member.department === formData.service)
                         .map((member) => (
-                          <SelectItem key={member.id} value={member.name}>
-                            {member.name} - {member.role}
+                          <SelectItem key={member.id} value={`${member.first_name} ${member.last_name}`}>
+                            {member.first_name} {member.last_name} - {member.role}
                           </SelectItem>
                         ))}
                     </SelectContent>
