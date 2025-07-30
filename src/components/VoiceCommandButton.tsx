@@ -72,10 +72,14 @@ export function VoiceCommandButton() {
   // Derived location data from database
   const rooms = locations
     .filter(location => location.type === 'room')
-    .map(location => location.name)
+    .map(location => {
+      // Extract room number from location name (e.g., "Room 101" -> "101", "Chambre 5" -> "5")
+      const match = location.name.match(/\d+/);
+      return match ? match[0] : location.name;
+    })
     .sort((a, b) => {
-      const numA = parseInt(a.replace(/\D/g, '')) || 0;
-      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      const numA = parseInt(a) || 0;
+      const numB = parseInt(b) || 0;
       return numA - numB;
     });
     
