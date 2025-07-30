@@ -6,7 +6,7 @@ export interface WebhookEvent {
   data: any;
 }
 
-export const sendWebhookEvent = async (event: WebhookEvent): Promise<boolean> => {
+export const sendWebhookEvent = async (event: WebhookEvent): Promise<{ success: boolean; error?: string }> => {
   try {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -17,15 +17,22 @@ export const sendWebhookEvent = async (event: WebhookEvent): Promise<boolean> =>
     });
 
     if (!response.ok) {
-      console.error(`Webhook failed with status: ${response.status}`);
-      return false;
+      const errorText = await response.text();
+      console.error(`Webhook failed with status: ${response.status}`, errorText);
+      return { 
+        success: false, 
+        error: `Server error: ${response.status}. Please try again or contact support.` 
+      };
     }
 
     console.log(`Webhook sent successfully for event: ${event.event_type}`);
-    return true;
+    return { success: true };
   } catch (error) {
     console.error('Error sending webhook:', error);
-    return false;
+    return { 
+      success: false, 
+      error: 'Unable to connect to server. Please check your internet connection and try again.' 
+    };
   }
 };
 

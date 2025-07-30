@@ -264,7 +264,7 @@ const KanbanColumn = ({
 
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { tasks, loading, error, updateTaskStatus } = useTasks();
+  const { tasks, loading, error, refetch } = useTasks();
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
@@ -324,9 +324,23 @@ const ShiftManagement = () => {
     if (task.status !== newStatus) {
       // Send specific webhook event for task movement (drag and drop)
       const { sendTaskMovedEvent } = await import('@/lib/webhookService');
-      await sendTaskMovedEvent(taskId, task.status, newStatus, task);
+      const result = await sendTaskMovedEvent(taskId, task.status, newStatus, task);
       
-      handleStatusChange(taskId, newStatus);
+      if (result.success) {
+        // Refetch data after successful webhook
+        refetch();
+        toast({
+          title: "Success",
+          description: "Task moved successfully",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to move task. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -337,23 +351,29 @@ const ShiftManagement = () => {
       
       const oldStatus = task.status;
 
-      // Update status using the Supabase hook
-      await updateTaskStatus(taskId, task.type, newStatus);
-      
       // Send webhook event for task status change
       const { sendTaskStatusChangedEvent } = await import('@/lib/webhookService');
-      await sendTaskStatusChangedEvent(taskId, oldStatus, newStatus, task);
+      const result = await sendTaskStatusChangedEvent(taskId, oldStatus, newStatus, task);
 
-      toast({
-        title: "Success",
-        description: "Status updated successfully",
-        variant: "default",
-      });
+      if (result.success) {
+        // Refetch data after successful webhook
+        refetch();
+        toast({
+          title: "Success",
+          description: "Status updated successfully",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update status. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error('Error updating task status:', error);
       toast({
         title: "Error",
-        description: "Failed to update task status",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
@@ -374,21 +394,28 @@ const ShiftManagement = () => {
   };
 
   const handleShiftStarted = async () => {
-    setShiftStatus('active');
-    
     // Send webhook event for shift started
     const { sendShiftStartedEvent } = await import('@/lib/webhookService');
-    await sendShiftStartedEvent({
+    const result = await sendShiftStartedEvent({
       timestamp: new Date().toISOString(),
       status: 'active',
       tasks_count: tasks.length,
     });
-    
-    toast({
-      title: "Shift Started",
-      description: "Your shift has been started successfully",
-      variant: "default",
-    });
+
+    if (result.success) {
+      setShiftStatus('active');
+      toast({
+        title: "Shift Started",
+        description: "Your shift has been marked as active",
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to start shift. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -517,22 +544,30 @@ const ShiftManagement = () => {
         isOpen={isShiftCloseOpen}
         onClose={async () => {
           setIsShiftCloseOpen(false);
-          setShiftStatus('closed');
           
           // Send webhook event for shift ended
           const { sendShiftEndedEvent } = await import('@/lib/webhookService');
-          await sendShiftEndedEvent({
+          const result = await sendShiftEndedEvent({
             timestamp: new Date().toISOString(),
             status: 'closed',
             tasks_count: tasks.length,
             completed_tasks: tasks.filter(task => task.status === 'completed').length,
           });
           
-          toast({
-            title: "Shift Ended",
-            description: "Your shift has been ended successfully",
-            variant: "default",
-          });
+          if (result.success) {
+            setShiftStatus('closed');
+            toast({
+              title: "Shift Ended",
+              description: "Your shift has been ended successfully",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: result.error || "Failed to end shift. Please try again.",
+              variant: "destructive",
+            });
+          }
         }}
         tasks={tasks}
         onCardClick={handleCardClick}

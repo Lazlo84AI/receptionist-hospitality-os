@@ -144,50 +144,7 @@ export const useTasks = () => {
     };
   }, []);
 
-  const updateTaskStatus = async (taskId: string, taskType: string, newStatus: string) => {
-    try {
-      const statusValue = newStatus as 'pending' | 'in_progress' | 'completed' | 'cancelled';
-      let result;
-      
-      switch (taskType) {
-        case 'incident':
-          result = await supabase
-            .from('incidents')
-            .update({ status: statusValue, updated_at: new Date().toISOString() })
-            .eq('id', taskId);
-          break;
-        case 'client_request':
-          result = await supabase
-            .from('client_requests')
-            .update({ preparation_status: statusValue, updated_at: new Date().toISOString() })
-            .eq('id', taskId);
-          break;
-        case 'follow_up':
-          result = await supabase
-            .from('follow_ups')
-            .update({ status: statusValue, updated_at: new Date().toISOString() })
-            .eq('id', taskId);
-          break;
-        case 'internal_task':
-          result = await supabase
-            .from('internal_tasks')
-            .update({ status: statusValue, updated_at: new Date().toISOString() })
-            .eq('id', taskId);
-          break;
-        default:
-          throw new Error(`Unknown task type: ${taskType}`);
-      }
-
-      if (result.error) throw result.error;
-      
-      return true;
-    } catch (err) {
-      console.error('Error updating task status:', err);
-      throw err;
-    }
-  };
-
-  return { tasks, loading, error, refetch: fetchTasks, updateTaskStatus };
+  return { tasks, loading, error, refetch: fetchTasks };
 };
 
 // Hook for fetching follow-ups specifically

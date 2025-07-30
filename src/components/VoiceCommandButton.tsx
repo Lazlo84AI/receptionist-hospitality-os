@@ -191,20 +191,23 @@ export function VoiceCommandButton() {
 
       // Send webhook event for task creation
       const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
-      const webhookSent = await sendTaskCreatedEvent(taskData);
+      const result = await sendTaskCreatedEvent(taskData);
       
-      if (!webhookSent) {
-        console.warn('Webhook failed but task creation continues');
+      if (result.success) {
+        toast({
+          title: "Succès",
+          description: "La carte a été créée avec succès !",
+          variant: "default",
+        });
+        setShowCreateModal(false);
+        resetForm();
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Échec de la création de la carte. Veuillez réessayer.",
+          variant: "destructive",
+        });
       }
-
-      toast({
-        title: "Succès",
-        description: "La carte a été créée avec succès !",
-        variant: "default",
-      });
-
-      setShowCreateModal(false);
-      resetForm();
       
     } catch (error) {
       console.error('Error creating card:', error);
