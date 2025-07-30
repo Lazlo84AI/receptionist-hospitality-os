@@ -104,22 +104,11 @@ export const sendTaskCreatedEvent = async (
   const comprehensivePayload = {
     ...enhancedData,
     created_by: currentUserId,
-    // Include all enhancements in the payload
+    // Include selected enhancements in the payload
     checklists: enhancements.checklists || [],
     attachments: enhancements.attachments || [],
     reminders: enhancements.reminders || [],
     comments: enhancements.comments || [],
-    members: enhancements.members || [],
-    escalations: enhancements.escalations || [],
-    // Add enhancement counts for easy processing
-    enhancement_counts: {
-      checklists: (enhancements.checklists || []).length,
-      attachments: (enhancements.attachments || []).length,
-      reminders: (enhancements.reminders || []).length,
-      comments: (enhancements.comments || []).length,
-      members: (enhancements.members || []).length,
-      escalations: (enhancements.escalations || []).length,
-    }
   };
   
   return sendWebhookEvent({
