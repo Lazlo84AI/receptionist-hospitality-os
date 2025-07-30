@@ -14,7 +14,174 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      client_requests: {
+        Row: {
+          arrival_date: string | null
+          assigned_to: string | null
+          created_at: string
+          guest_name: string
+          id: string
+          preparation_status: Database["public"]["Enums"]["task_status"]
+          priority: Database["public"]["Enums"]["priority_level"]
+          request_details: string | null
+          request_type: string
+          room_number: string
+          updated_at: string
+        }
+        Insert: {
+          arrival_date?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          guest_name: string
+          id?: string
+          preparation_status?: Database["public"]["Enums"]["task_status"]
+          priority?: Database["public"]["Enums"]["priority_level"]
+          request_details?: string | null
+          request_type: string
+          room_number: string
+          updated_at?: string
+        }
+        Update: {
+          arrival_date?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          guest_name?: string
+          id?: string
+          preparation_status?: Database["public"]["Enums"]["task_status"]
+          priority?: Database["public"]["Enums"]["priority_level"]
+          request_details?: string | null
+          request_type?: string
+          room_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      follow_ups: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          due_date: string | null
+          follow_up_type: string
+          id: string
+          notes: string | null
+          priority: Database["public"]["Enums"]["priority_level"]
+          recipient: string
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          due_date?: string | null
+          follow_up_type: string
+          id?: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          recipient: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          due_date?: string | null
+          follow_up_type?: string
+          id?: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          recipient?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      incidents: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          id: string
+          incident_type: string
+          location: string | null
+          priority: Database["public"]["Enums"]["priority_level"]
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          incident_type: string
+          location?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          incident_type?: string
+          location?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      internal_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          department: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          location: string | null
+          priority: Database["public"]["Enums"]["priority_level"]
+          status: Database["public"]["Enums"]["task_status"]
+          task_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          department?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          location?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["task_status"]
+          task_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          department?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          location?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["task_status"]
+          task_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +190,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      priority_level: "low" | "medium" | "high" | "urgent"
+      task_status: "pending" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +318,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      priority_level: ["low", "medium", "high", "urgent"],
+      task_status: ["pending", "in_progress", "completed", "cancelled"],
+    },
   },
 } as const
