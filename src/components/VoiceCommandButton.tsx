@@ -474,7 +474,20 @@ export function VoiceCommandButton() {
                     </SelectTrigger>
                     <SelectContent>
                       {hotelMembers
-                        .filter(member => member.department === formData.service)
+                        .filter(member => {
+                          if (!formData.service) return false;
+                          // Map service selection to department/role values
+                          switch (formData.service) {
+                            case 'housekeeping':
+                              return member.department === 'housekeeping' || member.role === 'housekeeping';
+                            case 'reception':
+                              return member.department === 'reception' || member.role === 'staff';
+                            case 'maintenance':
+                              return member.department === 'maintenance' || member.role === 'maintenance';
+                            default:
+                              return false;
+                          }
+                        })
                         .map((member) => (
                           <SelectItem key={member.id} value={`${member.first_name} ${member.last_name}`}>
                             {member.first_name} {member.last_name} - {member.role}
