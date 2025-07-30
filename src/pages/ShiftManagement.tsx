@@ -294,7 +294,7 @@ const ShiftManagement = () => {
     setDraggedTask(task || null);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggedTask(null);
     
@@ -322,6 +322,10 @@ const ShiftManagement = () => {
     }
 
     if (task.status !== newStatus) {
+      // Send specific webhook event for task movement (drag and drop)
+      const { sendTaskMovedEvent } = await import('@/lib/webhookService');
+      await sendTaskMovedEvent(taskId, task.status, newStatus, task);
+      
       handleStatusChange(taskId, newStatus);
     }
   };
@@ -330,9 +334,15 @@ const ShiftManagement = () => {
     try {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
+      
+      const oldStatus = task.status;
 
       // Update status using the Supabase hook
       await updateTaskStatus(taskId, task.type, newStatus);
+      
+      // Send webhook event for task status change
+      const { sendTaskStatusChangedEvent } = await import('@/lib/webhookService');
+      await sendTaskStatusChangedEvent(taskId, oldStatus, newStatus, task);
 
       toast({
         title: "Success",
@@ -363,8 +373,17 @@ const ShiftManagement = () => {
     }
   };
 
-  const handleShiftStarted = () => {
+  const handleShiftStarted = async () => {
     setShiftStatus('active');
+    
+    // Send webhook event for shift started
+    const { sendShiftStartedEvent } = await import('@/lib/webhookService');
+    await sendShiftStartedEvent({
+      timestamp: new Date().toISOString(),
+      status: 'active',
+      tasks_count: tasks.length,
+    });
+    
     toast({
       title: "Shift Started",
       description: "Your shift has been started successfully",
@@ -496,7 +515,25 @@ const ShiftManagement = () => {
       {/* Shift Close Modal */}
       <ShiftCloseModal
         isOpen={isShiftCloseOpen}
-        onClose={() => setIsShiftCloseOpen(false)}
+        onClose={async () => {
+          setIsShiftCloseOpen(false);
+          setShiftStatus('closed');
+          
+          // Send webhook event for shift ended
+          const { sendShiftEndedEvent } = await import('@/lib/webhookService');
+          await sendShiftEndedEvent({
+            timestamp: new Date().toISOString(),
+            status: 'closed',
+            tasks_count: tasks.length,
+            completed_tasks: tasks.filter(task => task.status === 'completed').length,
+          });
+          
+          toast({
+            title: "Shift Ended",
+            description: "Your shift has been ended successfully",
+            variant: "default",
+          });
+        }}
         tasks={tasks}
         onCardClick={handleCardClick}
       />

@@ -189,17 +189,12 @@ export function VoiceCommandButton() {
         due_date: formData.dueDate?.toISOString() || null
       };
 
-      // Send POST request to n8n webhook
-      const response = await fetch('https://primary-production-31bef.up.railway.app/webhook-test/send_data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Send webhook event for task creation
+      const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
+      const webhookSent = await sendTaskCreatedEvent(taskData);
+      
+      if (!webhookSent) {
+        console.warn('Webhook failed but task creation continues');
       }
 
       toast({
