@@ -200,7 +200,7 @@ export function VoiceCommandButton() {
 
       // Send webhook event for task creation
       const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
-      const result = await sendTaskCreatedEvent(taskData);
+      const result = await sendTaskCreatedEvent(taskData, hotelMembers, locations);
       
       if (result.success) {
         toast({
