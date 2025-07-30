@@ -154,7 +154,7 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
       {/* Add New Item */}
       <div className="space-y-3">
         <Input
-          placeholder="Ajouter un élément"
+          placeholder="Add an item"
           value={newItemText}
           onChange={(e) => setNewItemText(e.target.value)}
           onFocus={() => setIsAdding(true)}
@@ -173,14 +173,14 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
                 disabled={!newItemText.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Ajouter
+                Add
               </Button>
               <Button 
                 variant="ghost" 
                 onClick={handleCancel}
                 className="text-muted-foreground hover:text-foreground"
               >
-                Annuler
+                Cancel
               </Button>
             </div>
             
@@ -198,12 +198,12 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
                     )}
                   >
                     <User className="h-3 w-3" />
-                    {selectedAssignee ? selectedAssignee.name : "Attribuer"}
+                    {selectedAssignee ? selectedAssignee.name : "Assign"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="start">
                   <div className="space-y-1">
-                    <div className="text-sm font-medium text-foreground mb-2">Attribuer à</div>
+                    <div className="text-sm font-medium text-foreground mb-2">Assign to</div>
                     {members.map((member) => (
                       <div
                         key={member.avatar}
