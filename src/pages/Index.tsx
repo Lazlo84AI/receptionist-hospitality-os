@@ -5,6 +5,7 @@ import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { IncidentsCard } from '@/components/IncidentsCard';
 import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { FollowUpsCard } from '@/components/FollowUpsCard';
+import { ReceptionistStatus } from '@/components/ReceptionistStatus';
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,6 +25,11 @@ const Index = () => {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard: Top Priorities</h1>
             <p className="text-muted-foreground text-lg">with the highest impact on customer experience.</p>
+          </div>
+
+          {/* Receptionist Status - Full Width */}
+          <div className="w-full mb-8">
+            <ReceptionistStatus />
           </div>
 
           {/* Dashboard Grid - Row 1: 50/50 Layout */}
