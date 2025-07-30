@@ -62,7 +62,7 @@ export function VoiceCommandButton() {
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
-  const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items?: any[] }>>([]);
+  const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items: any[] }>>([]);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number }>>([]);
   
   // Fetch real-time data from database
@@ -146,12 +146,23 @@ export function VoiceCommandButton() {
     const newChecklist = {
       id: Date.now().toString(),
       title: title,
+      items: [], // Initialize with empty items array
     };
     setChecklists(prev => [...prev, newChecklist]);
   };
 
   const handleDeleteChecklist = (checklistId: string) => {
     setChecklists(prev => prev.filter(checklist => checklist.id !== checklistId));
+  };
+
+  const handleUpdateChecklistItems = (checklistId: string, items: any[]) => {
+    setChecklists(prev => 
+      prev.map(checklist => 
+        checklist.id === checklistId 
+          ? { ...checklist, items }
+          : checklist
+      )
+    );
   };
 
   const handleCreateCard = async () => {
@@ -222,12 +233,16 @@ export function VoiceCommandButton() {
       }
 
       // Prepare enhancements for webhook
+      console.log('🔍 DEBUG: Current checklists state:', checklists);
       const enhancements = {
-        checklists: checklists.map(checklist => ({
-          id: checklist.id,
-          title: checklist.title,
-          items: checklist.items || [] // Include actual items if they exist
-        })),
+        checklists: checklists.map(checklist => {
+          console.log('🔍 DEBUG: Processing checklist:', checklist);
+          return {
+            id: checklist.id,
+            title: checklist.title,
+            items: checklist.items || [] // Include actual items if they exist
+          };
+        }),
         attachments: attachments.map(attachment => ({
           id: attachment.id,
           name: attachment.name,
@@ -238,6 +253,8 @@ export function VoiceCommandButton() {
         reminders: [], // No reminders in current UI
         comments: [], // No comments in current UI
       };
+      
+      console.log('🔍 DEBUG: Final enhancements object:', enhancements);
 
       // Send webhook event for task creation
       const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
@@ -664,13 +681,14 @@ export function VoiceCommandButton() {
             {checklists.length > 0 && (
               <div className="space-y-4">
                 <div className="text-sm font-medium text-muted-foreground">Added Checklists</div>
-                {checklists.map((checklist) => (
-                  <ChecklistComponent
-                    key={checklist.id}
-                    title={checklist.title}
-                    onDelete={() => handleDeleteChecklist(checklist.id)}
-                  />
-                ))}
+                 {checklists.map((checklist) => (
+                   <ChecklistComponent
+                     key={checklist.id}
+                     title={checklist.title}
+                     onDelete={() => handleDeleteChecklist(checklist.id)}
+                     onItemsChange={(items) => handleUpdateChecklistItems(checklist.id, items)}
+                   />
+                 ))}
               </div>
             )}
 

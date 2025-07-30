@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckSquare, Trash2, User, Clock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useProfiles } from '@/hooks/useSupabaseData';
 
-interface ChecklistItem {
+export interface ChecklistItem {
   id: string;
   text: string;
   completed: boolean;
@@ -21,9 +21,10 @@ interface ChecklistItem {
 interface ChecklistComponentProps {
   title: string;
   onDelete: () => void;
+  onItemsChange?: (items: ChecklistItem[]) => void;
 }
 
-export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps) {
+export function ChecklistComponent({ title, onDelete, onItemsChange }: ChecklistComponentProps) {
   const { profiles } = useProfiles();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState('');
@@ -35,6 +36,13 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
 
   const completedCount = items.filter(item => item.completed).length;
   const progressPercentage = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
+
+  // Notify parent component when items change
+  useEffect(() => {
+    if (onItemsChange) {
+      onItemsChange(items);
+    }
+  }, [items, onItemsChange]);
 
   // Transform profiles to member format
   const members = profiles.map(profile => ({
@@ -55,7 +63,10 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
         assignedTo: selectedAssignee || undefined,
         dueDate: selectedDate
       };
-      setItems([...items, newItem]);
+      console.log('🔍 DEBUG: Adding new checklist item:', newItem);
+      const updatedItems = [...items, newItem];
+      setItems(updatedItems);
+      console.log('🔍 DEBUG: Updated items array:', updatedItems);
       setNewItemText('');
       setSelectedAssignee(null);
       setSelectedDate(undefined);
