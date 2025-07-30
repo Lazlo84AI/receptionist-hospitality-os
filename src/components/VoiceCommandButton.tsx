@@ -69,9 +69,8 @@ export function VoiceCommandButton() {
   const { profiles: hotelMembers, loading: profilesLoading } = useProfiles();
   const { locations, loading: locationsLoading } = useLocations();
   
-  // Derived location data from database
-  const rooms = locations
-    .filter(location => location.type === 'room')
+  // All locations from database
+  const allLocations = locations
     .map(location => location.name)
     .sort((a, b) => {
       // Try to sort by number if both have numbers, otherwise alphabetically
@@ -80,16 +79,6 @@ export function VoiceCommandButton() {
       if (numA && numB) return numA - numB;
       return a.localeCompare(b);
     });
-    
-  const commonAreas = locations
-    .filter(location => location.type === 'common_area')
-    .map(location => location.name)
-    .sort();
-    
-  const corridors = locations
-    .filter(location => location.type === 'corridor')
-    .map(location => location.name)
-    .sort();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -494,49 +483,29 @@ export function VoiceCommandButton() {
             {(['client_request', 'incident', 'follow_up', 'internal_task'].includes(formData.category)) && (
               <div className="space-y-3">
                 <label className="text-sm font-medium">Location</label>
-                <div className="grid grid-cols-2 gap-4 h-48">
-                  {/* Rooms */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Rooms</h4>
-                    <div className="grid grid-cols-6 gap-2 max-h-44 overflow-y-auto">
-                      {rooms.map((room) => (
-                        <Button
-                          key={room}
-                          variant={formData.location === room ? "default" : "outline"}
-                          className="h-8 text-xs px-1"
-                          onClick={() => setFormData(prev => ({ ...prev, location: room }))}
-                        >
-                          {room}
-                        </Button>
-                      ))}
-                    </div>
+                <div className="max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-4 gap-2">
+                    {allLocations.map((location) => (
+                      <Button
+                        key={location}
+                        variant={formData.location === location ? "default" : "outline"}
+                        className="h-8 text-xs px-2 justify-start"
+                        onClick={() => setFormData(prev => ({ ...prev, location: location }))}
+                      >
+                        {location}
+                      </Button>
+                    ))}
                   </div>
-                  {/* Common Areas and Corridors */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Common Areas</h4>
-                    <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto">
-                      {commonAreas.map((area) => (
-                        <Button
-                          key={area}
-                          variant={formData.location === area ? "default" : "outline"}
-                          className="text-xs h-8"
-                          onClick={() => setFormData(prev => ({ ...prev, location: area }))}
-                        >
-                          {area}
-                        </Button>
-                      ))}
-                      {corridors.map((corridor) => (
-                        <Button
-                          key={corridor}
-                          variant={formData.location === corridor ? "default" : "outline"}
-                          className="text-xs h-8"
-                          onClick={() => setFormData(prev => ({ ...prev, location: corridor }))}
-                        >
-                          {corridor}
-                        </Button>
-                      ))}
+                  {allLocations.length === 0 && locationsLoading && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      Loading locations...
                     </div>
-                  </div>
+                  )}
+                  {allLocations.length === 0 && !locationsLoading && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No locations available
+                    </div>
+                  )}
                 </div>
               </div>
             )}
