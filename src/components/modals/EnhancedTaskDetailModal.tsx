@@ -29,21 +29,7 @@ import { MembersModal } from './MembersModal';
 import { EscalationModal } from './EscalationModal';
 import { AttachmentModal } from './AttachmentModal';
 import { ChecklistComponent } from '@/components/ChecklistComponent';
-
-interface TaskItem {
-  id: string;
-  title: string;
-  type: 'incident' | 'client_request' | 'follow_up' | 'internal_task';
-  priority: 'normal' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed';
-  description?: string;
-  assignedTo?: string;
-  dueDate?: string;
-  location?: string;
-  guestName?: string;
-  roomNumber?: string;
-  recipient?: string;
-}
+import { TaskItem } from '@/types/database';
 
 interface EnhancedTaskDetailModalProps {
   isOpen: boolean;

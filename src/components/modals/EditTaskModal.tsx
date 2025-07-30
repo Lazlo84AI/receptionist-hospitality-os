@@ -18,21 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface TaskItem {
-  id: string;
-  title: string;
-  type: 'incident' | 'client_request' | 'follow_up' | 'internal_task';
-  priority: 'normal' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed';
-  description?: string;
-  assignedTo?: string;
-  dueDate?: string;
-  location?: string;
-  guestName?: string;
-  roomNumber?: string;
-  recipient?: string;
-}
+import { TaskItem } from '@/types/database';
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -173,7 +159,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Statut</Label>
                 <div className="flex gap-2">
-                  {(['pending', 'in_progress', 'completed'] as const).map((status) => (
+                  {(['pending', 'in_progress', 'completed', 'cancelled'] as const).map((status) => (
                     <Button
                       key={status}
                       variant={editedTask.status === status ? "default" : "outline"}
@@ -183,6 +169,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                       {status === 'pending' && 'À traiter'}
                       {status === 'in_progress' && 'En cours'}
                       {status === 'completed' && 'Résolu'}
+                      {status === 'cancelled' && 'Annulé'}
                     </Button>
                   ))}
                 </div>

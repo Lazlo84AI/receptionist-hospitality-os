@@ -125,9 +125,9 @@ const SortableTaskCard = ({
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              {(task.priority === 'urgent' || task.priority === 'high') && (
+              {task.priority === 'urgent' && (
                 <Badge className="bg-urgence-red text-warm-cream">
-                  {task.priority === 'high' ? 'High' : 'Urgent'}
+                  Urgent
                 </Badge>
               )}
               <div

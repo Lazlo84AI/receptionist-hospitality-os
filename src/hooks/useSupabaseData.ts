@@ -41,11 +41,11 @@ export const useTasks = () => {
       if (internalTasksResult.error) throw internalTasksResult.error;
 
       // Transform incidents
-      const incidents: TaskItem[] = (incidentsResult.data || []).map((incident: Incident) => ({
+      const incidents: TaskItem[] = (incidentsResult.data || []).map((incident: any) => ({
         id: incident.id,
         title: incident.title,
         type: 'incident' as const,
-        priority: incident.priority,
+        priority: mapPriority(incident.priority),
         status: incident.status,
         description: incident.description || undefined,
         assignedTo: incident.assigned_to || undefined,
@@ -55,11 +55,11 @@ export const useTasks = () => {
       }));
 
       // Transform client requests
-      const clientRequests: TaskItem[] = (clientRequestsResult.data || []).map((request: ClientRequest) => ({
+      const clientRequests: TaskItem[] = (clientRequestsResult.data || []).map((request: any) => ({
         id: request.id,
         title: `${request.request_type} - ${request.guest_name}`,
         type: 'client_request' as const,
-        priority: request.priority,
+        priority: mapPriority(request.priority),
         status: request.preparation_status,
         description: request.request_details || undefined,
         assignedTo: request.assigned_to || undefined,
@@ -71,11 +71,11 @@ export const useTasks = () => {
       }));
 
       // Transform follow-ups
-      const followUps: TaskItem[] = (followUpsResult.data || []).map((followUp: FollowUp) => ({
+      const followUps: TaskItem[] = (followUpsResult.data || []).map((followUp: any) => ({
         id: followUp.id,
         title: followUp.title,
         type: 'follow_up' as const,
-        priority: followUp.priority,
+        priority: mapPriority(followUp.priority),
         status: followUp.status,
         description: followUp.notes || undefined,
         assignedTo: followUp.assigned_to || undefined,
@@ -86,11 +86,11 @@ export const useTasks = () => {
       }));
 
       // Transform internal tasks
-      const internalTasks: TaskItem[] = (internalTasksResult.data || []).map((task: InternalTask) => ({
+      const internalTasks: TaskItem[] = (internalTasksResult.data || []).map((task: any) => ({
         id: task.id,
         title: task.title,
         type: 'internal_task' as const,
-        priority: task.priority,
+        priority: mapPriority(task.priority),
         status: task.status,
         description: task.description || undefined,
         assignedTo: task.assigned_to || undefined,
@@ -192,7 +192,7 @@ export const useTasks = () => {
 
 // Hook for fetching follow-ups specifically
 export const useFollowUps = () => {
-  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [followUps, setFollowUps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
