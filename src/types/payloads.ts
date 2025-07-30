@@ -8,7 +8,7 @@ export type AttachmentType = 'image' | 'document' | 'video' | 'audio' | 'other';
 export type EscalationMethod = 'email' | 'phone' | 'sms' | 'internal';
 export type ReminderFrequency = 'once' | 'daily' | 'weekly' | 'monthly';
 
-// Incident Payloads
+// Incident Payloads - matches incidents table exactly
 export interface CreateIncidentPayload {
   title: string;
   description?: string;
@@ -29,13 +29,13 @@ export interface UpdateIncidentPayload {
   assigned_to?: string;
 }
 
-// Client Request Payloads
+// Client Request Payloads - matches client_requests table exactly
 export interface CreateClientRequestPayload {
   guest_name: string;
   room_number: string;
   request_type: string;
   request_details?: string;
-  arrival_date?: string;
+  arrival_date?: string; // ISO date string
   priority: Priority;
   assigned_to?: string;
 }
@@ -52,13 +52,13 @@ export interface UpdateClientRequestPayload {
   assigned_to?: string;
 }
 
-// Follow-up Payloads
+// Follow-up Payloads - matches follow_ups table exactly
 export interface CreateFollowUpPayload {
   title: string;
   follow_up_type: string;
   recipient: string;
   notes?: string;
-  due_date?: string;
+  due_date?: string; // ISO date string
   priority: Priority;
   assigned_to?: string;
 }
@@ -75,14 +75,14 @@ export interface UpdateFollowUpPayload {
   assigned_to?: string;
 }
 
-// Internal Task Payloads
+// Internal Task Payloads - matches internal_tasks table exactly
 export interface CreateInternalTaskPayload {
   title: string;
   description?: string;
   task_type: string;
   department?: string;
   location?: string;
-  due_date?: string;
+  due_date?: string; // ISO date string
   priority: Priority;
   assigned_to?: string;
 }
