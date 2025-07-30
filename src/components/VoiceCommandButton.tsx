@@ -62,7 +62,7 @@ export function VoiceCommandButton() {
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
-  const [checklists, setChecklists] = useState<Array<{ id: string; title: string }>>([]);
+  const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items?: any[] }>>([]);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number }>>([]);
   
   // Fetch real-time data from database
@@ -226,7 +226,7 @@ export function VoiceCommandButton() {
         checklists: checklists.map(checklist => ({
           id: checklist.id,
           title: checklist.title,
-          items: [] // Empty items for now, can be expanded later
+          items: checklist.items || [] // Include actual items if they exist
         })),
         attachments: attachments.map(attachment => ({
           id: attachment.id,
@@ -237,8 +237,6 @@ export function VoiceCommandButton() {
         })),
         reminders: [], // No reminders in current UI
         comments: [], // No comments in current UI
-        members: [], // No additional members in current UI
-        escalations: [] // No escalations in current UI
       };
 
       // Send webhook event for task creation
