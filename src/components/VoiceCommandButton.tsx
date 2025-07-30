@@ -72,16 +72,13 @@ export function VoiceCommandButton() {
   // Derived location data from database
   const rooms = locations
     .filter(location => location.type === 'room')
-    .map(location => {
-      // Extract room number from location name (e.g., "Room 101" -> "101", "Chambre 5" -> "5")
-      const match = location.name.match(/\d+/);
-      return match ? match[0] : null;
-    })
-    .filter(room => room !== null) // Only include rooms with actual numbers
+    .map(location => location.name)
     .sort((a, b) => {
-      const numA = parseInt(a) || 0;
-      const numB = parseInt(b) || 0;
-      return numA - numB;
+      // Try to sort by number if both have numbers, otherwise alphabetically
+      const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+      const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+      if (numA && numB) return numA - numB;
+      return a.localeCompare(b);
     });
     
   const commonAreas = locations
@@ -505,9 +502,9 @@ export function VoiceCommandButton() {
                       {rooms.map((room) => (
                         <Button
                           key={room}
-                          variant={formData.location === `Room ${room}` ? "default" : "outline"}
-                          className="h-8 w-12 text-xs"
-                          onClick={() => setFormData(prev => ({ ...prev, location: `Room ${room}` }))}
+                          variant={formData.location === room ? "default" : "outline"}
+                          className="h-8 text-xs px-1"
+                          onClick={() => setFormData(prev => ({ ...prev, location: room }))}
                         >
                           {room}
                         </Button>
