@@ -26,7 +26,15 @@ export const useTasks = () => {
     try {
       setLoading(true);
       
-      // Fetch all task types in parallel
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch all task types in parallel - for now, show all tasks until we implement proper user assignment
       const [incidentsResult, clientRequestsResult, followUpsResult, internalTasksResult] = await Promise.all([
         supabase.from('incidents').select('*'),
         supabase.from('client_requests').select('*'),

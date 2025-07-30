@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Menu, User, Clock, BarChart3, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, User, Clock, BarChart3, Calendar, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import hotelCrest from '@/assets/hotel-crest.jpg';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -12,15 +12,16 @@ interface HeaderProps {
 
 export function Header({ onMenuToggle }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   // Update time every minute
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
     return () => clearInterval(interval);
-  });
+  }, []);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('fr-FR', { 
@@ -37,6 +38,15 @@ export function Header({ onMenuToggle }: HeaderProps) {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const getUserInitials = (email: string) => {
+    return email.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -72,18 +82,22 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center space-x-2 hover:bg-champagne-gold/10">
               <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-warm-cream">Marie Dubois</p>
-                <p className="text-xs text-soft-pewter">Chef de Réception</p>
+                <p className="text-sm font-medium text-warm-cream">{user?.email}</p>
+                <p className="text-xs text-soft-pewter">Authenticated User</p>
               </div>
               <Avatar className="h-10 w-10 ring-2 ring-champagne-gold/50">
                 <AvatarImage src="/api/placeholder/40/40" />
                 <AvatarFallback className="bg-champagne-gold text-palace-navy font-semibold">
-                  MD
+                  {user?.email ? getUserInitials(user.email) : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem className="flex items-center space-x-2">
+              <User className="h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
             <DropdownMenuItem className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
               <span>My Statistics</span>
@@ -95,6 +109,14 @@ export function Header({ onMenuToggle }: HeaderProps) {
             >
               <Calendar className="h-4 w-4" />
               <span>My Shifts</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="flex items-center space-x-2 cursor-pointer text-red-600"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
