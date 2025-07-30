@@ -37,9 +37,9 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
       case 'incident':
         return { icon: AlertTriangle, color: 'bg-urgence-red text-warm-cream', label: 'Incident' };
       case 'client_request':
-        return { icon: Users, color: 'bg-champagne-gold text-palace-navy', label: 'Demande client' };
+        return { icon: Users, color: 'bg-champagne-gold text-palace-navy', label: 'Client Request' };
       default:
-        return { icon: Users, color: 'bg-champagne-gold text-palace-navy', label: 'Demande client' };
+        return { icon: Users, color: 'bg-champagne-gold text-palace-navy', label: 'Client Request' };
     }
   };
 
@@ -52,7 +52,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
         <DialogHeader className="pb-4 border-b">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold">
-              Détails de la tâche
+              Task Details
             </DialogTitle>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -61,9 +61,9 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
         </DialogHeader>
 
         <div className="space-y-6 pt-4">
-          {/* 🧱 Informations statiques en haut */}
+          {/* 🧱 Static information at top */}
           <div className="space-y-4">
-            {/* Type et titre */}
+            {/* Type and title */}
             <div className="flex items-start gap-3">
               <div className={cn("p-3 rounded-full", typeConfig.color)}>
                 <TypeIcon className="h-6 w-6" />
@@ -80,16 +80,16 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
               <p className="text-foreground leading-relaxed">
-                {task.description || "Le système de climatisation de la Suite Présidentielle ne fonctionne plus depuis hier soir."}
+                {task.description || "The air conditioning system in the Presidential Suite has not been working since last night."}
               </p>
             </div>
 
-            {/* Localisation et Assigné à */}
+            {/* Location and Assigned to */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Localisation</p>
+                  <p className="text-sm font-medium text-muted-foreground">Location</p>
                   <p className="text-foreground">{task.location}</p>
                 </div>
               </div>
@@ -97,36 +97,36 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
               <div className="flex items-center gap-3">
                 <User className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Assigné à</p>
+                  <p className="text-sm font-medium text-muted-foreground">Assigned to</p>
                   <p className="text-foreground">{task.assignedTo}</p>
                 </div>
               </div>
             </div>
 
-            {/* Statut */}
+            {/* Status */}
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">Statut</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Status</p>
               <Badge className={getStatusColor(task.statut)}>
                 {task.statut}
               </Badge>
             </div>
           </div>
 
-          {/* 💬 Bloc commentaires et activité */}
+          {/* 💬 Comments and activity block */}
           <div className="border-t pt-6">
             <div className="flex items-center gap-2 mb-4">
               <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <h4 className="font-medium text-foreground">Commentaires et activité</h4>
+              <h4 className="font-medium text-foreground">Comments and Activity</h4>
             </div>
             
-            {/* Zone commentaire (lecture seule) */}
+            {/* Comment area (read-only) */}
             <div className="mb-4 p-3 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
               <p className="text-sm text-muted-foreground italic">
-                Zone de commentaire (consultation uniquement)
+                Comment area (view only)
               </p>
             </div>
 
-            {/* Commentaires postés */}
+            {/* Posted comments */}
             <div className="space-y-3">
               <div className="flex space-x-3">
                 <div className="flex-shrink-0">
@@ -137,63 +137,63 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-foreground">Jean Dupont</span>
-                    <span className="text-sm text-muted-foreground">il y a 4 heures</span>
+                    <span className="text-sm text-muted-foreground">4 hours ago</span>
                   </div>
-                  <p className="text-foreground">Problème résolu, climatisation réparée</p>
+                  <p className="text-foreground">Problem resolved, air conditioning repaired</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ⏰ Bloc Reminder(s) configuré(s) */}
+          {/* ⏰ Configured reminder(s) block */}
           <div className="border-t pt-6">
             <div className="flex items-center gap-2 mb-4">
               <Bell className="h-5 w-5 text-muted-foreground" />
-              <h4 className="font-medium text-foreground">Reminder(s) configuré(s)</h4>
+              <h4 className="font-medium text-foreground">Configured Reminder(s)</h4>
             </div>
             
             <div className="bg-muted/30 rounded-lg p-4">
               <p className="text-foreground mb-2">
-                Vérification tous les vendredis à 16h pour la maintenance préventive
+                Check every Friday at 4 PM for preventive maintenance
               </p>
               <p className="text-sm text-muted-foreground">
-                Configuré par Sophie Martin – 26/07/2025
+                Configured by Sophie Martin – 26/07/2025
               </p>
             </div>
           </div>
 
-          {/* 📜 Activités récentes (journal chronologique) */}
+          {/* 📜 Recent activities (chronological log) */}
           <div className="border-t pt-6">
-            <h4 className="font-medium text-foreground mb-4">Activités récentes</h4>
+            <h4 className="font-medium text-foreground mb-4">Recent Activities</h4>
             
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>JD a laissé un commentaire – il y a 4h</span>
+                <span>JD left a comment – 4h ago</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span>Sophie Martin a programmé un reminder – il y a 48h</span>
+                <span>Sophie Martin scheduled a reminder – 48h ago</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Marie Dubois a complété une tâche de checklist – il y a 6h</span>
+                <span>Marie Dubois completed a checklist task – 6h ago</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span>Une pièce jointe a été ajoutée par Pierre Leroy – il y a 8h</span>
+                <span>An attachment was added by Pierre Leroy – 8h ago</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Pierre Leroy a escaladé par email – il y a 12h</span>
+                <span>Pierre Leroy escalated by email – 12h ago</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Carte assignée à {task.assignedTo} par Sophie Martin – il y a 1j</span>
+                <span>Card assigned to {task.assignedTo} by Sophie Martin – 1d ago</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                <span>Checklist initiale ajoutée par Sophie Martin – il y a 1j</span>
+                <span>Initial checklist added by Sophie Martin – 1d ago</span>
               </div>
             </div>
           </div>
