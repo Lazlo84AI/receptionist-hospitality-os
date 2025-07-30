@@ -22,8 +22,8 @@ import {
   GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTasks } from '@/hooks/useSupabaseData';
 import {
   DndContext,
   DragEndEvent,
@@ -41,21 +41,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-interface TaskItem {
-  id: string;
-  title: string;
-  type: 'incident' | 'client_request' | 'follow_up' | 'internal_task';
-  priority: 'normal' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed';
-  description?: string;
-  assignedTo?: string;
-  dueDate?: string;
-  location?: string;
-  guestName?: string;
-  roomNumber?: string;
-  recipient?: string;
-}
+import { TaskItem } from '@/types/database';
 
 const getTypeConfig = (type: string) => {
   switch (type) {
@@ -139,9 +125,9 @@ const SortableTaskCard = ({
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              {task.priority === 'urgent' && (
+              {(task.priority === 'urgent' || task.priority === 'high') && (
                 <Badge className="bg-urgence-red text-warm-cream">
-                  Urgent
+                  {task.priority === 'high' ? 'High' : 'Urgent'}
                 </Badge>
               )}
               <div
@@ -278,7 +264,7 @@ const KanbanColumn = ({
 
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const { tasks, loading, error, updateTaskStatus } = useTasks();
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
@@ -296,11 +282,6 @@ const ShiftManagement = () => {
       },
     })
   );
-
-  // Initialize tasks with dashboard data
-  useEffect(() => {
-    initializeTasks();
-  }, []);
 
   const handleCardClick = (task: TaskItem) => {
     setSelectedTask(task);
@@ -345,181 +326,24 @@ const ShiftManagement = () => {
     }
   };
 
-  const initializeTasks = () => {
-    // Incidents from dashboard
-    const incidents = [
-      {
-        id: '1',
-        title: 'Presidential Suite Air Conditioning Issue',
-        type: 'incident' as const,
-        priority: 'urgent' as const,
-        status: 'pending' as const,
-        description: 'The Presidential Suite air conditioning system has not been working since last night.',
-        location: 'Suite 301',
-        assignedTo: 'Jean Dupont'
-      },
-      {
-        id: '2',
-        title: 'Client Complaint - Breakfast Service',
-        type: 'incident' as const,
-        priority: 'normal' as const,
-        status: 'in_progress' as const,
-        description: 'Client dissatisfied with breakfast service quality.',
-        location: 'Room 205',
-        assignedTo: 'Sophie Martin'
-      },
-      {
-        id: '3',
-        title: 'Unexpected Housekeeping Team Absence',
-        type: 'incident' as const,
-        priority: 'urgent' as const,
-        status: 'in_progress' as const,
-        description: 'Three housekeeping team members are absent today.',
-        location: 'Floors 2-4',
-        assignedTo: 'Marie Dubois'
-      },
-      {
-        id: '4',
-        title: 'Bathroom Leak',
-        type: 'incident' as const,
-        priority: 'normal' as const,
-        status: 'pending' as const,
-        description: 'Leak detected under the sink in room 107.',
-        location: 'Room 107',
-        assignedTo: 'Pierre Leroy'
-      }
-    ];
-
-    // Client requests from dashboard
-    const clientRequests = [
-      {
-        id: '5',
-        title: 'Champagne Dom Pérignon et roses rouges',
-        type: 'client_request' as const,
-        priority: 'urgent' as const,
-        status: 'pending' as const,
-        description: 'Charles et Emily Anderson célèbrent leurs 25 ans de mariage. Charles est amateur de grands crus et Emily adore les roses.',
-        guestName: 'M. et Mme Anderson',
-        roomNumber: 'Suite 201',
-        assignedTo: 'Claire Petit'
-      },
-      {
-        id: '6',
-        title: 'Lit bébé et produits hypoallergéniques',
-        type: 'client_request' as const,
-        priority: 'normal' as const,
-        status: 'in_progress' as const,
-        description: 'Pierre et Léa Dubois voyagent avec leur bébé de 8 mois, Lucas, qui fait ses premières vacances.',
-        guestName: 'Famille Dubois',
-        roomNumber: 'Chambre 305',
-        assignedTo: 'Marie Rousseau'
-      },
-      {
-        id: '7',
-        title: 'Bureau adapté télétravail + silence',
-        type: 'client_request' as const,
-        priority: 'normal' as const,
-        status: 'completed' as const,
-        description: 'Dr. James Williams, chirurgien cardiaque de Londres, doit finaliser une publication médicale importante.',
-        guestName: 'Dr. Williams',
-        roomNumber: 'Suite 102',
-        assignedTo: 'Sophie Bernard'
-      },
-      {
-        id: '8',
-        title: 'Repas végétalien + yoga mat',
-        type: 'client_request' as const,
-        priority: 'urgent' as const,
-        status: 'pending' as const,
-        description: 'Isabella Martinez, professeure de yoga et influenceuse wellness, revient d\'un voyage spirituel de 3 mois à Bali.',
-        guestName: 'Mlle Martinez',
-        roomNumber: 'Chambre 208',
-        assignedTo: 'Claire Petit'
-      }
-    ];
-
-    // Follow ups from dashboard
-    const followUps = [
-      {
-        id: '9',
-        title: 'Confirmation arrivée VIP',
-        type: 'follow_up' as const,
-        priority: 'urgent' as const,
-        status: 'pending' as const,
-        description: 'Confirmation arrivée VIP à effectuer.',
-        location: 'Réception',
-        assignedTo: 'Leopold Bechu'
-      },
-      {
-        id: '10',
-        title: 'Message non lu WhatsApp',
-        type: 'follow_up' as const,
-        priority: 'normal' as const,
-        status: 'in_progress' as const,
-        description: 'Message WhatsApp en attente de réponse.',
-        location: 'Réception',
-        assignedTo: 'Marie Dubois'
-      },
-      {
-        id: '11',
-        title: 'Équipement manquant en chambre',
-        type: 'follow_up' as const,
-        priority: 'urgent' as const,
-        status: 'pending' as const,
-        description: 'Équipement manquant en chambre 450.',
-        location: 'Chambre 450',
-        assignedTo: 'Jean Dupont'
-      },
-      {
-        id: '12',
-        title: 'Confirmation équipements massage',
-        type: 'follow_up' as const,
-        priority: 'normal' as const,
-        status: 'in_progress' as const,
-        description: 'Confirmation des équipements de massage au spa.',
-        location: 'Spa',
-        assignedTo: 'Marie Dubois'
-      },
-      {
-        id: '13',
-        title: 'Livraison arrangements floraux',
-        type: 'follow_up' as const,
-        priority: 'urgent' as const,
-        status: 'pending' as const,
-        description: 'Livraison d\'arrangements floraux pour le lobby.',
-        location: 'Lobby',
-        assignedTo: 'Jean Dupont'
-      }
-    ];
-
-    const allTasks: TaskItem[] = [...incidents, ...clientRequests, ...followUps];
-    setTasks(allTasks);
-  };
-
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
 
-      // Task status updates will be handled by the n8n workflow
-      // For now, just update local state
-      console.log(`Task ${taskId} status updated to ${newStatus}`);
-
-      // Update local state
-      setTasks(prev => prev.map(t => 
-        t.id === taskId ? { ...t, status: newStatus as any } : t
-      ));
+      // Update status using the Supabase hook
+      await updateTaskStatus(taskId, task.type, newStatus);
 
       toast({
         title: "Success",
-        description: "Status updated",
+        description: "Status updated successfully",
         variant: "default",
       });
     } catch (error) {
       console.error('Error updating task status:', error);
       toast({
         title: "Error",
-        description: "Unable to update status",
+        description: "Failed to update task status",
         variant: "destructive",
       });
     }
@@ -658,11 +482,6 @@ const ShiftManagement = () => {
         onClose={() => {
           setIsTaskDetailOpen(false);
           setSelectedTask(null);
-        }}
-        onUpdateTask={(updatedTask) => {
-          setTasks(prev => prev.map(t => 
-            t.id === updatedTask.id ? updatedTask : t
-          ));
         }}
       />
       

@@ -4,69 +4,53 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useFollowUps } from '@/hooks/useSupabaseData';
+import { FollowUp } from '@/types/database';
 
-const followUps = [
-  {
-    id: 1,
-    title: 'Confirmation arrivée VIP',
-    location: 'Réception',
-    client: '',
-    statut: 'To Process',
-    priority: 'urgence',
-    assignedTo: 'Réception : Leopold Bechu',
-    hoursElapsed: 3,
-    overdue: false
-  },
-  {
-    id: 2,
-    title: 'Message non lu WhatsApp',
-    location: 'Réception',
-    client: '',
-    statut: 'In Progress',
-    priority: null,
-    assignedTo: 'Gouvernante : Marie Dubois',
-    hoursElapsed: 24,
-    overdue: true
-  },
-  {
-    id: 3,
-    title: 'Équipement manquant en chambre',
-    location: 'Chambre 450',
-    client: '',
-    statut: 'To Process',
-    priority: 'urgence',
-    assignedTo: 'Prestataire : Jean Dupont',
-    hoursElapsed: 6,
-    overdue: false
-  },
-  {
-    id: 4,
-    title: 'Confirmation équipements massage',
-    location: 'Spa',
-    client: '',
-    statut: 'In Progress',
-    priority: null,
-    assignedTo: 'Gouvernante : Marie Dubois',
-    hoursElapsed: 12,
-    overdue: false
-  },
-  {
-    id: 5,
-    title: 'Livraison arrangements floraux',
-    location: 'Lobby',
-    client: '',
-    statut: 'To Process',
-    priority: 'urgence',
-    assignedTo: 'Prestataire : Jean Dupont',
-    hoursElapsed: 48,
-    overdue: true
+// Helper function to calculate hours elapsed
+const getHoursElapsed = (createdAt: string): number => {
+  const now = new Date();
+  const created = new Date(createdAt);
+  return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
+};
+
+// Helper function to determine if a task is overdue
+const isOverdue = (createdAt: string, dueDate?: string | null): boolean => {
+  if (dueDate) {
+    return new Date() > new Date(dueDate);
   }
-];
+  // Consider tasks overdue if they're over 24 hours old and not completed
+  const hoursElapsed = getHoursElapsed(createdAt);
+  return hoursElapsed > 24;
+};
+
+// Transform database FollowUp to UI format
+const transformFollowUp = (followUp: FollowUp) => ({
+  id: followUp.id,
+  title: followUp.title,
+  location: '', // This could be extracted from notes or a separate field
+  client: followUp.recipient,
+  statut: followUp.status === 'pending' ? 'To Process' : 
+          followUp.status === 'in_progress' ? 'In Progress' : 
+          followUp.status === 'completed' ? 'Completed' : 'Cancelled',
+  priority: followUp.priority === 'urgent' ? 'urgence' : null,
+  assignedTo: followUp.assigned_to || 'Unassigned',
+  hoursElapsed: getHoursElapsed(followUp.created_at),
+  overdue: isOverdue(followUp.created_at, followUp.due_date),
+  description: followUp.notes,
+  type: 'Relance',
+  dueDate: followUp.due_date
+});
 
 export function FollowUpsCard() {
+  const { followUps: rawFollowUps, loading, error } = useFollowUps();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedTask, setSelectedTask] = useState<(typeof followUps[0] & { description?: string; type?: string }) | null>(null);
+  const [selectedTask, setSelectedTask] = useState<ReturnType<typeof transformFollowUp> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Transform raw follow-ups to UI format
+  const followUps = rawFollowUps.map(transformFollowUp);
+  
   const itemsPerPage = 2;
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
 
@@ -96,14 +80,38 @@ export function FollowUpsCard() {
     setCurrentIndex(Math.max(currentIndex - 1, 0));
   };
 
-  const handleTaskClick = (task: typeof followUps[0]) => {
-    setSelectedTask({
-      ...task,
-      description: 'Description détaillée de la tâche à effectuer.',
-      type: 'Relance'
-    });
+  const handleTaskClick = (task: ReturnType<typeof transformFollowUp>) => {
+    setSelectedTask(task);
     setIsModalOpen(true);
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="luxury-card p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-palace-navy mx-auto mb-4"></div>
+            <p className="text-soft-pewter">Loading follow-ups...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="luxury-card p-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+            <p className="text-red-500">Error loading follow-ups: {error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="luxury-card p-8">

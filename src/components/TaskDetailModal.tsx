@@ -9,7 +9,7 @@ interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: {
-    id: number;
+    id: string | number;
     title: string;
     location: string;
     client: string;
