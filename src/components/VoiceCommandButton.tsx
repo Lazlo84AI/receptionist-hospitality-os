@@ -155,48 +155,62 @@ export function VoiceCommandButton() {
 
   const handleCreateCard = async () => {
     try {
-      // Prepare task data for n8n webhook
-      const taskData = {
-        title: formData.title || `New ${formData.category}`,
-        description: formData.description,
-        category: formData.category,
-        origin_type: formData.originType,
-        service: formData.service,
-        assigned_to: null, // Will be mapped by n8n workflow
-        collaborators: [],
-        created_by: null, // Will be set by n8n workflow
-        location: formData.location,
-        location_id: null, // Will be mapped by n8n workflow
-        incident_id: null,
-        priority: formData.priority || 'medium',
-        status: 'pending',
-        reminder_date: null, // Will be set separately via reminder modal
-        reminder_sent_at: null,
-        escalation_date: null,
-        escalated_at: null,
-        escalation_channel: null,
-        requires_validation: false,
-        validated_by: null,
-        validation_status: null,
-        validation_deadline: null,
-        checklist_items: checklists.map(checklist => ({
-          id: checklist.id,
-          title: checklist.title,
-          items: []
-        })),
-        attachment_url: null,
-        voice_note_url: null,
-        voice_transcript: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: null,
-        // Additional fields for specific categories
-        guest_name: formData.guestName,
-        room_number: formData.roomNumber,
-        recipient: formData.recipient,
-        assigned_member: formData.assignedMember,
-        due_date: formData.dueDate?.toISOString() || null
-      };
+      // Create proper payload based on task category
+      let taskData: any = {};
+
+      switch (formData.category) {
+        case 'client_request':
+          taskData = {
+            guest_name: formData.guestName || '',
+            room_number: formData.roomNumber || '',
+            request_type: formData.service || 'General Request',
+            request_details: formData.description,
+            arrival_date: formData.dueDate?.toISOString().split('T')[0] || null,
+            priority: formData.priority || 'medium',
+            assigned_to: formData.assignedMember || null,
+          };
+          break;
+
+        case 'incident':
+          taskData = {
+            title: formData.title || 'New Incident',
+            description: formData.description,
+            incident_type: formData.service || 'General Incident',
+            location: formData.location,
+            priority: formData.priority || 'medium',
+            assigned_to: formData.assignedMember || null,
+          };
+          break;
+
+        case 'follow_up':
+          taskData = {
+            title: formData.title || 'New Follow-up',
+            follow_up_type: formData.service || 'General Follow-up',
+            recipient: formData.recipient || formData.guestName || '',
+            notes: formData.description,
+            due_date: formData.dueDate?.toISOString().split('T')[0] || null,
+            priority: formData.priority || 'medium',
+            assigned_to: formData.assignedMember || null,
+          };
+          break;
+
+        case 'internal_task':
+        default:
+          taskData = {
+            title: formData.title || 'New Internal Task',
+            description: formData.description,
+            task_type: formData.service || 'General Task',
+            department: null, // You can map this from form if needed
+            location: formData.location,
+            due_date: formData.dueDate?.toISOString().split('T')[0] || null,
+            priority: formData.priority || 'medium',
+            assigned_to: formData.assignedMember || null,
+          };
+          break;
+      }
+
+      // Add task category for webhook processing
+      taskData.task_category = formData.category;
 
       // Send webhook event for task creation
       const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
