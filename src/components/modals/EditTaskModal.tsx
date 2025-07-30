@@ -79,7 +79,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
           <div className="p-6 border-b bg-background">
             <div>
               <h2 className="text-2xl font-playfair font-bold">
-                Modifier la carte
+                Edit Card
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Tous les champs sont modifiables – N'oubliez pas de sauvegarder
@@ -166,10 +166,10 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                       size="sm"
                       onClick={() => handleFieldChange('status', status)}
                     >
-                      {status === 'pending' && 'À traiter'}
-                      {status === 'in_progress' && 'En cours'}
-                      {status === 'completed' && 'Résolu'}
-                      {status === 'cancelled' && 'Annulé'}
+                      {status === 'pending' && 'To Process'}
+                      {status === 'in_progress' && 'In Progress'}
+                      {status === 'completed' && 'Resolved'}
+                      {status === 'cancelled' && 'Cancelled'}
                     </Button>
                   ))}
                 </div>
@@ -275,7 +275,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                   value={editedTask.description || ''}
                   onChange={(e) => handleFieldChange('description', e.target.value)}
                   rows={4}
-                  placeholder="Décrivez les détails de la tâche..."
+                  placeholder="Describe the task details..."
                 />
               </div>
 
@@ -290,7 +290,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                   <Textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Écrivez un commentaire..."
+                    placeholder="Write a comment..."
                     rows={3}
                   />
                   {newComment && (
@@ -319,14 +319,14 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
               variant="outline"
               onClick={handleCancel}
             >
-              Annuler
+              Cancel
             </Button>
             <Button
               onClick={handleSave}
               disabled={!hasChanges}
               className="bg-primary hover:bg-primary/90"
             >
-              Sauvegarder
+              Save
             </Button>
           </div>
         </div>

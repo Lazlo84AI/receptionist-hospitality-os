@@ -76,16 +76,16 @@ export function IncidentsCard() {
       id: 1,
       type: 'comment',
       user: 'Staff Member',
-      action: 'a laissé un commentaire',
-      content: 'Problème en cours de résolution',
+      action: 'left a comment',
+      content: 'Problem being resolved',
       timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
     },
     {
       id: 2,
       type: 'reminder',
       user: 'System',
-      action: 'a programmé un reminder',
-      content: 'Vérification requise dans 2 heures',
+      action: 'scheduled a reminder',
+      content: 'Verification required in 2 hours',
       timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
     }
   ]);
@@ -217,7 +217,7 @@ export function IncidentsCard() {
                   <div className="flex items-center space-x-2">
                     <Clock className="h-4 w-4 text-soft-pewter" />
                     <span className={cn("font-medium", getTimeColor(incident.timeElapsed))}>
-                      Depuis {incident.timeElapsed}
+                      Since {incident.timeElapsed}
                     </span>
                   </div>
                 </div>
@@ -386,7 +386,7 @@ export function IncidentsCard() {
                 {/* Zone de commentaire */}
                 <div className="mb-4">
                   <Textarea
-                    placeholder="Écrivez un commentaire…"
+                    placeholder="Write a comment…"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     className="min-h-[80px]"
@@ -456,14 +456,14 @@ export function IncidentsCard() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => console.log('À traiter')}>
-                      À traiter
+                    <DropdownMenuItem onClick={() => console.log('To Process')}>
+                      To Process
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => console.log('En cours')}>
-                      En cours
+                    <DropdownMenuItem onClick={() => console.log('In Progress')}>
+                      In Progress
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => console.log('Résolu')}>
-                      Résolu
+                    <DropdownMenuItem onClick={() => console.log('Resolved')}>
+                      Resolved
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

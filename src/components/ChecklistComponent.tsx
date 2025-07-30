@@ -237,7 +237,7 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
                     )}
                   >
                     <Clock className="h-3 w-3" />
-                    {selectedDate ? selectedDate.toLocaleDateString() : "Date limite"}
+                    {selectedDate ? selectedDate.toLocaleDateString() : "Due date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

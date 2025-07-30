@@ -31,7 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 const categories = [
-  { id: 'incident', label: 'Incident en cours', icon: AlertTriangle, color: 'bg-urgence-red text-warm-cream' },
+  { id: 'incident', label: 'Ongoing Incident', icon: AlertTriangle, color: 'bg-urgence-red text-warm-cream' },
   { id: 'client_request', label: 'Demande client', icon: Users, color: 'bg-champagne-gold text-palace-navy' },
   { id: 'follow_up', label: 'Relance', icon: Clock, color: 'bg-palace-navy text-warm-cream' },
   { id: 'internal_task', label: 'Tâche interne', icon: Wrench, color: 'bg-muted text-muted-foreground' },
@@ -50,7 +50,7 @@ const priorityLevels = [
 ];
 
 const services = [
-  { id: 'housekeeping', label: 'Gouvernantes' },
+  { id: 'housekeeping', label: 'Housekeeping' },
   { id: 'reception', label: 'Réception' },
   { id: 'maintenance', label: 'Maintenance' },
 ];
