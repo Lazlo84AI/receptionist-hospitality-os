@@ -75,8 +75,9 @@ export function VoiceCommandButton() {
     .map(location => {
       // Extract room number from location name (e.g., "Room 101" -> "101", "Chambre 5" -> "5")
       const match = location.name.match(/\d+/);
-      return match ? match[0] : location.name;
+      return match ? match[0] : null;
     })
+    .filter(room => room !== null) // Only include rooms with actual numbers
     .sort((a, b) => {
       const numA = parseInt(a) || 0;
       const numB = parseInt(b) || 0;
