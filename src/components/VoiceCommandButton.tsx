@@ -158,9 +158,17 @@ export function VoiceCommandButton() {
       // Create proper payload based on task category
       let taskData: any = {};
 
+      // Base fields that all tasks need
+      const baseFields = {
+        task_category: formData.category,
+        assigned_member: formData.assignedMember, // For ID mapping in webhook service
+        location: formData.location, // For ID mapping in webhook service
+      };
+
       switch (formData.category) {
         case 'client_request':
           taskData = {
+            ...baseFields,
             guest_name: formData.guestName || '',
             room_number: formData.roomNumber || '',
             request_type: formData.service || 'General Request',
@@ -173,6 +181,7 @@ export function VoiceCommandButton() {
 
         case 'incident':
           taskData = {
+            ...baseFields,
             title: formData.title || 'New Incident',
             description: formData.description,
             incident_type: formData.service || 'General Incident',
@@ -184,6 +193,7 @@ export function VoiceCommandButton() {
 
         case 'follow_up':
           taskData = {
+            ...baseFields,
             title: formData.title || 'New Follow-up',
             follow_up_type: formData.service || 'General Follow-up',
             recipient: formData.recipient || formData.guestName || '',
@@ -197,6 +207,7 @@ export function VoiceCommandButton() {
         case 'internal_task':
         default:
           taskData = {
+            ...baseFields,
             title: formData.title || 'New Internal Task',
             description: formData.description,
             task_type: formData.service || 'General Task',
@@ -208,9 +219,6 @@ export function VoiceCommandButton() {
           };
           break;
       }
-
-      // Add task category for webhook processing
-      taskData.task_category = formData.category;
 
       // Send webhook event for task creation
       const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
