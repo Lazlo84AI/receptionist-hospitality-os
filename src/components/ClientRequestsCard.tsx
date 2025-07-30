@@ -176,7 +176,7 @@ export function ClientRequestsCard() {
                   <div className="flex items-center space-x-2">
                     <Clock className="h-4 w-4 text-soft-pewter" />
                     <span className="text-sm font-medium text-palace-navy">
-                      {clientRequest.daysSince} jour{clientRequest.daysSince > 1 ? 's' : ''}
+                      {clientRequest.daysSince} day{clientRequest.daysSince > 1 ? 's' : ''}
                     </span>
                   </div>
                 </div>

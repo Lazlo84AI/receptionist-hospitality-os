@@ -179,7 +179,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
               <div className="space-y-2">
                 <Label htmlFor="assignedTo" className="text-sm font-medium">
                   <Users className="h-4 w-4 inline mr-1" />
-                  Membre assigné
+                  Assigned Member
                 </Label>
                 <Input
                   id="assignedTo"
@@ -254,7 +254,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                 <div className="space-y-2">
                   <Label htmlFor="dueDate" className="text-sm font-medium">
                     <Clock className="h-4 w-4 inline mr-1" />
-                    Date d'échéance
+                    Due Date
                   </Label>
                   <Input
                     id="dueDate"
@@ -268,7 +268,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
               {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-sm font-medium">
-                  Description personnalisée
+                  Custom Description
                 </Label>
                 <Textarea
                   id="description"

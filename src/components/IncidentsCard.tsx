@@ -62,7 +62,7 @@ export function IncidentsCard() {
   const [showActivityDetails, setShowActivityDetails] = useState(false);
   const [comment, setComment] = useState('');
   
-  // États pour les pop-ins
+  // States for popups
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [showMembersDialog, setShowMembersDialog] = useState(false);
@@ -70,7 +70,7 @@ export function IncidentsCard() {
   const [selectedEscaladeMember, setSelectedEscaladeMember] = useState('');
   const [escaladeMethod, setEscaladeMethod] = useState('email');
   
-  // États pour l'historique et les actions
+  // States for history and actions
   const [activities, setActivities] = useState([
     {
       id: 1,
@@ -90,7 +90,7 @@ export function IncidentsCard() {
     }
   ]);
   
-  // États pour les fonctionnalités
+  // States for features
   const [checklistTitle, setChecklistTitle] = useState('Checklist');
   const [showChecklist, setShowChecklist] = useState(false);
 
@@ -110,7 +110,7 @@ export function IncidentsCard() {
   };
 
   const getTimeColor = (timeElapsed: string) => {
-    if (timeElapsed.includes('jour')) return 'text-red-600';
+    if (timeElapsed.includes('day')) return 'text-red-600';
     if (timeElapsed.includes('h') && parseInt(timeElapsed) > 12) return 'text-orange-600';
     return 'text-gray-600';
   };
@@ -361,7 +361,7 @@ export function IncidentsCard() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <MessageCircle className="h-5 w-5 text-palace-navy" />
-                    <h4 className="font-semibold text-palace-navy">Commentaires et activité</h4>
+                    <h4 className="font-semibold text-palace-navy">Comments and Activity</h4>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -372,12 +372,12 @@ export function IncidentsCard() {
                     {showActivityDetails ? (
                       <>
                         <ChevronUp className="h-4 w-4 mr-1" />
-                        Masquer les détails
+                        Hide details
                       </>
                     ) : (
                       <>
                         <ChevronDown className="h-4 w-4 mr-1" />
-                        Afficher les détails
+                        Show details
                       </>
                     )}
                   </Button>
@@ -396,7 +396,7 @@ export function IncidentsCard() {
                 {/* Affichage des reminders actifs */}
                 {activities.filter(a => a.type === 'reminder').length > 0 && (
                   <div className="mb-4">
-                    <h5 className="font-medium text-palace-navy mb-2">Reminders configurés :</h5>
+                    <h5 className="font-medium text-palace-navy mb-2">Configured Reminders:</h5>
                     {activities.filter(a => a.type === 'reminder').map((reminder) => (
                       <div key={reminder.id} className="bg-blue-50 p-3 rounded-lg mb-2">
                         <p className="text-sm text-palace-navy">{reminder.content}</p>
@@ -411,7 +411,7 @@ export function IncidentsCard() {
                 {/* Historique d'activité */}
                 {showActivityDetails && (
                   <div className="space-y-4">
-                    <h5 className="font-medium text-palace-navy">Activités récentes :</h5>
+                    <h5 className="font-medium text-palace-navy">Recent Activities:</h5>
                     {activities.map((activity) => (
                       <div key={activity.id} className="flex items-start space-x-3">
                         <Avatar className="h-8 w-8">
@@ -425,7 +425,7 @@ export function IncidentsCard() {
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-palace-navy">Commentaire laissé</span>
                                 <span className="text-xs text-soft-pewter">
-                                  {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} heures
+                                   {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} hours ago
                                 </span>
                               </div>
                               <p className="text-sm">{activity.content}</p>
@@ -434,7 +434,7 @@ export function IncidentsCard() {
                             <div className="text-sm text-soft-pewter">
                               <span className="font-medium">{activity.user}</span> {activity.action}
                               <span className="text-xs ml-2">
-                                il y a {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} heures
+                                il y a {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} hours ago
                               </span>
                               {activity.content && (
                                 <div className="text-xs text-palace-navy mt-1">{activity.content}</div>
@@ -452,7 +452,7 @@ export function IncidentsCard() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90">
-                      Changer le statut
+                      Change status
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
@@ -478,12 +478,12 @@ export function IncidentsCard() {
         <DialogContent className="max-w-md luxury-card">
           <DialogHeader>
             <DialogTitle className="font-playfair text-lg text-palace-navy">
-              Ajouter une checklist
+              Add checklist
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-palace-navy">Titre</label>
+              <label className="text-sm font-medium text-palace-navy">Title</label>
               <Input
                 value={checklistTitle}
                 onChange={(e) => setChecklistTitle(e.target.value)}
@@ -495,7 +495,7 @@ export function IncidentsCard() {
                 variant="outline"
                 onClick={() => setShowChecklistDialog(false)}
               >
-                Annuler
+                Cancel
               </Button>
               <Button
                 onClick={() => {
@@ -504,7 +504,7 @@ export function IncidentsCard() {
                 }}
                 className="bg-blue-600 text-white hover:bg-blue-700"
               >
-                Ajouter
+                Add
               </Button>
             </div>
           </div>

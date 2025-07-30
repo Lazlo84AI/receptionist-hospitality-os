@@ -537,7 +537,7 @@ export function VoiceCommandButton() {
             {/* Due Date for Follow-ups and Tasks */}
             {(formData.category === 'follow_up' || formData.category === 'internal_task') && (
               <div className="space-y-3">
-                <label className="text-sm font-medium">Date d'échéance</label>
+                <label className="text-sm font-medium">Due Date</label>
                 <Input 
                   type="datetime-local"
                   value={formData.dueDate ? formData.dueDate.toISOString().slice(0, 16) : ''}
@@ -552,13 +552,13 @@ export function VoiceCommandButton() {
             {/* Description */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Description personnalisée</label>
+                <label className="text-sm font-medium">Custom Description</label>
                 <span className="text-xs text-muted-foreground">
-                  💡 Décrivez précisément pour une meilleure compréhension
+                  💡 Describe precisely for better understanding
                 </span>
               </div>
               <Textarea 
-                placeholder="Décrivez précisément la situation ou la demande..."
+                placeholder="Describe precisely the situation or request..."
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={4}
@@ -566,7 +566,7 @@ export function VoiceCommandButton() {
               {/* Texte informatif pour les demandes client */}
               {formData.category === 'client_request' && (
                 <p className="text-sm text-muted-foreground italic mt-2">
-                  (avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)
+                  (with client name, context of the need and any personal information to be more friendly)
                 </p>
               )}
             </div>
@@ -579,7 +579,7 @@ export function VoiceCommandButton() {
                 className="flex items-center gap-2"
               >
                 <CheckSquare className="h-4 w-4" />
-                Ajouter une checklist
+                Add checklist
               </Button>
               <Button
                 variant="outline"
@@ -587,7 +587,7 @@ export function VoiceCommandButton() {
                 className="flex items-center gap-2"
               >
                 <Bell className="h-4 w-4" />
-                Configurer un rappel
+                Set up reminder
               </Button>
               <Button
                 variant="outline"
@@ -595,14 +595,14 @@ export function VoiceCommandButton() {
                 className="flex items-center gap-2"
               >
                 <Paperclip className="h-4 w-4" />
-                Pièce jointe
+                Attachment
               </Button>
             </div>
 
             {/* Display Added Checklists */}
             {checklists.length > 0 && (
               <div className="space-y-4">
-                <div className="text-sm font-medium text-muted-foreground">Checklists ajoutées</div>
+                <div className="text-sm font-medium text-muted-foreground">Added Checklists</div>
                 {checklists.map((checklist) => (
                   <ChecklistComponent
                     key={checklist.id}
@@ -619,7 +619,7 @@ export function VoiceCommandButton() {
                 variant="outline" 
                 onClick={() => setShowCreateModal(false)}
               >
-                Annuler
+                Cancel
               </Button>
               <Button 
                 onClick={handleCreateCard}
@@ -631,7 +631,7 @@ export function VoiceCommandButton() {
                 }
                 className="bg-champagne-gold text-palace-navy hover:bg-champagne-gold/90"
               >
-                Créer la carte
+                Create Card
               </Button>
             </div>
           </div>
@@ -658,7 +658,7 @@ export function VoiceCommandButton() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Paperclip className="h-5 w-5" />
-              Ajouter une pièce jointe
+              Add attachment
             </DialogTitle>
           </DialogHeader>
           
@@ -667,8 +667,8 @@ export function VoiceCommandButton() {
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center space-y-4 hover:border-primary/50 transition-colors">
               <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
               <div className="space-y-2">
-                <p className="text-sm font-medium">Glissez-déposez vos fichiers ici</p>
-                <p className="text-xs text-muted-foreground">ou cliquez pour parcourir</p>
+                <p className="text-sm font-medium">Drag and drop your files here</p>
+                <p className="text-xs text-muted-foreground">or click to browse</p>
               </div>
               <Input
                 type="file"
@@ -691,7 +691,7 @@ export function VoiceCommandButton() {
             {/* File List */}
             {attachments.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Fichiers sélectionnés :</p>
+                <p className="text-sm font-medium">Selected files:</p>
                 {attachments.map((attachment) => (
                   <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                     <div className="flex items-center gap-2">
@@ -719,20 +719,20 @@ export function VoiceCommandButton() {
                 variant="outline" 
                 onClick={() => setIsAttachmentModalOpen(false)}
               >
-                Annuler
+                Cancel
               </Button>
               <Button 
                 onClick={() => {
                   setIsAttachmentModalOpen(false);
                   if (attachments.length > 0) {
                     toast({
-                      title: "Pièces jointes ajoutées",
-                      description: `${attachments.length} fichier(s) ajouté(s) à la carte.`,
+                      title: "Attachments added",
+                      description: `${attachments.length} file(s) added to the card.`,
                     });
                   }
                 }}
               >
-                Terminé
+                Done
               </Button>
             </div>
           </div>
