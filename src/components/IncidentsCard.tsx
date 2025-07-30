@@ -252,7 +252,7 @@ export function IncidentsCard() {
         <DialogContent className="max-w-2xl luxury-card">
           <DialogHeader>
             <DialogTitle className="font-playfair text-xl text-palace-navy">
-              Détails de l'Incident
+              Incident Details
             </DialogTitle>
           </DialogHeader>
           {selectedIncident && (
@@ -284,13 +284,13 @@ export function IncidentsCard() {
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                  <div>
-                  <span className="font-medium text-palace-navy">Assigné à:</span>
+                  <span className="font-medium text-palace-navy">Assigned to:</span>
                   <p className="mt-1 text-palace-navy">
                     {selectedIncident.assignedTo}
                   </p>
                  </div>
                 <div>
-                  <span className="font-medium text-palace-navy">Localisation:</span>
+                  <span className="font-medium text-palace-navy">Location:</span>
                   <p className="mt-1">{selectedIncident.room}</p>
                 </div>
               </div>

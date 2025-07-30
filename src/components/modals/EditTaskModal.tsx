@@ -157,7 +157,7 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
 
               {/* Statut */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Statut</Label>
+                <Label className="text-sm font-medium">Status</Label>
                 <div className="flex gap-2">
                   {(['pending', 'in_progress', 'completed', 'cancelled'] as const).map((status) => (
                     <Button
