@@ -374,8 +374,65 @@ export interface WebhookEventPayload {
   source: 'task_management' | 'shift_management' | 'escalation';
 }
 
+// Unified Card Payload Structure (as requested by user)
+export interface UnifiedCardPayload {
+  // Core fields
+  title: string;
+  task_category: 'incident' | 'client_request' | 'follow_up' | 'internal_task';
+  priority: Priority;
+  description?: string;
+  
+  // Assignment fields
+  assigned_member?: string;
+  assigned_member_id?: string;
+  
+  // Location fields
+  location?: string;
+  location_id?: string;
+  
+  // Client/Guest related fields
+  client_name?: string;
+  room_number?: string;
+  
+  // Service/Type fields
+  service?: string;
+  origin_type?: string;
+  incident_type?: string;
+  request_type?: string;
+  follow_up_type?: string;
+  task_type?: string;
+  department?: string;
+  
+  // Enhancements
+  check_list?: string[];
+  reminder?: string[];
+  attachment?: string;
+  
+  // Metadata
+  created_by?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  
+  // Follow-up specific fields
+  follow_up_recipient?: string;
+  follow_up_due?: string;
+  
+  // Internal task specific fields
+  internal_task_due?: string;
+  
+  // Date fields
+  arrival_date?: string;
+  due_date?: string;
+}
+
+export interface CreateUnifiedCardPayload extends UnifiedCardPayload {}
+
+export interface UpdateUnifiedCardPayload extends Partial<UnifiedCardPayload> {
+  id: string;
+}
+
 // Export all payload types
-export type TaskPayload = CreateIncidentPayload | CreateClientRequestPayload | CreateFollowUpPayload | CreateInternalTaskPayload;
-export type UpdateTaskPayload = UpdateIncidentPayload | UpdateClientRequestPayload | UpdateFollowUpPayload | UpdateInternalTaskPayload;
+export type TaskPayload = CreateIncidentPayload | CreateClientRequestPayload | CreateFollowUpPayload | CreateInternalTaskPayload | CreateUnifiedCardPayload;
+export type UpdateTaskPayload = UpdateIncidentPayload | UpdateClientRequestPayload | UpdateFollowUpPayload | UpdateInternalTaskPayload | UpdateUnifiedCardPayload;
 export type CreatePayload = TaskPayload | CreateCommentPayload | CreateAttachmentPayload | CreateChecklistPayload | CreateEscalationPayload | CreateReminderPayload | AddTaskMemberPayload | StartShiftPayload | CreateActivityLogPayload | CreateProfilePayload | CreateLocationPayload;
 export type UpdatePayload = UpdateTaskPayload | UpdateCommentPayload | UpdateChecklistPayload | UpdateEscalationPayload | UpdateReminderPayload | EndShiftPayload | UpdateShiftPayload | UpdateProfilePayload | UpdateLocationPayload;

@@ -45,7 +45,7 @@ const getCurrentUserId = async (): Promise<string | null> => {
   return user?.id || null;
 };
 
-// Helper function to enhance task data with necessary IDs
+// Helper function to enhance task data with necessary IDs and normalize the payload
 const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: any[] = []) => {
   const enhanced = { ...taskData };
 
@@ -65,6 +65,19 @@ const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: a
     if (location) {
       enhanced.location_id = location.id;
     }
+  }
+
+  // Ensure timestamps are properly formatted
+  if (!enhanced.created_at) {
+    enhanced.created_at = new Date().toISOString();
+  }
+  if (!enhanced.updated_at) {
+    enhanced.updated_at = new Date().toISOString();
+  }
+
+  // Normalize field names to match the user's expected payload structure
+  if (enhanced.incident_type && !enhanced.origin_type) {
+    enhanced.origin_type = enhanced.incident_type;
   }
 
   return enhanced;
