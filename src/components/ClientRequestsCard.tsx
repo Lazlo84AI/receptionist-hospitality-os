@@ -15,381 +15,179 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ReminderModal } from './modals/ReminderModal';
+import { useTasks, useProfiles } from '@/hooks/useSupabaseData';
+import { TaskItem } from '@/types/database';
 
-const clientRequests = [
-  {
-    id: 1,
-    clientName: 'Mr. and Mrs. Anderson',
-    room: 'Suite 201',
-    request: 'Champagne Dom Pérignon and red roses',
-    occasion: 'Wedding anniversary',
-    status: 'To Process',
-    gouvernante: 'Claire Petit',
-    avatar: 'CP',
-    daysSince: 2,
-    priority: 'URGENCE',
-    description: 'Charles and Emily Anderson are celebrating their 25th wedding anniversary. Charles is a wine enthusiast and Emily loves roses. They mentioned their honeymoon was in Champagne, they will be touched by this reference.'
-  },
-  {
-    id: 2,
-    clientName: 'Dubois Family',
-    room: 'Room 305',
-    request: 'Baby crib and hypoallergenic products',
-    occasion: 'Family trip',
-    status: 'In Progress',
-    gouvernante: 'Marie Rousseau',
-    avatar: 'MR',
-    daysSince: 1,
-    priority: 'NORMAL',
-    description: 'Pierre and Léa Dubois are traveling with their 8-month-old baby, Lucas, on his first vacation. Léa mentioned that Lucas has sensitive skin due to eczema. Very attentive to their child\'s well-being, they will appreciate our attention to detail.'
-  },
-  {
-    id: 3,
-    clientName: 'Dr. Williams',
-    room: 'Suite 102',
-    request: 'Adapted workspace for remote work + silence',
-    occasion: 'Business stay',
-    status: 'Resolved',
-    gouvernante: 'Sophie Bernard',
-    avatar: 'SB',
-    daysSince: 0,
-    priority: 'NORMAL',
-    description: 'Dr. James Williams, a cardiac surgeon from London, needs to complete an important medical publication during his stay. He often works late at night and appreciates absolute silence. A great lover of Italian coffee, he will be delighted with our selection.'
-  },
-  {
-    id: 4,
-    clientName: 'Ms. Martinez',
-    room: 'Room 208',
-    request: 'Vegan meals + yoga mat',
-    occasion: 'Wellness retreat',
-    status: 'To Process',
-    gouvernante: 'Claire Petit',
-    avatar: 'CP',
-    daysSince: 1,
-    priority: 'URGENCE',
-    description: 'Isabella Martinez, yoga teacher and wellness influencer, is returning from a 3-month spiritual journey to Bali. Passionate about meditation and Ayurvedic cuisine, she documents her stay for her 50k followers. Special attention will enchant her.'
-  }
-];
+// Helper function to calculate days since creation
+const getDaysSince = (createdAt: string): number => {
+  const now = new Date();
+  const created = new Date(createdAt);
+  return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+};
 
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-  assignee?: string;
-  dueDate?: Date;
-}
-
-interface Checklist {
-  id: string;
-  title: string;
-  items: ChecklistItem[];
-}
-
-const availableMembers = [
-  { id: 'JD', name: 'Jean Dupont', initials: 'JD' },
-  { id: 'SM', name: 'Sophie Martin', initials: 'SM' },
-  { id: 'MD', name: 'Marie Dubois', initials: 'MD' },
-  { id: 'WR', name: 'Wilfried de Renty', initials: 'WR' }
-];
+// Transform database TaskItem (client request) to UI format
+const transformClientRequest = (request: TaskItem) => ({
+  id: request.id,
+  clientName: request.guestName || 'Unknown Guest',
+  room: request.roomNumber || 'Unknown Room',
+  request: request.title,
+  occasion: request.description || '',
+  status: request.status === 'pending' ? 'To Process' : 
+          request.status === 'in_progress' ? 'In Progress' : 
+          request.status === 'completed' ? 'Completed' : 'Cancelled',
+  gouvernante: request.assignedTo || 'Unassigned',
+  avatar: request.assignedTo ? request.assignedTo.split(' ').map(n => n[0]).join('') : 'UN',
+  daysSince: getDaysSince(request.created_at),
+  priority: request.priority === 'urgent' ? 'URGENCE' : 'NORMAL',
+  created_at: request.created_at,
+  updated_at: request.updated_at
+});
 
 export function ClientRequestsCard() {
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [showActivityDetails, setShowActivityDetails] = useState(false);
-  const [newComment, setNewComment] = useState('');
+  const { tasks, loading, error } = useTasks();
+  const { profiles } = useProfiles();
   
-  // Checklist states
-  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
-  const [checklistTitle, setChecklistTitle] = useState('Checklist');
-  const [checklists, setChecklists] = useState<Checklist[]>([]);
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [newItemText, setNewItemText] = useState('');
-  const [showMemberSelection, setShowMemberSelection] = useState<string | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  
-  // Reminder states
-  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [hasStartDate, setHasStartDate] = useState(false);
-  const [hasEndDate, setHasEndDate] = useState(true);
-  
-  // Members states
-  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-  const [memberSearchQuery, setMemberSearchQuery] = useState('');
-  
-  // Escalade states
-  const [isEscaladeModalOpen, setIsEscaladeModalOpen] = useState(false);
-  const [escaladeChannel, setEscaladeChannel] = useState<'email' | 'whatsapp' | null>(null);
-  const [escaladeMemberSearchQuery, setEscaladeMemberSearchQuery] = useState('');
+  // Filter client requests from all tasks
+  const clientRequests = tasks
+    .filter(task => task.type === 'client_request')
+    .map(transformClientRequest)
+    .slice(0, 4); // Show only top 4 requests
 
-  // États pour l'historique et les actions
-  const [activities, setActivities] = useState([
+  const [selectedRequest, setSelectedRequest] = useState<ReturnType<typeof transformClientRequest> | null>(null);
+  const [comment, setComment] = useState('');
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showActivities, setShowActivities] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  
+  // Mock activities (could be fetched from database)
+  const activities = [
     {
       id: 1,
       type: 'comment',
-      user: 'Sophie Martin',
-      action: 'left a comment',
-      content: 'Champagne delivered and installed in room',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000)
-    },
-    {
-      id: 2,
-      type: 'reminder',
-      user: 'Claire Petit',
-      action: 'scheduled a reminder',
-      content: 'VIP quality follow-up every Sunday at 10am',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-    },
-    {
-      id: 3,
-      type: 'checklist',
-      user: 'Marie Rousseau',
-      action: 'completed a checklist task',
-      content: 'Baby crib installation completed',
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
-    },
-    {
-      id: 4,
-      type: 'escalation',
-      user: 'Sophie Bernard',
-      action: 'escalated via WhatsApp',
-      content: 'Direct contact with concierge for ergonomic desk',
-      timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000)
+      user: 'Staff Member',
+      action: 'a ajouté un commentaire',
+      content: 'Préparation en cours',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      avatar: 'SM'
     }
-  ]);
+  ];
 
-  // Fonction pour ajouter une assignation
-  const handleMemberAssignment = (member: any) => {
-    setSelectedRequest({
-      ...selectedRequest,
-      gouvernante: member.name
-    });
-    setActivities([{
-      id: Date.now(),
-      type: 'assignment',
-      user: 'Système',
-      action: 'a assigné la demande à',
-      content: member.name,
-      timestamp: new Date()
-    }, ...activities]);
-  };
+  if (loading) {
+    return (
+      <div className="bg-card rounded-lg border shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-foreground">Client Requests</h2>
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-  // Fonction pour ajouter une escalade
-  const handleEscalation = (channel: string, member?: string) => {
-    setActivities([{
-      id: Date.now(),
-      type: 'escalation',
-      user: 'Utilisateur actuel',
-      action: `a escaladé par ${channel}`,
-      content: member ? `Contact avec ${member}` : `Escalade via ${channel}`,
-      timestamp: new Date()
-    }, ...activities]);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'To Process': return 'bg-green-500 text-white';
-      case 'In Progress': return 'bg-palace-navy text-white';
-      case 'Resolved': return '';
-      default: return 'bg-muted text-soft-pewter border-border';
-    }
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    if (priority === 'URGENCE') {
-      return (
-        <Badge className="bg-urgence-red text-white">
-          URGENCE
-        </Badge>
-      );
-    }
-    return null;
-  };
-
-  const getDaysSinceText = (days: number) => {
-    if (days === 0) return "Today";
-    if (days === 1) return "1 day ago";
-    return `${days} days ago`;
-  };
-
-  // Checklist functions
-  const handleCreateChecklist = () => {
-    const newChecklist: Checklist = {
-      id: Date.now().toString(),
-      title: checklistTitle,
-      items: []
-    };
-    setChecklists([...checklists, newChecklist]);
-    setIsChecklistModalOpen(false);
-    setChecklistTitle('Checklist');
-  };
-
-  const handleAddItem = (checklistId: string) => {
-    if (!newItemText.trim()) return;
-    
-    const newItem: ChecklistItem = {
-      id: Date.now().toString(),
-      text: newItemText,
-      completed: false
-    };
-
-    setChecklists(checklists.map(checklist => 
-      checklist.id === checklistId 
-        ? { ...checklist, items: [...checklist.items, newItem] }
-        : checklist
-    ));
-    setNewItemText('');
-    setEditingItem(null);
-  };
-
-  const handleToggleItem = (checklistId: string, itemId: string) => {
-    setChecklists(checklists.map(checklist => 
-      checklist.id === checklistId 
-        ? {
-            ...checklist,
-            items: checklist.items.map(item => 
-              item.id === itemId ? { ...item, completed: !item.completed } : item
-            )
-          }
-        : checklist
-    ));
-  };
-
-  const handleDeleteItem = (checklistId: string, itemId: string) => {
-    setChecklists(checklists.map(checklist => 
-      checklist.id === checklistId 
-        ? { ...checklist, items: checklist.items.filter(item => item.id !== itemId) }
-        : checklist
-    ));
-  };
-
-  const handleDeleteChecklist = (checklistId: string) => {
-    setChecklists(checklists.filter(checklist => checklist.id !== checklistId));
-  };
-
-  const handleAssignMember = (checklistId: string, itemId: string, memberId: string) => {
-    setChecklists(checklists.map(checklist => 
-      checklist.id === checklistId 
-        ? {
-            ...checklist,
-            items: checklist.items.map(item => 
-              item.id === itemId ? { ...item, assignee: memberId } : item
-            )
-          }
-        : checklist
-    ));
-    setShowMemberSelection(null);
-  };
-
-  const handleSetDueDate = (checklistId: string, itemId: string, date: Date) => {
-    setChecklists(checklists.map(checklist => 
-      checklist.id === checklistId 
-        ? {
-            ...checklist,
-            items: checklist.items.map(item => 
-              item.id === itemId ? { ...item, dueDate: date } : item
-            )
-          }
-        : checklist
-    ));
-    setShowDatePicker(null);
-    setSelectedDate(undefined);
-  };
-
-  const getChecklistProgress = (checklist: Checklist) => {
-    if (checklist.items.length === 0) return 0;
-    const completedItems = checklist.items.filter(item => item.completed).length;
-    return Math.round((completedItems / checklist.items.length) * 100);
-  };
-
-  const today = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  if (error) {
+    return (
+      <div className="bg-card rounded-lg border shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-foreground">Client Requests</h2>
+        </div>
+        <div className="text-center text-muted-foreground">
+          Error loading client requests: {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="luxury-card p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-green-50 rounded-lg">
-            <Heart className="h-6 w-6 text-green-600" />
+    <>
+      <div className="luxury-card p-6 col-span-full lg:col-span-2">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-soft-pewter/10 rounded-lg">
+              <Heart className="h-6 w-6 text-soft-pewter" />
+            </div>
+            <div>
+              <h2 className="text-xl font-playfair font-semibold text-palace-navy">
+                Client Requests
+              </h2>
+              <p className="text-sm text-soft-pewter">
+                Special occasions & preparations
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Client Requests
-            </h2>
-            <p className="text-sm text-soft-pewter capitalize">
-              {today}
-            </p>
-          </div>
+          <span className="text-sm text-soft-pewter font-medium">
+            {clientRequests.length} requests
+          </span>
         </div>
-        <span className="text-sm text-soft-pewter font-medium">
-          {clientRequests.length} requests
-        </span>
-      </div>
 
-      <div className="space-y-4">
-        {clientRequests.map((request) => (
-          <div
-            key={request.id}
-            className="p-4 bg-muted/20 rounded-lg border border-border/30 hover-luxury transition-all duration-300"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-palace-navy">
-                    {request.request}
-                  </h3>
-                  <Eye 
-                    className="h-4 w-4 text-soft-pewter cursor-pointer hover:text-palace-navy" 
-                    onClick={() => {
-                      setSelectedRequest(request);
-                      setIsDetailModalOpen(true);
-                    }}
-                  />
-                </div>
-                <p className="text-palace-navy mb-1">
-                  {request.room}
-                </p>
-                <p className="text-sm text-soft-pewter mb-3">
-                  {request.clientName}
-                </p>
-                
-                <div className="flex items-center space-x-2 mb-3">
-                  {request.status !== 'Resolved' && (
-                    <Badge className={getStatusColor(request.status)}>
-                      {request.status}
-                    </Badge>
-                  )}
-                  {request.status === 'Resolved' && (
-                    <span className="text-soft-pewter">Resolved</span>
-                  )}
-                  {getPriorityBadge(request.priority)}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-border/20">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-soft-pewter">Assigned to:</span>
-                <span className="text-sm font-bold text-palace-navy">
-                  Gouvernante : {request.gouvernante}
-                </span>
-              </div>
-              <div className="flex items-center space-x-1 text-sm text-urgence-red">
-                <Clock className="h-4 w-4" />
-                <span>{getDaysSinceText(request.daysSince)}</span>
-              </div>
-            </div>
+        {clientRequests.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No client requests found
           </div>
-        ))}
-      </div>
+        ) : (
+          <div className="space-y-4">
+            {clientRequests.map((clientRequest) => (
+              <div 
+                key={clientRequest.id}
+                className="p-4 bg-muted/30 rounded-lg border border-border/50 hover-luxury cursor-pointer transition-all duration-300"
+                onClick={() => setSelectedRequest(clientRequest)}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-palace-navy">
+                        {clientRequest.clientName}
+                      </h3>
+                      <Button variant="ghost" size="sm" className="shrink-0">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-sm text-soft-pewter mb-2">
+                      {clientRequest.room} • {clientRequest.request}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Badge 
+                        variant={clientRequest.status === 'To Process' ? 'secondary' : 'outline'}
+                        className={clientRequest.status === 'To Process' ? 'bg-green-500 text-white' : ''}
+                      >
+                        {clientRequest.status}
+                      </Badge>
+                      {clientRequest.priority === 'URGENCE' && (
+                        <Badge className="bg-urgence-red text-white animate-pulse">
+                          {clientRequest.priority}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-      <div className="mt-6 pt-4 border-t border-border/20">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-soft-pewter">Today's Status:</span>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-soft-pewter" />
+                    <span className="text-sm text-soft-pewter">
+                      {clientRequest.gouvernante}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-soft-pewter" />
+                    <span className="text-sm font-medium text-palace-navy">
+                      {clientRequest.daysSince} jour{clientRequest.daysSince > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 pt-4 border-t border-border/20">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-soft-pewter">Today's Status:</span>
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -397,531 +195,119 @@ export function ClientRequestsCard() {
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-soft-pewter" />
-                <span className="text-xs">1 in progress</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'In Progress').length} in progress</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="h-2 w-2 rounded-full bg-green-500" />
-                <span className="text-xs">1 prepared</span>
+                <span className="text-xs">{clientRequests.filter(r => r.status === 'Completed').length} completed</span>
               </div>
             </div>
+          </div>
         </div>
       </div>
 
-      {/* Modal de détails de la demande client */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Request Detail Modal */}
+      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+        <DialogContent className="max-w-2xl luxury-card">
           <DialogHeader>
-            <DialogTitle className="text-xl font-playfair font-semibold text-palace-navy">
-              Client Request
+            <DialogTitle className="font-playfair text-xl text-palace-navy">
+              Client Request Details
             </DialogTitle>
           </DialogHeader>
-
           {selectedRequest && (
             <div className="space-y-6">
-              {/* En-tête avec nom et badges */}
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-palace-navy">
-                  {selectedRequest.request}
-                </h2>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge className="bg-green-600 text-white">À traiter</Badge>
-                  <Badge className="bg-muted text-soft-pewter">Client</Badge>
-                  {selectedRequest.priority === 'URGENCE' && (
-                    <Badge className="bg-urgence-red text-white">URGENCE</Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Informations générales */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold text-palace-navy mb-2">Assigné à :</h3>
-                  <p className="text-palace-navy">Gouvernante : {selectedRequest.gouvernante}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-palace-navy mb-2">Localisation :</h3>
-                  <p className="text-palace-navy">{selectedRequest.room}</p>
-                </div>
-              </div>
-
-              {/* Description de la demande */}
               <div>
-                <h3 className="font-semibold text-palace-navy mb-1">Description de la demande</h3>
-                <p className="text-xs text-muted-foreground italic mb-2">(avec le nom du client, le contexte du besoin et toute information personnelle pour être plus sympathique)</p>
-                <p className="text-soft-pewter">
-                  {selectedRequest.description}
-                </p>
-              </div>
-
-              {/* Barre d'actions rapides */}
-              <div className="flex flex-wrap gap-2 p-4 bg-muted/20 rounded-lg">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center space-x-2"
-                  onClick={() => setIsReminderModalOpen(true)}
-                >
-                  <Clock className="h-4 w-4" />
-                  <span>Reminder</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center space-x-2"
-                  onClick={() => setIsChecklistModalOpen(true)}
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Checklist</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center space-x-2"
-                  onClick={() => setIsMembersModalOpen(true)}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Membres</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center space-x-2"
-                  onClick={() => setIsEscaladeModalOpen(true)}
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Escalade</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center space-x-2"
-                >
-                  <Paperclip className="h-4 w-4" />
-                  <span>Attachment</span>
-                </Button>
-              </div>
-
-              {/* Affichage des checklists */}
-              {checklists.map((checklist) => (
-                <div key={checklist.id} className="space-y-4 p-4 bg-muted/10 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={checklist.items.every(item => item.completed)}
-                        onChange={() => {}}
-                        className="rounded border-border"
-                      />
-                      <h4 className="font-bold text-palace-navy">{checklist.title}</h4>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteChecklist(checklist.id)}
-                      className="text-urgence-red hover:text-urgence-red"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* Barre de progression */}
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${getChecklistProgress(checklist)}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-soft-pewter">
-                    {getChecklistProgress(checklist)}% complété
-                  </div>
-
-                  {/* Liste des éléments */}
-                  <div className="space-y-2">
-                    {checklist.items.map((item, index) => (
-                      <div key={item.id} className="flex items-center space-x-2 group">
-                        <input
-                          type="checkbox"
-                          checked={item.completed}
-                          onChange={() => handleToggleItem(checklist.id, item.id)}
-                          className="rounded border-border"
-                        />
-                        <span className="text-sm text-palace-navy flex-1">
-                          {index + 1}. {item.text}
-                        </span>
-                        {item.assignee && (
-                          <Badge variant="outline" className="text-xs">
-                            {availableMembers.find(m => m.id === item.assignee)?.initials}
-                          </Badge>
-                        )}
-                        {item.dueDate && (
-                          <Badge variant="outline" className="text-xs">
-                            {format(item.dueDate, 'dd/MM')}
-                          </Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteItem(checklist.id, item.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="h-3 w-3 text-soft-pewter" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Ajout d'un nouvel élément */}
-                  {editingItem === checklist.id ? (
-                    <div className="space-y-3">
-                      <Input
-                        value={newItemText}
-                        onChange={(e) => setNewItemText(e.target.value)}
-                        placeholder="Ajouter un élément"
-                        className="border-yellow-400 focus:border-yellow-400"
-                        autoFocus
-                      />
-                      <div className="flex items-center space-x-2">
-                        <Button size="sm" onClick={() => handleAddItem(checklist.id)}>
-                          Ajouter
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => {
-                            setEditingItem(null);
-                            setNewItemText('');
-                          }}
-                        >
-                          Annuler
-                        </Button>
-                        
-                        {/* Assignation */}
-                        <Popover open={showMemberSelection === checklist.id} onOpenChange={(open) => setShowMemberSelection(open ? checklist.id : null)}>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Attribuer
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-48">
-                            <div className="space-y-2">
-                              {availableMembers.map((member) => (
-                                <div
-                                  key={member.id}
-                                  className="flex items-center space-x-2 p-2 hover:bg-muted rounded cursor-pointer"
-                                  onClick={() => {
-                                    // Pour la nouvelle tâche, on peut stocker l'assignation temporairement
-                                    setShowMemberSelection(null);
-                                  }}
-                                >
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarFallback className="text-xs">{member.initials}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm">{member.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-
-                        {/* Date limite */}
-                        <Popover open={showDatePicker === checklist.id} onOpenChange={(open) => setShowDatePicker(open ? checklist.id : null)}>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Date limite
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={selectedDate}
-                              onSelect={(date) => {
-                                if (date) {
-                                  setSelectedDate(date);
-                                  setShowDatePicker(null);
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingItem(checklist.id)}
-                      className="text-soft-pewter hover:text-palace-navy"
-                    >
-                      Ajouter un élément
-                    </Button>
+                <h3 className="font-semibold text-lg text-palace-navy mb-3">
+                  {selectedRequest.clientName}
+                </h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge 
+                    variant={selectedRequest.status === 'To Process' ? 'secondary' : 'outline'}
+                    className={selectedRequest.status === 'To Process' ? 'bg-green-500 text-white' : ''}
+                  >
+                    {selectedRequest.status}
+                  </Badge>
+                  {selectedRequest.priority === 'URGENCE' && (
+                    <Badge className="bg-urgence-red text-white animate-pulse">
+                      {selectedRequest.priority}
+                    </Badge>
                   )}
                 </div>
-              ))}
+              </div>
 
-              {/* Section Commentaires et activité */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-palace-navy">Commentaires et activité</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowActivityDetails(!showActivityDetails)}
-                  >
-                    {showActivityDetails ? 'Masquer les détails' : 'Afficher les détails'}
-                  </Button>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-palace-navy">Room:</span>
+                  <p className="mt-1">{selectedRequest.room}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-palace-navy">Assigned to:</span>
+                  <p className="mt-1">{selectedRequest.gouvernante}</p>
+                </div>
+              </div>
+
+              <div>
+                <span className="font-medium text-palace-navy">Request:</span>
+                <p className="mt-2 text-soft-pewter">{selectedRequest.request}</p>
+              </div>
+
+              {selectedRequest.occasion && (
+                <div>
+                  <span className="font-medium text-palace-navy">Occasion:</span>
+                  <p className="mt-2 text-soft-pewter">{selectedRequest.occasion}</p>
+                </div>
+              )}
+
+              {/* Comment section */}
+              <div className="border-t pt-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <MessageCircle className="h-5 w-5 text-palace-navy" />
+                  <h4 className="font-semibold text-palace-navy">Comments</h4>
+                </div>
+                
+                <div className="mb-4">
+                  <Textarea
+                    placeholder="Add a comment..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="min-h-[80px]"
+                  />
                 </div>
 
-                <Textarea
-                  placeholder="Écrivez un commentaire…"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="min-h-[100px]"
-                />
-
-                {showActivityDetails && (
-                  <div className="space-y-4 p-4 bg-muted/10 rounded-lg">
-                    {/* Commentaire existant */}
-                    <div className="space-y-3">
-                      <div className="flex items-start space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-blue-500 text-white text-sm">XX</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-palace-navy">Commentaire laissé</span>
-                            <span className="text-sm text-soft-pewter">il y a 4 heures</span>
-                          </div>
-                          <p className="text-palace-navy mb-2">lol</p>
-                          <div className="flex space-x-4 text-sm text-soft-pewter">
-                            <button className="hover:text-palace-navy">Modifier</button>
-                            <button className="hover:text-palace-navy">Supprimer</button>
-                          </div>
+                {/* Activity history */}
+                {activities.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3 mb-4">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-soft-pewter text-white text-xs">
+                        {activity.avatar}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="bg-muted/50 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-palace-navy">
+                            {activity.user} {activity.action}
+                          </span>
+                          <span className="text-xs text-soft-pewter">
+                            {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))}h ago
+                          </span>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Historique d'activité */}
-                    <div className="space-y-2 pt-4 border-t border-border/20">
-                      <div className="text-sm text-soft-pewter">
-                        <span>Nom utilisateur a marqué cette carte comme inachevée</span>
-                        <span className="ml-2">il y a 4 heures</span>
-                      </div>
-                      <div className="text-sm text-soft-pewter">
-                        <span>Nom utilisateur a marqué cette carte comme étant terminée</span>
-                        <span className="ml-2">il y a 4 heures</span>
-                      </div>
-                      <div className="text-sm text-soft-pewter">
-                        <span>Nom utilisateur a ajouté cette carte à Aujourd'hui</span>
-                        <span className="ml-2">il y a 4 heures</span>
+                        <p className="text-sm">{activity.content}</p>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Bouton Changer le statut */}
-              <div className="flex justify-end pt-4">
-                <Button className="bg-yellow-500 hover:bg-yellow-600 text-white">
-                  Changer le statut
-                </Button>
+                ))}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Modal pour ajouter une checklist */}
-      <Dialog open={isChecklistModalOpen} onOpenChange={setIsChecklistModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-palace-navy">
-              Ajouter une checklist
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="checklist-title" className="text-sm font-medium text-palace-navy">
-                Titre
-              </Label>
-              <Input
-                id="checklist-title"
-                value={checklistTitle}
-                onChange={(e) => setChecklistTitle(e.target.value)}
-                className="mt-1 border-yellow-500"
-                autoFocus
-              />
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline"
-                onClick={() => setIsChecklistModalOpen(false)}
-              >
-                Annuler
-              </Button>
-              <Button 
-                onClick={handleCreateChecklist}
-                className="bg-blue-500 hover:bg-blue-600 text-white"
-              >
-                Ajouter
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Reminder Modal */}
       <ReminderModal
-        isOpen={isReminderModalOpen}
-        onClose={() => setIsReminderModalOpen(false)}
+        isOpen={showReminderModal}
+        onClose={() => setShowReminderModal(false)}
       />
-
-      {/* Modal Attribution de membres */}
-      <Dialog open={isMembersModalOpen} onOpenChange={setIsMembersModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-palace-navy">
-              Attribution de membres
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Bouton Membres */}
-            <Button 
-              className="w-full justify-start space-x-2 bg-purple-100 text-purple-700 hover:bg-purple-200"
-              variant="outline"
-            >
-              <Users className="h-4 w-4 text-purple-500" />
-              <span>👥 Membres</span>
-            </Button>
-
-            {/* Champ de recherche */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-palace-navy">Membres</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-soft-pewter" />
-                <Input
-                  value={memberSearchQuery}
-                  onChange={(e) => setMemberSearchQuery(e.target.value)}
-                  placeholder="Rechercher des membres"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Section Membres de l'annuaire de l'hôtel */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-palace-navy">
-                Membres de l'annuaire de l'hôtel
-              </h4>
-              
-              <div className="space-y-2">
-                {availableMembers
-                  .filter(member => 
-                    member.name.toLowerCase().includes(memberSearchQuery.toLowerCase())
-                  )
-                  .map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-500 text-white text-sm">
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-palace-navy">{member.name}</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Escalade */}
-      <Dialog open={isEscaladeModalOpen} onOpenChange={setIsEscaladeModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-palace-navy">
-              Choix du canal
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Section Choix du canal */}
-            <div className="space-y-3">
-              <RadioGroup value={escaladeChannel || ''} onValueChange={(value) => setEscaladeChannel(value as 'email' | 'whatsapp')}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="email" id="email" />
-                  <Label htmlFor="email" className="text-palace-navy">Envoi d'un email</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="whatsapp" id="whatsapp" />
-                  <Label htmlFor="whatsapp" className="text-palace-navy">Envoi d'un message WhatsApp</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Section Attribution de membres */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-palace-navy">Attribution de membres</h4>
-              
-              <div className="space-y-2">
-                <Label className="text-sm text-palace-navy">Membres</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-soft-pewter" />
-                  <Input
-                    value={escaladeMemberSearchQuery}
-                    onChange={(e) => setEscaladeMemberSearchQuery(e.target.value)}
-                    placeholder="Rechercher des membres"
-                    className="pl-10"
-                    disabled={!escaladeChannel}
-                  />
-                </div>
-              </div>
-
-              {/* Liste des membres */}
-              <div className="space-y-2">
-                {availableMembers
-                  .filter(member => 
-                    member.name.toLowerCase().includes(escaladeMemberSearchQuery.toLowerCase())
-                  )
-                  .map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-500 text-white text-sm">
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-palace-navy">{member.name}</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Bouton d'action */}
-            <div className="flex justify-end pt-4">
-              <Button 
-                disabled={!escaladeChannel}
-                onClick={() => {
-                  // Logique pour envoyer l'escalade
-                  setIsEscaladeModalOpen(false);
-                }}
-                className="bg-blue-500 hover:bg-blue-600 text-white disabled:bg-soft-pewter"
-              >
-                Envoyer
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </>
   );
 }

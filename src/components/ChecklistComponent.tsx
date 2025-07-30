@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useProfiles } from '@/hooks/useSupabaseData';
 
 interface ChecklistItem {
   id: string;
@@ -23,6 +24,7 @@ interface ChecklistComponentProps {
 }
 
 export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps) {
+  const { profiles } = useProfiles();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -34,11 +36,15 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
   const completedCount = items.filter(item => item.completed).length;
   const progressPercentage = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
 
-  const mockMembers = [
-    { name: 'Jean Dupont', avatar: 'JD' },
-    { name: 'Sophie Martin', avatar: 'SM' },
-    { name: 'Marie Dubois', avatar: 'MD' }
-  ];
+  // Transform profiles to member format
+  const members = profiles.map(profile => ({
+    name: profile.first_name && profile.last_name 
+      ? `${profile.first_name} ${profile.last_name}` 
+      : profile.email || 'Unknown',
+    avatar: profile.first_name && profile.last_name
+      ? `${profile.first_name[0]}${profile.last_name[0]}`
+      : profile.email ? profile.email[0].toUpperCase() : 'U'
+  }));
 
   const handleAddItem = () => {
     if (newItemText.trim()) {
@@ -198,7 +204,7 @@ export function ChecklistComponent({ title, onDelete }: ChecklistComponentProps)
                 <PopoverContent className="w-56 p-2" align="start">
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-foreground mb-2">Attribuer à</div>
-                    {mockMembers.map((member) => (
+                    {members.map((member) => (
                       <div
                         key={member.avatar}
                         className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
