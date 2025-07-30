@@ -12,6 +12,11 @@ import {
 } from '@/types/database';
 
 // Hook for fetching all tasks
+// Helper function to map database priorities to UI priorities
+const mapPriority = (dbPriority: string): 'normal' | 'urgent' => {
+  return dbPriority === 'urgent' || dbPriority === 'high' ? 'urgent' : 'normal';
+};
+
 export const useTasks = () => {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);

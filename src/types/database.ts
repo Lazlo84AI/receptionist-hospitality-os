@@ -18,7 +18,7 @@ export interface Incident {
   title: string;
   description: string | null;
   incident_type: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: 'normal' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   location: string | null;
   assigned_to: string | null;
@@ -34,7 +34,7 @@ export interface ClientRequest {
   request_details: string | null;
   preparation_status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   arrival_date: string | null;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: 'normal' | 'urgent';
   assigned_to: string | null;
   created_at: string;
   updated_at: string;
@@ -48,7 +48,7 @@ export interface FollowUp {
   notes: string | null;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   due_date: string | null;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: 'normal' | 'urgent';
   assigned_to: string | null;
   created_at: string;
   updated_at: string;
@@ -59,7 +59,7 @@ export interface InternalTask {
   title: string;
   description: string | null;
   task_type: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: 'normal' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   location: string | null;
   department: string | null;
@@ -144,7 +144,7 @@ export interface TaskItem {
   id: string;
   title: string;
   type: 'incident' | 'client_request' | 'follow_up' | 'internal_task';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: 'normal' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   description?: string;
   assignedTo?: string;
