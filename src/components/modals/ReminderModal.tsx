@@ -27,17 +27,17 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
   const [endTime, setEndTime] = useState('');
   const [selectedShifts, setSelectedShifts] = useState<string[]>([]);
   
-  // Récurrence personnalisée
+  // Custom recurrence
   const [repeatEvery, setRepeatEvery] = useState(1);
-  const [repeatUnit, setRepeatUnit] = useState('semaine');
+  const [repeatUnit, setRepeatUnit] = useState('week');
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<string[]>([]);
   const [endType, setEndType] = useState<'never' | 'date' | 'occurrences'>('never');
   const [endDateRecurrence, setEndDateRecurrence] = useState<Date>();
   const [occurrences, setOccurrences] = useState(13);
 
   const handleSave = () => {
-    // Logique de sauvegarde du reminder
-    console.log('Reminder saved:', { 
+    // Reminder save logic
+    console.log('Reminder saved:', {
       subject: subject || taskTitle, 
       scheduleType,
       startDate, 
@@ -64,7 +64,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
     setEndTime('');
     setSelectedShifts([]);
     setRepeatEvery(1);
-    setRepeatUnit('semaine');
+    setRepeatUnit('week');
     setSelectedDaysOfWeek([]);
     setEndType('never');
     setEndDateRecurrence(undefined);
@@ -88,19 +88,19 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
   };
 
   const shifts = [
-    { id: 'matin', label: 'Matin' },
-    { id: 'apres-midi', label: 'Après-midi' },
-    { id: 'nuit', label: 'Nuit' }
+    { id: 'morning', label: 'Morning' },
+    { id: 'afternoon', label: 'Afternoon' },
+    { id: 'night', label: 'Night' }
   ];
 
   const daysOfWeek = [
-    { id: 'D', label: 'D', fullLabel: 'Dimanche' },
-    { id: 'L', label: 'L', fullLabel: 'Lundi' },
-    { id: 'M', label: 'M', fullLabel: 'Mardi' },
-    { id: 'M2', label: 'M', fullLabel: 'Mercredi' },
-    { id: 'J', label: 'J', fullLabel: 'Jeudi' },
-    { id: 'V', label: 'V', fullLabel: 'Vendredi' },
-    { id: 'S', label: 'S', fullLabel: 'Samedi' }
+    { id: 'S', label: 'S', fullLabel: 'Sunday' },
+    { id: 'M', label: 'M', fullLabel: 'Monday' },
+    { id: 'T', label: 'T', fullLabel: 'Tuesday' },
+    { id: 'W', label: 'W', fullLabel: 'Wednesday' },
+    { id: 'T2', label: 'T', fullLabel: 'Thursday' },
+    { id: 'F', label: 'F', fullLabel: 'Friday' },
+    { id: 'S2', label: 'S', fullLabel: 'Saturday' }
   ];
 
   return (
@@ -108,25 +108,25 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
       <DialogContent className="max-w-md">
         <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
-            Définir un reminder
+            Set a Reminder
           </h2>
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
           <div>
-            <Label htmlFor="subject">Objet du reminder</Label>
+            <Label htmlFor="subject">Reminder Subject</Label>
             <Input
               id="subject"
               value={subject || taskTitle || ''}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder={taskTitle || "Entrez l'objet du reminder"}
+              placeholder={taskTitle || "Enter reminder subject"}
               className="mt-1"
             />
           </div>
 
-          {/* Choix entre dates/heures et shifts */}
+          {/* Choice between dates/times and shifts */}
           <div>
-            <Label>Type de planification</Label>
+            <Label>Schedule Type</Label>
             <RadioGroup 
               value={scheduleType} 
               onValueChange={(value: 'datetime' | 'shifts') => setScheduleType(value)}
@@ -134,7 +134,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="datetime" id="datetime" />
-                <Label htmlFor="datetime">Dates et heures</Label>
+                <Label htmlFor="datetime">Dates and Times</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="shifts" id="shifts" />
@@ -147,7 +147,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Date de début</Label>
+                  <Label>Start Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -158,7 +158,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                         )}
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "dd/MM/yyyy") : "Sélectionner"}
+                        {startDate ? format(startDate, "dd/MM/yyyy") : "Select"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -174,7 +174,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                 </div>
 
                 <div>
-                  <Label>Date de fin</Label>
+                  <Label>End Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -185,7 +185,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                         )}
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "dd/MM/yyyy") : "Sélectionner"}
+                        {endDate ? format(endDate, "dd/MM/yyyy") : "Select"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -203,7 +203,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="startTime">Heure de début</Label>
+                  <Label htmlFor="startTime">Start Time</Label>
                   <div className="relative mt-1">
                     <Clock className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
                     <Input
@@ -217,7 +217,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                 </div>
 
                 <div>
-                  <Label htmlFor="endTime">Heure de fin</Label>
+                  <Label htmlFor="endTime">End Time</Label>
                   <div className="relative mt-1">
                     <Clock className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
                     <Input
@@ -253,13 +253,13 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
             </div>
           )}
 
-          {/* Récurrence personnalisée */}
+          {/* Custom recurrence */}
           <div className="bg-muted/50 p-4 rounded-lg space-y-4">
-            <h3 className="font-medium">Récurrence personnalisée</h3>
+            <h3 className="font-medium">Custom Recurrence</h3>
             
-            {/* Répéter toutes les... */}
+            {/* Repeat every... */}
             <div className="flex items-center gap-2">
-              <Label className="text-sm">Répéter tou(te)s les</Label>
+              <Label className="text-sm">Repeat every</Label>
               <Input
                 type="number"
                 value={repeatEvery}
@@ -272,16 +272,16 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="jour">jour</SelectItem>
-                  <SelectItem value="semaine">semaine</SelectItem>
-                  <SelectItem value="mois">mois</SelectItem>
+                  <SelectItem value="day">day</SelectItem>
+                  <SelectItem value="week">week</SelectItem>
+                  <SelectItem value="month">month</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Répéter le */}
+            {/* Repeat on */}
             <div>
-              <Label className="text-sm mb-2 block">Répéter le</Label>
+              <Label className="text-sm mb-2 block">Repeat on</Label>
               <div className="flex gap-1">
                 {daysOfWeek.map((day) => (
                   <Button
@@ -297,18 +297,18 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
               </div>
             </div>
 
-            {/* Se termine */}
+            {/* Ends */}
             <div>
-              <Label className="text-sm mb-2 block">Se termine</Label>
+              <Label className="text-sm mb-2 block">Ends</Label>
               <RadioGroup value={endType} onValueChange={(value: 'never' | 'date' | 'occurrences') => setEndType(value)} className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="never" id="never" />
-                  <Label htmlFor="never" className="text-sm">Jamais</Label>
+                  <Label htmlFor="never" className="text-sm">Never</Label>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="date" id="endDate" />
-                  <Label htmlFor="endDate" className="text-sm">Le</Label>
+                  <Label htmlFor="endDate" className="text-sm">On</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -320,7 +320,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                         )}
                         disabled={endType !== 'date'}
                       >
-                        {endDateRecurrence ? format(endDateRecurrence, "dd MMM yyyy") : "21 oct. 2025"}
+                        {endDateRecurrence ? format(endDateRecurrence, "dd MMM yyyy") : "21 Oct 2025"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -337,7 +337,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
                 
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="occurrences" id="occurrences" />
-                  <Label htmlFor="occurrences" className="text-sm">Après</Label>
+                  <Label htmlFor="occurrences" className="text-sm">After</Label>
                   <Input
                     type="number"
                     value={occurrences}
@@ -354,10 +354,10 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
 
           <div className="flex justify-between pt-4">
             <Button variant="outline" onClick={onClose} className="text-primary">
-              Annuler
+              Cancel
             </Button>
             <Button onClick={handleSave} className="bg-primary text-primary-foreground">
-              Terminé
+              Done
             </Button>
           </div>
         </div>
