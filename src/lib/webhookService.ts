@@ -71,18 +71,49 @@ const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: a
 };
 
 // Helper functions for specific events
-export const sendTaskCreatedEvent = async (taskData: any, profiles: any[] = [], locations: any[] = []) => {
+export const sendTaskCreatedEvent = async (
+  taskData: any, 
+  profiles: any[] = [], 
+  locations: any[] = [],
+  enhancements: {
+    checklists?: Array<{ id: string; title: string; items?: any[] }>;
+    attachments?: Array<{ id: string; name: string; size: number; type?: string; url?: string }>;
+    reminders?: Array<{ id: string; title: string; reminder_time: string; frequency: string }>;
+    comments?: Array<{ id: string; content: string; comment_type: string }>;
+    members?: Array<{ id: string; user_id: string; role?: string }>;
+    escalations?: Array<{ id: string; message: string; method: string; escalated_to?: string }>;
+  } = {}
+) => {
   const currentUserId = await getCurrentUserId();
   const enhancedData = await enhanceTaskData(taskData, profiles, locations);
+  
+  // Create comprehensive payload with all enhancements
+  const comprehensivePayload = {
+    ...enhancedData,
+    created_by: currentUserId,
+    // Include all enhancements in the payload
+    checklists: enhancements.checklists || [],
+    attachments: enhancements.attachments || [],
+    reminders: enhancements.reminders || [],
+    comments: enhancements.comments || [],
+    members: enhancements.members || [],
+    escalations: enhancements.escalations || [],
+    // Add enhancement counts for easy processing
+    enhancement_counts: {
+      checklists: (enhancements.checklists || []).length,
+      attachments: (enhancements.attachments || []).length,
+      reminders: (enhancements.reminders || []).length,
+      comments: (enhancements.comments || []).length,
+      members: (enhancements.members || []).length,
+      escalations: (enhancements.escalations || []).length,
+    }
+  };
   
   return sendWebhookEvent({
     event_type: 'task_created',
     timestamp: new Date().toISOString(),
     current_user_id: currentUserId,
-    data: {
-      ...enhancedData,
-      created_by: currentUserId,
-    },
+    data: comprehensivePayload,
   });
 };
 

@@ -139,6 +139,7 @@ export function VoiceCommandButton() {
       dueDate: null,
     });
     setChecklists([]);
+    setAttachments([]);
   };
 
   const handleAddChecklist = (title: string) => {
@@ -220,9 +221,29 @@ export function VoiceCommandButton() {
           break;
       }
 
+      // Prepare enhancements for webhook
+      const enhancements = {
+        checklists: checklists.map(checklist => ({
+          id: checklist.id,
+          title: checklist.title,
+          items: [] // Empty items for now, can be expanded later
+        })),
+        attachments: attachments.map(attachment => ({
+          id: attachment.id,
+          name: attachment.name,
+          size: attachment.size,
+          type: 'unknown', // Default type, can be enhanced
+          url: `#attachment-${attachment.id}` // Placeholder URL
+        })),
+        reminders: [], // No reminders in current UI
+        comments: [], // No comments in current UI
+        members: [], // No additional members in current UI
+        escalations: [] // No escalations in current UI
+      };
+
       // Send webhook event for task creation
       const { sendTaskCreatedEvent } = await import('@/lib/webhookService');
-      const result = await sendTaskCreatedEvent(taskData, hotelMembers, locations);
+      const result = await sendTaskCreatedEvent(taskData, hotelMembers, locations, enhancements);
       
       if (result.success) {
         toast({
