@@ -32,26 +32,26 @@ import { cn } from '@/lib/utils';
 
 const categories = [
   { id: 'incident', label: 'Ongoing Incident', icon: AlertTriangle, color: 'bg-urgence-red text-warm-cream' },
-  { id: 'client_request', label: 'Demande client', icon: Users, color: 'bg-champagne-gold text-palace-navy' },
-  { id: 'follow_up', label: 'Relance', icon: Clock, color: 'bg-palace-navy text-warm-cream' },
-  { id: 'internal_task', label: 'Tâche interne', icon: Wrench, color: 'bg-muted text-muted-foreground' },
+  { id: 'client_request', label: 'Client Request', icon: Users, color: 'bg-champagne-gold text-palace-navy' },
+  { id: 'follow_up', label: 'Follow-up', icon: Clock, color: 'bg-palace-navy text-warm-cream' },
+  { id: 'internal_task', label: 'Internal Task', icon: Wrench, color: 'bg-muted text-muted-foreground' },
 ];
 
 const originTypes = [
   { id: 'maintenance', label: 'Maintenance' },
-  { id: 'team', label: 'Équipe' },
+  { id: 'team', label: 'Team' },
   { id: 'client', label: 'Client' },
-  { id: 'staff', label: 'Personnel' },
+  { id: 'staff', label: 'Staff' },
 ];
 
 const priorityLevels = [
-  { id: 'normal', label: 'Normale', color: 'bg-muted text-muted-foreground' },
-  { id: 'urgent', label: 'Urgence', color: 'bg-urgence-red text-warm-cream' },
+  { id: 'normal', label: 'Normal', color: 'bg-muted text-muted-foreground' },
+  { id: 'urgent', label: 'Urgent', color: 'bg-urgence-red text-warm-cream' },
 ];
 
 const services = [
   { id: 'housekeeping', label: 'Housekeeping' },
-  { id: 'reception', label: 'Réception' },
+  { id: 'reception', label: 'Reception' },
   { id: 'maintenance', label: 'Maintenance' },
 ];
 
@@ -309,7 +309,7 @@ export function VoiceCommandButton() {
               ) : (
                 <Edit3 className="h-5 w-5" />
               )}
-              Créer une nouvelle carte - Mode {creationMode === 'voice' ? 'Vocal' : 'Édition'}
+              Create New Card - {creationMode === 'voice' ? 'Voice' : 'Edit'} Mode
             </DialogTitle>
           </DialogHeader>
           
@@ -321,7 +321,7 @@ export function VoiceCommandButton() {
               <div className="flex items-center gap-2 p-3 rounded-lg bg-champagne-gold/10 border border-champagne-gold/20">
                 <span className="text-champagne-gold">💡</span>
                 <span className="text-sm text-champagne-gold">
-                  Décrivez précisément pour une meilleure compréhension
+                  Describe precisely for better understanding
                 </span>
               </div>
             )}
@@ -331,10 +331,10 @@ export function VoiceCommandButton() {
                 "text-sm font-medium",
                 creationMode === 'voice' ? "text-champagne-gold" : "text-foreground"
               )}>
-                Titre de la carte
+                Card Title
               </label>
               <Input 
-                placeholder="Titre descriptif de la carte"
+                placeholder="Descriptive card title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className={cn(
@@ -345,7 +345,7 @@ export function VoiceCommandButton() {
 
             {/* Category Selection */}
             <div className="space-y-3">
-              <label className="text-sm font-medium">Catégorie de la carte</label>
+              <label className="text-sm font-medium">Card Category</label>
               <div className="grid grid-cols-2 gap-3">
                 {categories.map((category) => (
                   <Card 
@@ -375,9 +375,9 @@ export function VoiceCommandButton() {
             {/* Conditional Fields for Client Requests */}
             {formData.category === 'client_request' && (
               <div className="space-y-3">
-                <label className="text-sm font-medium">Nom du client</label>
+                <label className="text-sm font-medium">Client Name</label>
                 <Input 
-                  placeholder="Nom du client"
+                  placeholder="Client name"
                   value={formData.guestName}
                   onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
                 />
@@ -387,9 +387,9 @@ export function VoiceCommandButton() {
             {/* Conditional Fields for Follow-ups */}
             {formData.category === 'follow_up' && (
               <div className="space-y-3">
-                <label className="text-sm font-medium">Destinataire de la relance</label>
+                <label className="text-sm font-medium">Follow-up Recipient</label>
                 <Input 
-                  placeholder="Nom du destinataire"
+                  placeholder="Recipient name"
                   value={formData.recipient}
                   onChange={(e) => setFormData(prev => ({ ...prev, recipient: e.target.value }))}
                 />
@@ -398,10 +398,10 @@ export function VoiceCommandButton() {
 
             {/* Origin Type */}
             <div className="space-y-3">
-              <label className="text-sm font-medium">Type d'origine</label>
+              <label className="text-sm font-medium">Origin Type</label>
               <Select value={formData.originType} onValueChange={(value) => setFormData(prev => ({ ...prev, originType: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner le type d'origine" />
+                  <SelectValue placeholder="Select origin type" />
                 </SelectTrigger>
                 <SelectContent>
                   {originTypes.map((type) => (
@@ -414,7 +414,7 @@ export function VoiceCommandButton() {
             {/* Priority Level (only for incidents and tasks) */}
             {(formData.category === 'incident' || formData.category === 'internal_task') && (
               <div className="space-y-3">
-                <label className="text-sm font-medium">Niveau de priorité</label>
+                <label className="text-sm font-medium">Priority Level</label>
                 <div className="flex gap-3">
                   {priorityLevels.map((priority) => (
                     <Button
@@ -446,7 +446,7 @@ export function VoiceCommandButton() {
                   }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner le service" />
+                    <SelectValue placeholder="Select service" />
                   </SelectTrigger>
                   <SelectContent>
                     {services.map((service) => (
@@ -456,14 +456,14 @@ export function VoiceCommandButton() {
                 </Select>
               </div>
               <div className="space-y-3">
-                <label className="text-sm font-medium">Membres assignés</label>
+                <label className="text-sm font-medium">Assigned Members</label>
                 {formData.service ? (
                   <Select 
                     value={formData.assignedMember} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, assignedMember: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un membre" />
+                      <SelectValue placeholder="Select a member" />
                     </SelectTrigger>
                     <SelectContent>
                       {hotelMembers
@@ -477,7 +477,7 @@ export function VoiceCommandButton() {
                   </Select>
                 ) : (
                   <div className="h-10 flex items-center px-3 py-2 border border-input bg-muted text-muted-foreground rounded-md text-sm">
-                    Sélectionnez d'abord un service
+                    Select a service first
                   </div>
                 )}
               </div>
@@ -486,18 +486,18 @@ export function VoiceCommandButton() {
             {/* Location Module for all card types requiring location */}
             {(['client_request', 'incident', 'follow_up', 'internal_task'].includes(formData.category)) && (
               <div className="space-y-3">
-                <label className="text-sm font-medium">Localisation</label>
+                <label className="text-sm font-medium">Location</label>
                 <div className="grid grid-cols-2 gap-4 h-48">
                   {/* Rooms */}
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Chambres</h4>
+                    <h4 className="text-sm font-medium">Rooms</h4>
                     <div className="grid grid-cols-6 gap-2 max-h-44 overflow-y-auto">
                       {rooms.map((room) => (
                         <Button
                           key={room}
-                          variant={formData.location === `Chambre ${room}` ? "default" : "outline"}
+                          variant={formData.location === `Room ${room}` ? "default" : "outline"}
                           className="h-8 w-12 text-xs"
-                          onClick={() => setFormData(prev => ({ ...prev, location: `Chambre ${room}` }))}
+                          onClick={() => setFormData(prev => ({ ...prev, location: `Room ${room}` }))}
                         >
                           {room}
                         </Button>
@@ -506,7 +506,7 @@ export function VoiceCommandButton() {
                   </div>
                   {/* Common Areas and Corridors */}
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Espaces communs</h4>
+                    <h4 className="text-sm font-medium">Common Areas</h4>
                     <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto">
                       {commonAreas.map((area) => (
                         <Button
