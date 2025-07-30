@@ -16,9 +16,10 @@ interface ReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
   taskTitle?: string;
+  onSave?: (reminderData: any) => void;
 }
 
-export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps) {
+export function ReminderModal({ isOpen, onClose, taskTitle, onSave }: ReminderModalProps) {
   const [subject, setSubject] = useState('');
   const [scheduleType, setScheduleType] = useState<'datetime' | 'shifts'>('datetime');
   const [startDate, setStartDate] = useState<Date>();
@@ -36,22 +37,24 @@ export function ReminderModal({ isOpen, onClose, taskTitle }: ReminderModalProps
   const [occurrences, setOccurrences] = useState(13);
 
   const handleSave = () => {
-    // Reminder save logic
-    console.log('Reminder saved:', {
-      subject: subject || taskTitle, 
+    const reminderData = {
+      subject: subject || taskTitle || '',
       scheduleType,
-      startDate, 
-      endDate, 
-      startTime,
-      endTime,
-      selectedShifts,
-      repeatEvery,
-      repeatUnit,
-      selectedDaysOfWeek,
-      endType,
-      endDateRecurrence,
-      occurrences
-    });
+      date: startDate,
+      time: startTime,
+      shifts: selectedShifts,
+      frequency: `every ${repeatEvery} ${repeatUnit}`,
+      repeatOn: selectedDaysOfWeek,
+      endDate: endDateRecurrence,
+    };
+    
+    console.log('Reminder saved:', reminderData);
+    
+    // Call the onSave callback if provided
+    if (onSave) {
+      onSave(reminderData);
+    }
+    
     onClose();
   };
 

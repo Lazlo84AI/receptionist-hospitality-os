@@ -64,6 +64,7 @@ export function VoiceCommandButton() {
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
   const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items: any[] }>>([]);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number }>>([]);
+  const [reminders, setReminders] = useState<Array<{ id: string; subject: string; scheduleType: string; date?: Date; time?: string; shifts?: string[]; frequency?: string; endDate?: Date }>>([]);
   
   // Fetch real-time data from database
   const { profiles: hotelMembers, loading: profilesLoading } = useProfiles();
@@ -140,6 +141,7 @@ export function VoiceCommandButton() {
     });
     setChecklists([]);
     setAttachments([]);
+    setReminders([]);
   };
 
   const handleAddChecklist = (title: string) => {
@@ -163,6 +165,24 @@ export function VoiceCommandButton() {
           : checklist
       )
     );
+  };
+
+  const handleAddReminder = (reminderData: any) => {
+    const newReminder = {
+      id: Date.now().toString(),
+      subject: reminderData.subject,
+      scheduleType: reminderData.scheduleType,
+      date: reminderData.date,
+      time: reminderData.time,
+      shifts: reminderData.shifts,
+      frequency: reminderData.frequency,
+      endDate: reminderData.endDate,
+    };
+    setReminders(prev => [...prev, newReminder]);
+  };
+
+  const handleDeleteReminder = (reminderId: string) => {
+    setReminders(prev => prev.filter(reminder => reminder.id !== reminderId));
   };
 
   const handleCreateCard = async () => {
@@ -250,7 +270,17 @@ export function VoiceCommandButton() {
           type: 'unknown', // Default type, can be enhanced
           url: `#attachment-${attachment.id}` // Placeholder URL
         })),
-        reminders: [], // No reminders in current UI
+        reminders: reminders.map(reminder => ({
+          id: reminder.id,
+          title: reminder.subject,
+          reminder_time: reminder.scheduleType === 'datetime' && reminder.date && reminder.time 
+            ? new Date(`${reminder.date.toISOString().split('T')[0]}T${reminder.time}`).toISOString()
+            : new Date().toISOString(),
+          frequency: reminder.frequency || 'once',
+          schedule_type: reminder.scheduleType,
+          shifts: reminder.shifts || [],
+          end_date: reminder.endDate?.toISOString() || null,
+        })),
         comments: [], // No comments in current UI
       };
       
@@ -692,6 +722,37 @@ export function VoiceCommandButton() {
               </div>
             )}
 
+            {/* Display Added Reminders */}
+            {reminders.length > 0 && (
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground">Added Reminders</div>
+                {reminders.map((reminder) => (
+                  <div key={reminder.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Bell className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">{reminder.subject}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {reminder.scheduleType === 'datetime' && reminder.date && reminder.time
+                            ? `${reminder.date.toLocaleDateString()} at ${reminder.time}`
+                            : reminder.scheduleType === 'shifts' && reminder.shifts
+                            ? `During ${reminder.shifts.join(', ')} shifts`
+                            : 'Custom schedule'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteReminder(reminder.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button 
@@ -729,6 +790,7 @@ export function VoiceCommandButton() {
         isOpen={isReminderModalOpen}
         onClose={() => setIsReminderModalOpen(false)}
         taskTitle={formData.title}
+        onSave={handleAddReminder}
       />
 
       {/* Attachment Modal */}
