@@ -32,13 +32,13 @@ export function ChecklistModal({ isOpen, onClose, onAdd }: ChecklistModalProps) 
       <DialogContent className="max-w-md">
         <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
-            Ajouter une checklist
+            Add a Checklist
           </h2>
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
           <div>
-            <Label htmlFor="checklistTitle">Titre</Label>
+            <Label htmlFor="checklistTitle">Title</Label>
             <Input
               id="checklistTitle"
               value={title}
@@ -51,10 +51,10 @@ export function ChecklistModal({ isOpen, onClose, onAdd }: ChecklistModalProps) 
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button variant="outline" onClick={handleCancel}>
-              Annuler
+              Cancel
             </Button>
             <Button onClick={handleAdd}>
-              Ajouter
+              Add
             </Button>
           </div>
         </div>
