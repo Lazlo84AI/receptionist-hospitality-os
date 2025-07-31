@@ -529,6 +529,10 @@ const ShiftManagement = () => {
           setIsTaskDetailOpen(false);
           setSelectedTask(null);
         }}
+        onUpdateTask={(updatedTask) => {
+          // Refetch data after task update to trigger webhooks
+          refetch();
+        }}
       />
       
       {/* Shift Start Modal */}

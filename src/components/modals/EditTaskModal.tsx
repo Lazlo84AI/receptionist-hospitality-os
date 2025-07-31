@@ -73,6 +73,9 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
           description: "Task has been updated and notification sent successfully",
         });
       }
+
+      // Save the task regardless of webhook success
+      onSave(editedTask);
     } catch (error) {
       console.error('Error sending webhook:', error);
       toast({
@@ -82,7 +85,6 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
       });
     }
 
-    onSave(editedTask);
     setHasChanges(false);
     onClose();
   };

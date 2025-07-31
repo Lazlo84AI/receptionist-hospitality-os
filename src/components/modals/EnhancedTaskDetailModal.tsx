@@ -134,6 +134,10 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
             title: "Comment Added",
             description: "Comment has been added and notification sent successfully",
           });
+          // Call onUpdateTask to trigger data refresh
+          if (onUpdateTask) {
+            onUpdateTask(task);
+          }
         } else {
           toast({
             title: "Webhook Error",
@@ -185,6 +189,10 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
             title: "Checklist Added",
             description: "Checklist has been added and notification sent successfully",
           });
+          // Call onUpdateTask to trigger data refresh
+          if (onUpdateTask) {
+            onUpdateTask(task);
+          }
         } else {
           toast({
             title: "Webhook Error",
