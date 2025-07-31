@@ -171,14 +171,10 @@ export const sendTaskUpdatedEvent = async (
   const currentUserId = await getCurrentUserId();
   const enhancedData = await enhanceTaskData(updatedTask, profiles, locations);
   
-  // Create comprehensive payload with all enhancements
+  // Create comprehensive payload identical to creation payload structure
   const comprehensivePayload = {
-    task_id: taskId,
-    original_task: originalTask,
-    updated_task: enhancedData,
-    updated_by: currentUserId,
-    event_type: 'task_updated',
-    task_category: enhancedData.type || updatedTask.type,
+    ...enhancedData,
+    created_by: currentUserId,
     // Include selected enhancements in the payload
     checklists: enhancements.checklists || [],
     attachments: enhancements.attachments || [],
