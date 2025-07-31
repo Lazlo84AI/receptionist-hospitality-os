@@ -89,14 +89,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const [isEscalationOpen, setIsEscalationOpen] = useState(false);
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [checklists, setChecklists] = useState<{ id: string; title: string; tasks: { id: string; text: string; completed: boolean }[] }[]>([]);
-  const [reminders, setReminders] = useState<{ id: string; title: string; date: string; description: string }[]>([
-    {
-      id: '1',
-      title: 'Preventive maintenance check',
-      date: '2025-01-31T16:00',
-      description: 'Check every Friday at 4 PM for preventive maintenance'
-    }
-  ]);
+  const [reminders, setReminders] = useState<{ id: string; title: string; date: string; description: string }[]>([]);
   const [attachments, setAttachments] = useState<{ id: string; name: string; type: string; size: string }[]>([]);
   
   const { profiles } = useProfiles();
@@ -506,6 +499,8 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
         isOpen={isReminderOpen}
         onClose={() => setIsReminderOpen(false)}
         taskTitle={task.title}
+        task={task}
+        onUpdate={() => onUpdateTask && onUpdateTask(task)}
       />
       
       <ChecklistModal 
@@ -517,16 +512,22 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
       <MembersModal 
         isOpen={isMembersOpen}
         onClose={() => setIsMembersOpen(false)}
+        task={task}
+        onUpdate={() => onUpdateTask && onUpdateTask(task)}
       />
       
       <EscalationModal 
         isOpen={isEscalationOpen}
         onClose={() => setIsEscalationOpen(false)}
+        task={task}
+        onUpdate={() => onUpdateTask && onUpdateTask(task)}
       />
       
       <AttachmentModal 
         isOpen={isAttachmentOpen}
         onClose={() => setIsAttachmentOpen(false)}
+        task={task}
+        onUpdate={() => onUpdateTask && onUpdateTask(task)}
       />
     </>
   );

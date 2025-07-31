@@ -11,6 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { sendTaskUpdatedEvent } from '@/lib/webhookService';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -18,9 +21,11 @@ interface ReminderModalProps {
   taskTitle?: string;
   editingReminder?: any;
   onSave?: (reminderData: any) => void;
+  task?: any;
+  onUpdate?: () => void;
 }
 
-export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onSave }: ReminderModalProps) {
+export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onSave, task, onUpdate }: ReminderModalProps) {
   const [subject, setSubject] = useState('');
   const [scheduleType, setScheduleType] = useState<'datetime' | 'shifts'>('datetime');
   const [startDate, setStartDate] = useState<Date>();
@@ -71,19 +76,57 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
     }
   }, [editingReminder]);
 
-  const handleSave = () => {
+  const { profiles } = useProfiles();
+  const { locations } = useLocations();
+  const { toast } = useToast();
+
+  const handleSave = async () => {
     const reminderData = {
-      subject: subject || taskTitle || '',
-      scheduleType,
-      date: startDate,
-      time: startTime,
-      shifts: selectedShifts,
+      id: editingReminder?.id || Date.now().toString(),
+      title: subject || taskTitle || '',
+      reminder_time: startDate && startTime ? `${startDate.toISOString().split('T')[0]}T${startTime}:00.000Z` : new Date().toISOString(),
       frequency: `every ${repeatEvery} ${repeatUnit}`,
-      repeatOn: selectedDaysOfWeek,
-      endDate: endDateRecurrence,
     };
     
-    console.log('Reminder saved:', reminderData);
+    if (task) {
+      try {
+        // Send webhook event for task update with reminder
+        const webhookResult = await sendTaskUpdatedEvent(
+          task.id,
+          task,
+          task,
+          profiles,
+          locations,
+          {
+            reminders: [reminderData]
+          }
+        );
+
+        if (webhookResult.success) {
+          toast({
+            title: editingReminder ? "Reminder Updated" : "Reminder Added",
+            description: "Reminder has been updated and notification sent successfully",
+          });
+          // Call onUpdate to trigger data refresh
+          if (onUpdate) {
+            onUpdate();
+          }
+        } else {
+          toast({
+            title: "Webhook Error",
+            description: webhookResult.error || "Failed to send reminder notification",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+        toast({
+          title: "Reminder Error",
+          description: "Failed to send reminder notification",
+          variant: "destructive",
+        });
+      }
+    }
     
     // Call the onSave callback if provided
     if (onSave) {

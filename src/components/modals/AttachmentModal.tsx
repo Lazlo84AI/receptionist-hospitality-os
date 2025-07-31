@@ -3,10 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Upload, X, File, Image, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { sendTaskUpdatedEvent } from '@/lib/webhookService';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 
 interface AttachmentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  task?: any;
+  onUpdate?: () => void;
 }
 
 interface UploadedFile {
@@ -19,10 +24,16 @@ interface UploadedFile {
 
 export const AttachmentModal: React.FC<AttachmentModalProps> = ({ 
   isOpen, 
-  onClose 
+  onClose,
+  task,
+  onUpdate
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  
+  const { profiles } = useProfiles();
+  const { locations } = useLocations();
+  const { toast } = useToast();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -165,9 +176,55 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
               Annuler
             </Button>
             <Button 
-              onClick={() => {
-                // Ici on sauvegarderait les fichiers
-                console.log('Fichiers sauvegardés:', uploadedFiles);
+              onClick={async () => {
+                if (task && uploadedFiles.length > 0) {
+                  try {
+                    const attachmentsData = uploadedFiles.map(file => ({
+                      id: file.id,
+                      name: file.name,
+                      size: file.size,
+                      type: file.type,
+                      url: file.url
+                    }));
+
+                    // Send webhook event for task update with attachments
+                    const webhookResult = await sendTaskUpdatedEvent(
+                      task.id,
+                      task,
+                      task,
+                      profiles,
+                      locations,
+                      {
+                        attachments: attachmentsData
+                      }
+                    );
+
+                    if (webhookResult.success) {
+                      toast({
+                        title: "Attachments Added",
+                        description: "Attachments have been added and notification sent successfully",
+                      });
+                      // Call onUpdate to trigger data refresh
+                      if (onUpdate) {
+                        onUpdate();
+                      }
+                    } else {
+                      toast({
+                        title: "Webhook Error",
+                        description: webhookResult.error || "Failed to send attachment notification",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error sending webhook:', error);
+                    toast({
+                      title: "Attachment Error",
+                      description: "Failed to send attachment notification",
+                      variant: "destructive",
+                    });
+                  }
+                }
+                
                 setUploadedFiles([]);
                 onClose();
               }}

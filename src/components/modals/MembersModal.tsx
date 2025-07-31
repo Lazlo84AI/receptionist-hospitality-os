@@ -6,33 +6,86 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { sendTaskUpdatedEvent } from '@/lib/webhookService';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 
 interface MembersModalProps {
   isOpen: boolean;
   onClose: () => void;
+  task?: any;
+  onUpdate?: () => void;
 }
 
-const hotelMembers = [
-  { id: '1', name: 'Jean Dupont', role: 'Réception', initials: 'JD' },
-  { id: '2', name: 'Marie Dubois', role: 'Gouvernante', initials: 'MD' },
-  { id: '3', name: 'Pierre Leroy', role: 'Réception', initials: 'PL' },
-  { id: '4', name: 'Claire Petit', role: 'Gouvernante', initials: 'CP' },
-  { id: '5', name: 'Wilfried de Renty', role: 'Direction', initials: 'WR' },
-  { id: '6', name: 'Leopold Bechu', role: 'Réception', initials: 'LB' },
-];
 
-export function MembersModal({ isOpen, onClose }: MembersModalProps) {
+export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMember, setSelectedMember] = useState('');
+  
+  const { profiles } = useProfiles();
+  const { locations } = useLocations();
+  const { toast } = useToast();
+
+  // Convert profiles to hotel members format
+  const hotelMembers = profiles?.map(profile => ({
+    id: profile.id,
+    name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+    role: profile.department || profile.role || 'Staff',
+    initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'U'
+  })) || [];
 
   const filteredMembers = hotelMembers.filter(member =>
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAssign = () => {
-    // Logique d'assignation du membre
-    console.log('Member assigned:', selectedMember);
+  const handleAssign = async () => {
+    if (task && selectedMember) {
+      try {
+        const selectedMemberData = hotelMembers.find(m => m.id === selectedMember);
+        const memberData = {
+          id: selectedMember,
+          user_id: selectedMember,
+          role: 'assignee',
+        };
+
+        // Send webhook event for task update with member assignment
+        const webhookResult = await sendTaskUpdatedEvent(
+          task.id,
+          task,
+          task,
+          profiles,
+          locations,
+          {
+            members: [memberData]
+          }
+        );
+
+        if (webhookResult.success) {
+          toast({
+            title: "Member Assigned",
+            description: `${selectedMemberData?.name} has been assigned and notification sent successfully`,
+          });
+          // Call onUpdate to trigger data refresh
+          if (onUpdate) {
+            onUpdate();
+          }
+        } else {
+          toast({
+            title: "Webhook Error",
+            description: webhookResult.error || "Failed to send member assignment notification",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+        toast({
+          title: "Assignment Error",
+          description: "Failed to send member assignment notification",
+          variant: "destructive",
+        });
+      }
+    }
     onClose();
   };
 

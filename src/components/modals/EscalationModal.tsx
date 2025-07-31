@@ -6,34 +6,88 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { sendTaskUpdatedEvent } from '@/lib/webhookService';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 
 interface EscalationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  task?: any;
+  onUpdate?: () => void;
 }
 
-const hotelMembers = [
-  { id: '1', name: 'Jean Dupont', role: 'Réception', initials: 'JD' },
-  { id: '2', name: 'Marie Dubois', role: 'Gouvernante', initials: 'MD' },
-  { id: '3', name: 'Pierre Leroy', role: 'Réception', initials: 'PL' },
-  { id: '4', name: 'Claire Petit', role: 'Gouvernante', initials: 'CP' },
-  { id: '5', name: 'Wilfried de Renty', role: 'Direction', initials: 'WR' },
-  { id: '6', name: 'Leopold Bechu', role: 'Réception', initials: 'LB' },
-];
 
-export function EscalationModal({ isOpen, onClose }: EscalationModalProps) {
+export function EscalationModal({ isOpen, onClose, task, onUpdate }: EscalationModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('email');
   const [selectedMember, setSelectedMember] = useState('');
+  
+  const { profiles } = useProfiles();
+  const { locations } = useLocations();
+  const { toast } = useToast();
+
+  // Convert profiles to hotel members format
+  const hotelMembers = profiles?.map(profile => ({
+    id: profile.id,
+    name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+    role: profile.department || profile.role || 'Staff',
+    initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'U'
+  })) || [];
 
   const filteredMembers = hotelMembers.filter(member =>
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSend = () => {
-    // Logique d'envoi d'escalade
-    console.log('Escalation sent:', { channel: selectedChannel, member: selectedMember });
+  const handleSend = async () => {
+    if (task && selectedMember) {
+      try {
+        const selectedMemberData = hotelMembers.find(m => m.id === selectedMember);
+        const escalationData = {
+          id: Date.now().toString(),
+          message: `Task escalated via ${selectedChannel}`,
+          method: selectedChannel,
+          escalated_to: selectedMemberData?.name || '',
+        };
+
+        // Send webhook event for task update with escalation
+        const webhookResult = await sendTaskUpdatedEvent(
+          task.id,
+          task,
+          task,
+          profiles,
+          locations,
+          {
+            escalations: [escalationData]
+          }
+        );
+
+        if (webhookResult.success) {
+          toast({
+            title: "Escalation Sent",
+            description: "Escalation has been sent and notification sent successfully",
+          });
+          // Call onUpdate to trigger data refresh
+          if (onUpdate) {
+            onUpdate();
+          }
+        } else {
+          toast({
+            title: "Webhook Error",
+            description: webhookResult.error || "Failed to send escalation notification",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+        toast({
+          title: "Escalation Error",
+          description: "Failed to send escalation notification",
+          variant: "destructive",
+        });
+      }
+    }
     onClose();
   };
 
