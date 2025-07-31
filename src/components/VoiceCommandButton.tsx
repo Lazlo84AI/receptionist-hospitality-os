@@ -14,8 +14,7 @@ import {
   CheckSquare,
   Bell,
   Paperclip,
-  Upload,
-  Edit
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -773,39 +772,34 @@ export function VoiceCommandButton() {
               <div className="space-y-4">
                 <div className="text-sm font-medium text-muted-foreground">Added Reminders</div>
                 {reminders.map((reminder) => (
-                  <div key={reminder.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Bell className="h-4 w-4 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">{reminder.subject}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {reminder.scheduleType === 'datetime' && reminder.date && reminder.time
-                            ? `${reminder.date.toLocaleDateString()} at ${reminder.time}`
-                            : reminder.scheduleType === 'shifts' && reminder.shifts
-                            ? `During ${reminder.shifts.join(', ')} shifts`
-                            : 'Custom schedule'}
-                        </p>
-                      </div>
-                    </div>
-                     <div className="flex gap-1">
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         onClick={() => {
-                           setEditingReminder(reminder);
-                           setIsReminderModalOpen(true);
-                         }}
-                       >
-                         <Edit className="h-4 w-4" />
-                       </Button>
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         onClick={() => handleDeleteReminder(reminder.id)}
-                       >
-                         <X className="h-4 w-4" />
-                       </Button>
+                   <div 
+                     key={reminder.id} 
+                     className="flex items-center justify-between p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80"
+                     onClick={() => {
+                       setEditingReminder(reminder);
+                       setIsReminderModalOpen(true);
+                     }}
+                   >
+                     <div className="flex items-center gap-3">
+                       <Bell className="h-4 w-4 text-primary" />
+                       <div>
+                         <p className="text-sm font-medium">{reminder.subject}</p>
+                         <p className="text-xs text-muted-foreground">
+                           {reminder.scheduleType === 'datetime' && reminder.date && reminder.time
+                             ? `${reminder.date.toLocaleDateString()} at ${reminder.time}`
+                             : reminder.scheduleType === 'shifts' && reminder.shifts
+                             ? `During ${reminder.shifts.join(', ')} shifts`
+                             : 'Custom schedule'}
+                         </p>
+                       </div>
                      </div>
+                     <Button
+                       variant="ghost"
+                       size="sm"
+                       onClick={() => handleDeleteReminder(reminder.id)}
+                     >
+                       <X className="h-4 w-4" />
+                     </Button>
                   </div>
                 ))}
               </div>
