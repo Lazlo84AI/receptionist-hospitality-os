@@ -47,41 +47,54 @@ const getCurrentUserId = async (): Promise<string | null> => {
 
 // Helper function to enhance task data with necessary IDs and normalize the payload
 const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: any[] = []) => {
-  const enhanced = { ...taskData };
+  // Create a clean payload with only the required fields
+  const payload: any = {};
 
-  // Map assigned member name to assigned_to and get assigned_member_id
-  if (taskData.assigned_member && profiles.length > 0) {
-    const assignedProfile = profiles.find(p => 
-      `${p.first_name} ${p.last_name}` === taskData.assigned_member
-    );
-    if (assignedProfile) {
-      enhanced.assigned_to = taskData.assigned_member;
-      enhanced.assigned_member_id = assignedProfile.id;
+  // Map due_date
+  if (taskData.dueDate || taskData.due_date) {
+    payload.due_date = taskData.dueDate || taskData.due_date;
+  }
+
+  // Map priority
+  if (taskData.priority) {
+    payload.priority = taskData.priority;
+  }
+
+  // Map assigned member name and ID
+  if (taskData.assignedTo || taskData.assigned_member) {
+    const memberName = taskData.assignedTo || taskData.assigned_member;
+    payload.assigned_to = memberName;
+    
+    if (profiles.length > 0) {
+      const assignedProfile = profiles.find(p => 
+        `${p.first_name} ${p.last_name}` === memberName
+      );
+      if (assignedProfile) {
+        payload.assigned_member_id = assignedProfile.id;
+      }
     }
   }
 
-  // Map location ID if location name is provided
-  if (taskData.location && locations.length > 0) {
+  // Map location ID
+  if (taskData.location_id) {
+    payload.location_id = taskData.location_id;
+  } else if (taskData.location && locations.length > 0) {
     const location = locations.find(l => l.name === taskData.location);
     if (location) {
-      enhanced.location_id = location.id;
+      payload.location_id = location.id;
     }
   }
 
-  // Ensure timestamps are properly formatted
-  if (!enhanced.created_at) {
-    enhanced.created_at = new Date().toISOString();
-  }
-  if (!enhanced.updated_at) {
-    enhanced.updated_at = new Date().toISOString();
+  // Map timestamps
+  payload.created_at = taskData.created_at || new Date().toISOString();
+  payload.updated_at = new Date().toISOString();
+
+  // Map created_by
+  if (taskData.created_by) {
+    payload.created_by = taskData.created_by;
   }
 
-  // Remove fields that shouldn't be in the final payload
-  delete enhanced.assigned_member;
-  delete enhanced.location;
-  delete enhanced.incident_type;
-
-  return enhanced;
+  return payload;
 };
 
 // Helper functions for specific events
