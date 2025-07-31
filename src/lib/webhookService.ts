@@ -49,17 +49,18 @@ const getCurrentUserId = async (): Promise<string | null> => {
 const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: any[] = []) => {
   const enhanced = { ...taskData };
 
-  // Add assigned member ID if assigned_member name is provided
+  // Map assigned member name to assigned_to and get assigned_member_id
   if (taskData.assigned_member && profiles.length > 0) {
     const assignedProfile = profiles.find(p => 
       `${p.first_name} ${p.last_name}` === taskData.assigned_member
     );
     if (assignedProfile) {
+      enhanced.assigned_to = taskData.assigned_member;
       enhanced.assigned_member_id = assignedProfile.id;
     }
   }
 
-  // Add location ID if location name is provided
+  // Map location ID if location name is provided
   if (taskData.location && locations.length > 0) {
     const location = locations.find(l => l.name === taskData.location);
     if (location) {
@@ -75,10 +76,10 @@ const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: a
     enhanced.updated_at = new Date().toISOString();
   }
 
-  // Normalize field names to match the user's expected payload structure
-  if (enhanced.incident_type && !enhanced.origin_type) {
-    enhanced.origin_type = enhanced.incident_type;
-  }
+  // Remove fields that shouldn't be in the final payload
+  delete enhanced.assigned_member;
+  delete enhanced.location;
+  delete enhanced.incident_type;
 
   return enhanced;
 };
