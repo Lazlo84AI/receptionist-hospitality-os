@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Trash2, Calendar, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,11 @@ interface ReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
   taskTitle?: string;
+  editingReminder?: any;
   onSave?: (reminderData: any) => void;
 }
 
-export function ReminderModal({ isOpen, onClose, taskTitle, onSave }: ReminderModalProps) {
+export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onSave }: ReminderModalProps) {
   const [subject, setSubject] = useState('');
   const [scheduleType, setScheduleType] = useState<'datetime' | 'shifts'>('datetime');
   const [startDate, setStartDate] = useState<Date>();
@@ -35,6 +36,40 @@ export function ReminderModal({ isOpen, onClose, taskTitle, onSave }: ReminderMo
   const [endType, setEndType] = useState<'never' | 'date' | 'occurrences'>('never');
   const [endDateRecurrence, setEndDateRecurrence] = useState<Date>();
   const [occurrences, setOccurrences] = useState(13);
+
+  // Effect to populate form when editing
+  useEffect(() => {
+    if (editingReminder) {
+      setSubject(editingReminder.subject || '');
+      setScheduleType(editingReminder.scheduleType || 'datetime');
+      setStartDate(editingReminder.date);
+      setStartTime(editingReminder.time || '');
+      setSelectedShifts(editingReminder.shifts || []);
+      if (editingReminder.frequency) {
+        const freqParts = editingReminder.frequency.match(/every (\d+) (\w+)/);
+        if (freqParts) {
+          setRepeatEvery(parseInt(freqParts[1]));
+          setRepeatUnit(freqParts[2]);
+        }
+      }
+      setEndDateRecurrence(editingReminder.endDate);
+    } else {
+      // Reset form for new reminder
+      setSubject('');
+      setScheduleType('datetime');
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setStartTime('');
+      setEndTime('');
+      setSelectedShifts([]);
+      setRepeatEvery(1);
+      setRepeatUnit('week');
+      setSelectedDaysOfWeek([]);
+      setEndType('never');
+      setEndDateRecurrence(undefined);
+      setOccurrences(13);
+    }
+  }, [editingReminder]);
 
   const handleSave = () => {
     const reminderData = {
@@ -111,7 +146,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, onSave }: ReminderMo
       <DialogContent className="max-w-md">
         <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
-            Set a Reminder
+            {editingReminder ? 'Edit Reminder' : 'Set a Reminder'}
           </h2>
         </DialogHeader>
 
@@ -360,7 +395,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, onSave }: ReminderMo
               Cancel
             </Button>
             <Button onClick={handleSave} className="bg-primary text-primary-foreground">
-              Done
+              {editingReminder ? 'Update' : 'Done'}
             </Button>
           </div>
         </div>

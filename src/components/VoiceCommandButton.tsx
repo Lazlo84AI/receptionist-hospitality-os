@@ -14,7 +14,8 @@ import {
   CheckSquare,
   Bell,
   Paperclip,
-  Upload
+  Upload,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -65,6 +66,7 @@ export function VoiceCommandButton() {
   const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items: any[] }>>([]);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number }>>([]);
   const [reminders, setReminders] = useState<Array<{ id: string; subject: string; scheduleType: string; date?: Date; time?: string; shifts?: string[]; frequency?: string; endDate?: Date }>>([]);
+  const [editingReminder, setEditingReminder] = useState<any>(null);
   
   // Fetch real-time data from database
   const { profiles: hotelMembers, loading: profilesLoading } = useProfiles();
@@ -179,6 +181,50 @@ export function VoiceCommandButton() {
       endDate: reminderData.endDate,
     };
     setReminders(prev => [...prev, newReminder]);
+  };
+
+  const handleUpdateReminder = async (reminderId: string, reminderData: any) => {
+    const updatedReminder = {
+      id: reminderId,
+      subject: reminderData.subject,
+      scheduleType: reminderData.scheduleType,
+      date: reminderData.date,
+      time: reminderData.time,
+      shifts: reminderData.shifts,
+      frequency: reminderData.frequency,
+      endDate: reminderData.endDate,
+    };
+    
+    setReminders(prev => 
+      prev.map(reminder => 
+        reminder.id === reminderId ? updatedReminder : reminder
+      )
+    );
+
+    // Send webhook for reminder update
+    try {
+      const reminderPayload = {
+        id: reminderId,
+        title: reminderData.subject,
+        reminder_time: reminderData.date?.toISOString() || new Date().toISOString(),
+        frequency: reminderData.frequency || 'once',
+        schedule_type: reminderData.scheduleType,
+        shifts: reminderData.shifts || [],
+        end_date: reminderData.endDate?.toISOString() || null,
+      };
+
+      const { sendTaskUpdatedEvent } = await import('@/lib/webhookService');
+      await sendTaskUpdatedEvent(
+        'temp-task-id', // This would be the actual task ID in a real implementation
+        {}, // Original task data
+        { title: formData.title || 'Task' }, // Updated task data
+        hotelMembers,
+        locations,
+        { reminders: [reminderPayload] }
+      );
+    } catch (error) {
+      console.error('Error sending reminder update webhook:', error);
+    }
   };
 
   const handleDeleteReminder = (reminderId: string) => {
@@ -741,13 +787,25 @@ export function VoiceCommandButton() {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteReminder(reminder.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                     <div className="flex gap-1">
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => {
+                           setEditingReminder(reminder);
+                           setIsReminderModalOpen(true);
+                         }}
+                       >
+                         <Edit className="h-4 w-4" />
+                       </Button>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => handleDeleteReminder(reminder.id)}
+                       >
+                         <X className="h-4 w-4" />
+                       </Button>
+                     </div>
                   </div>
                 ))}
               </div>
@@ -788,9 +846,19 @@ export function VoiceCommandButton() {
       {/* Reminder Modal */}
       <ReminderModal
         isOpen={isReminderModalOpen}
-        onClose={() => setIsReminderModalOpen(false)}
+        onClose={() => {
+          setIsReminderModalOpen(false);
+          setEditingReminder(null);
+        }}
         taskTitle={formData.title}
-        onSave={handleAddReminder}
+        editingReminder={editingReminder}
+        onSave={(reminderData) => {
+          if (editingReminder) {
+            handleUpdateReminder(editingReminder.id, reminderData);
+          } else {
+            handleAddReminder(reminderData);
+          }
+        }}
       />
 
       {/* Attachment Modal */}
