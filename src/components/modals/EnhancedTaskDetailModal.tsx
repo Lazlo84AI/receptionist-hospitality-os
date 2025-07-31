@@ -30,6 +30,9 @@ import { EscalationModal } from './EscalationModal';
 import { AttachmentModal } from './AttachmentModal';
 import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { TaskItem } from '@/types/database';
+import { sendTaskUpdatedEvent } from '@/lib/webhookService';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 
 interface EnhancedTaskDetailModalProps {
   isOpen: boolean;
@@ -95,16 +98,58 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
     }
   ]);
   const [attachments, setAttachments] = useState<{ id: string; name: string; type: string; size: string }[]>([]);
+  
+  const { profiles } = useProfiles();
+  const { locations } = useLocations();
+  const { toast } = useToast();
 
   if (!task) return null;
 
   const typeConfig = getTypeConfig(task.type);
   const TypeIcon = typeConfig.icon;
 
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      // Here you would normally save the comment
-      console.log('Adding comment:', newComment);
+  const handleAddComment = async () => {
+    if (newComment.trim() && task) {
+      try {
+        const commentData = {
+          id: Date.now().toString(),
+          content: newComment.trim(),
+          comment_type: 'user'
+        };
+
+        // Send webhook event for task update with comment
+        const webhookResult = await sendTaskUpdatedEvent(
+          task.id,
+          task,
+          task,
+          profiles,
+          locations,
+          {
+            comments: [commentData]
+          }
+        );
+
+        if (webhookResult.success) {
+          toast({
+            title: "Comment Added",
+            description: "Comment has been added and notification sent successfully",
+          });
+        } else {
+          toast({
+            title: "Webhook Error",
+            description: webhookResult.error || "Failed to send comment notification",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+        toast({
+          title: "Comment Error",
+          description: "Failed to send comment notification",
+          variant: "destructive",
+        });
+      }
+
       setNewComment('');
     }
   };
@@ -114,12 +159,49 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
     console.log('Reminder added');
   };
 
-  const handleAddChecklist = (title: string) => {
+  const handleAddChecklist = async (title: string) => {
     const newChecklist = {
       id: Date.now().toString(),
       title,
       tasks: []
     };
+    
+    try {
+      if (task) {
+        // Send webhook event for task update with checklist
+        const webhookResult = await sendTaskUpdatedEvent(
+          task.id,
+          task,
+          task,
+          profiles,
+          locations,
+          {
+            checklists: [{ id: newChecklist.id, title: newChecklist.title, items: [] }]
+          }
+        );
+
+        if (webhookResult.success) {
+          toast({
+            title: "Checklist Added",
+            description: "Checklist has been added and notification sent successfully",
+          });
+        } else {
+          toast({
+            title: "Webhook Error",
+            description: webhookResult.error || "Failed to send checklist notification",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error sending webhook:', error);
+      toast({
+        title: "Checklist Error",
+        description: "Failed to send checklist notification",
+        variant: "destructive",
+      });
+    }
+
     setChecklists([...checklists, newChecklist]);
   };
 

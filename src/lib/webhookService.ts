@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 const WEBHOOK_URL = 'https://primary-production-31bef.up.railway.app/webhook-test/send_data';
 
 export interface WebhookEvent {
-  event_type: 'task_created' | 'task_moved' | 'task_status_changed' | 'shift_started' | 'shift_ended';
+  event_type: 'task_created' | 'task_moved' | 'task_status_changed' | 'task_updated' | 'shift_started' | 'shift_ended';
   timestamp: string;
   current_user_id: string | null;
   data: any;
@@ -150,6 +150,49 @@ export const sendTaskStatusChangedEvent = async (taskId: string, oldStatus: stri
       task: taskData,
       updated_by: currentUserId,
     },
+  });
+};
+
+export const sendTaskUpdatedEvent = async (
+  taskId: string, 
+  originalTask: any, 
+  updatedTask: any,
+  profiles: any[] = [], 
+  locations: any[] = [],
+  enhancements: {
+    checklists?: Array<{ id: string; title: string; items?: any[] }>;
+    attachments?: Array<{ id: string; name: string; size: number; type?: string; url?: string }>;
+    reminders?: Array<{ id: string; title: string; reminder_time: string; frequency: string }>;
+    comments?: Array<{ id: string; content: string; comment_type: string }>;
+    members?: Array<{ id: string; user_id: string; role?: string }>;
+    escalations?: Array<{ id: string; message: string; method: string; escalated_to?: string }>;
+  } = {}
+) => {
+  const currentUserId = await getCurrentUserId();
+  const enhancedData = await enhanceTaskData(updatedTask, profiles, locations);
+  
+  // Create comprehensive payload with all enhancements
+  const comprehensivePayload = {
+    task_id: taskId,
+    original_task: originalTask,
+    updated_task: enhancedData,
+    updated_by: currentUserId,
+    event_type: 'task_updated',
+    task_category: enhancedData.type || updatedTask.type,
+    // Include selected enhancements in the payload
+    checklists: enhancements.checklists || [],
+    attachments: enhancements.attachments || [],
+    reminders: enhancements.reminders || [],
+    comments: enhancements.comments || [],
+    members: enhancements.members || [],
+    escalations: enhancements.escalations || [],
+  };
+  
+  return sendWebhookEvent({
+    event_type: 'task_updated',
+    timestamp: new Date().toISOString(),
+    current_user_id: currentUserId,
+    data: comprehensivePayload,
   });
 };
 

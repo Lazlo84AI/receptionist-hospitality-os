@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
+import { sendTaskUpdatedEvent } from '@/lib/webhookService';
+import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useToast } from '@/hooks/use-toast';
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -31,6 +34,11 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
   const [editedTask, setEditedTask] = useState<TaskItem>(task);
   const [hasChanges, setHasChanges] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [originalTask] = useState<TaskItem>(task);
+  
+  const { profiles } = useProfiles();
+  const { locations } = useLocations();
+  const { toast } = useToast();
 
   useEffect(() => {
     setEditedTask(task);
@@ -42,7 +50,38 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      // Send webhook event for task update
+      const webhookResult = await sendTaskUpdatedEvent(
+        task.id,
+        originalTask,
+        editedTask,
+        profiles,
+        locations
+      );
+
+      if (!webhookResult.success) {
+        toast({
+          title: "Webhook Error",
+          description: webhookResult.error || "Failed to send update notification",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Task Updated",
+          description: "Task has been updated and notification sent successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error sending webhook:', error);
+      toast({
+        title: "Update Error",
+        description: "Failed to send update notification",
+        variant: "destructive",
+      });
+    }
+
     onSave(editedTask);
     setHasChanges(false);
     onClose();
