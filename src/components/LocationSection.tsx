@@ -1,4 +1,8 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface LocationSectionProps {
   formData: {
@@ -10,179 +14,111 @@ interface LocationSectionProps {
     id: string;
     name: string;
     type: string;
-    floor?: number | null;
   }>;
 }
 
 export function LocationSection({ formData, setFormData, locations }: LocationSectionProps) {
-  // Group rooms by floor
-  const roomsByFloor = locations
+  const [isStaffAreasOpen, setIsStaffAreasOpen] = useState(false);
+
+  // Filter locations by type
+  const rooms = locations
     .filter(location => location.type === 'room')
-    .reduce((acc, location) => {
-      const floor = location.floor || 0;
-      if (!acc[floor]) acc[floor] = [];
-      acc[floor].push(location);
-      return acc;
-    }, {} as Record<number, typeof locations>);
-
-  // Group common areas by floor
-  const commonAreasByFloor = locations
+    .map(location => location.name)
+    .sort((a, b) => {
+      // Try to sort by number if both have numbers, otherwise alphabetically
+      const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+      const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+      if (numA && numB) return numA - numB;
+      return a.localeCompare(b);
+    });
+    
+  const commonAreas = locations
     .filter(location => location.type === 'common_area')
-    .reduce((acc, location) => {
-      const floor = location.floor;
-      const key = floor === null ? 'other' : floor.toString();
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(location);
-      return acc;
-    }, {} as Record<string, typeof locations>);
-
-  // Staff areas (basement)
+    .map(location => location.name)
+    .sort();
+    
   const staffAreas = locations
     .filter(location => location.type === 'staff_area')
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map(location => location.name)
+    .sort();
 
-  const handleLocationSelect = (location: typeof locations[0]) => {
-    setFormData(prev => ({ ...prev, location: location.name }));
-  };
-
-  const getFloorLabel = (floor: number) => {
-    if (floor === -1) return 'Basement';
-    if (floor === 0) return 'Ground Floor';
-    return `Floor ${floor}`;
+  const handleLocationSelect = (location: string) => {
+    setFormData(prev => ({ ...prev, location }));
   };
 
   // Don't show staff areas for client requests
   const showStaffAreas = formData.category !== 'client_request';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <label className="text-sm font-medium">Location</label>
-      
-      {/* 🛏️ Rooms */}
-      <div className="space-y-4">
-        <h3 className="text-base font-semibold flex items-center gap-2">
-          🛏️ Rooms
-        </h3>
-        {Object.keys(roomsByFloor)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .map(floor => (
-            <div key={floor} className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                {getFloorLabel(floor)}
-              </h4>
-              <div className="grid grid-cols-6 gap-2">
-                {roomsByFloor[floor]
-                  .sort((a, b) => {
-                    const numA = parseInt(a.name.match(/\d+/)?.[0] || '0');
-                    const numB = parseInt(b.name.match(/\d+/)?.[0] || '0');
-                    return numA - numB;
-                  })
-                  .map((room) => (
-                    <Button
-                      key={room.id}
-                      variant={formData.location === room.name ? "default" : "outline"}
-                      className="h-8 text-xs"
-                      onClick={() => handleLocationSelect(room)}
-                      data-name={room.name}
-                      data-type={room.type}
-                      data-floor={room.floor}
-                    >
-                      {room.name}
-                    </Button>
-                  ))}
-              </div>
-            </div>
-          ))}
-      </div>
-
-      {/* 🧭 Common Areas */}
-      <div className="space-y-4">
-        <h3 className="text-base font-semibold flex items-center gap-2">
-          🧭 Common Areas
-        </h3>
-        {/* Sort floors: basement (-1), then 0-6 */}
-        {[-1, 0, 1, 2, 3, 4, 5, 6]
-          .filter(floor => commonAreasByFloor[floor.toString()])
-          .map(floor => (
-            <div key={floor} className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                {getFloorLabel(floor)}
-              </h4>
-              <div className="grid grid-cols-3 gap-2">
-                {commonAreasByFloor[floor.toString()]
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((area) => (
-                    <Button
-                      key={area.id}
-                      variant={formData.location === area.name ? "default" : "outline"}
-                      className="text-xs h-8 text-left justify-start"
-                      onClick={() => handleLocationSelect(area)}
-                      data-name={area.name}
-                      data-type={area.type}
-                      data-floor={area.floor}
-                    >
-                      {area.name}
-                    </Button>
-                  ))}
-              </div>
-            </div>
-          ))}
-        
-        {/* Other Common Areas (no floor) */}
-        {commonAreasByFloor['other'] && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Other Common Areas
-            </h4>
-            <div className="grid grid-cols-3 gap-2">
-              {commonAreasByFloor['other']
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((area) => (
-                  <Button
-                    key={area.id}
-                    variant={formData.location === area.name ? "default" : "outline"}
-                    className="text-xs h-8 text-left justify-start"
-                    onClick={() => handleLocationSelect(area)}
-                    data-name={area.name}
-                    data-type={area.type}
-                    data-floor={area.floor}
-                  >
-                    {area.name}
-                  </Button>
-                ))}
-            </div>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Rooms */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Rooms</h4>
+          <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-md">
+            {rooms.map((room) => (
+              <Button
+                key={room}
+                variant={formData.location === room ? "default" : "outline"}
+                className="h-8 text-xs px-1"
+                onClick={() => handleLocationSelect(room)}
+              >
+                {room}
+              </Button>
+            ))}
           </div>
-        )}
+        </div>
+
+        {/* Common Areas */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Common Areas</h4>
+          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-md">
+            {commonAreas.map((area) => (
+              <Button
+                key={area}
+                variant={formData.location === area ? "default" : "outline"}
+                className="text-xs h-8"
+                onClick={() => handleLocationSelect(area)}
+              >
+                {area}
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* 🧰 Staff Areas */}
-      {showStaffAreas && staffAreas.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-base font-semibold flex items-center gap-2">
-            🧰 Staff Areas
-          </h3>
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Basement
-            </h4>
-            <div className="grid grid-cols-3 gap-2">
+      {/* Staff Areas - Collapsible (not shown for client requests) */}
+      {showStaffAreas && (
+        <Collapsible open={isStaffAreasOpen} onOpenChange={setIsStaffAreasOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-between"
+            >
+              <span className="text-sm font-medium">Staff Areas</span>
+              {isStaffAreasOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-md">
               {staffAreas.map((area) => (
                 <Button
-                  key={area.id}
-                  variant={formData.location === area.name ? "default" : "outline"}
-                  className="text-xs h-8 text-left justify-start"
+                  key={area}
+                  variant={formData.location === area ? "default" : "outline"}
+                  className="text-xs h-8"
                   onClick={() => handleLocationSelect(area)}
-                  data-name={area.name}
-                  data-type={area.type}
-                  data-floor={area.floor || -1}
                 >
-                  {area.name}
+                  {area}
                 </Button>
               ))}
             </div>
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
