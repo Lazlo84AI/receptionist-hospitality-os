@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -20,6 +22,10 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
   
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -70,6 +76,24 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError('');
+    setResetMessage('');
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail);
+    
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetMessage('Password reset email sent! Please check your inbox.');
+      setResetEmail('');
+    }
+    
+    setResetLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
@@ -109,6 +133,53 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <div className="flex justify-end">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Forgot your password?
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Reset Password</DialogTitle>
+                          <DialogDescription>
+                            Enter your email address and we'll send you a link to reset your password.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleResetPassword} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              required
+                            />
+                          </div>
+                          {resetError && (
+                            <Alert variant="destructive">
+                              <AlertDescription>{resetError}</AlertDescription>
+                            </Alert>
+                          )}
+                          {resetMessage && (
+                            <Alert>
+                              <AlertDescription>{resetMessage}</AlertDescription>
+                            </Alert>
+                          )}
+                          <Button type="submit" className="w-full" disabled={resetLoading}>
+                            {resetLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Reset Password
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
                 {error && (
                   <Alert variant="destructive">
