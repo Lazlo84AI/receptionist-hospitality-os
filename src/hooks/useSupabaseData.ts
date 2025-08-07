@@ -236,40 +236,40 @@ export const useLocations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchLocations = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      // Transform data to match our Location type
+      const transformedData = (data || []).map(location => ({
+        ...location,
+        type: location.type as 'room' | 'common_area' | 'staff_area' | 'corridor' | 'office',
+        amenities: Array.isArray(location.amenities) ? location.amenities as string[] : [],
+        floor: location.floor,
+        building: location.building || null,
+        capacity: location.capacity || null
+      }));
+      setLocations(transformedData);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching locations:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch locations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('locations')
-          .select('*')
-          .eq('is_active', true)
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-        // Transform data to match our Location type
-        const transformedData = (data || []).map(location => ({
-          ...location,
-          type: location.type as 'room' | 'common_area' | 'corridor' | 'office',
-          amenities: Array.isArray(location.amenities) ? location.amenities as string[] : [],
-          floor: location.floor || null,
-          building: location.building || null,
-          capacity: location.capacity || null
-        }));
-        setLocations(transformedData);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching locations:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch locations');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLocations();
   }, []);
 
-  return { locations, loading, error };
+  return { locations, loading, error, refetch: fetchLocations };
 };
 
 // Hook for fetching shifts
