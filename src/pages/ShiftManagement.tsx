@@ -404,6 +404,7 @@ const ShiftManagement = () => {
 
     if (result.success) {
       setShiftStatus('active');
+      setIsShiftStartOpen(false); // Close the modal
       toast({
         title: "Shift Started",
         description: "Your shift has been marked as active",
