@@ -330,81 +330,132 @@ export type Database = {
       }
       incidents: {
         Row: {
+          assigned_member_ids: string[] | null
           assigned_to: string | null
+          checklists: Json | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           incident_type: string
           location: string | null
+          location_id: string | null
+          origin_type: string | null
           priority: Database["public"]["Enums"]["priority_level"]
           status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at: string
         }
         Insert: {
+          assigned_member_ids?: string[] | null
           assigned_to?: string | null
+          checklists?: Json | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           incident_type: string
           location?: string | null
+          location_id?: string | null
+          origin_type?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at?: string
         }
         Update: {
+          assigned_member_ids?: string[] | null
           assigned_to?: string | null
+          checklists?: Json | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           incident_type?: string
           location?: string | null
+          location_id?: string | null
+          origin_type?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "incidents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       internal_tasks: {
         Row: {
+          assigned_member_ids: string[] | null
           assigned_to: string | null
+          attachments: Json[] | null
+          checklists: Json | null
           created_at: string
+          created_by: string
           department: string | null
           description: string | null
           due_date: string | null
           id: string
           location: string | null
+          location_id: string | null
+          origin_type: string | null
           priority: Database["public"]["Enums"]["priority_level"]
+          reminders: Json[] | null
           status: Database["public"]["Enums"]["task_status"]
           task_type: string
           title: string
           updated_at: string
         }
         Insert: {
+          assigned_member_ids?: string[] | null
           assigned_to?: string | null
+          attachments?: Json[] | null
+          checklists?: Json | null
           created_at?: string
+          created_by: string
           department?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           location?: string | null
+          location_id?: string | null
+          origin_type?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
+          reminders?: Json[] | null
           status?: Database["public"]["Enums"]["task_status"]
           task_type: string
           title: string
           updated_at?: string
         }
         Update: {
+          assigned_member_ids?: string[] | null
           assigned_to?: string | null
+          attachments?: Json[] | null
+          checklists?: Json | null
           created_at?: string
+          created_by?: string
           department?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           location?: string | null
+          location_id?: string | null
+          origin_type?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
+          reminders?: Json[] | null
           status?: Database["public"]["Enums"]["task_status"]
           task_type?: string
           title?: string
@@ -458,8 +509,10 @@ export type Database = {
           department: string | null
           email: string | null
           first_name: string | null
+          hierarchy: string | null
           id: string
           is_active: boolean
+          job_role: string | null
           last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -471,8 +524,10 @@ export type Database = {
           department?: string | null
           email?: string | null
           first_name?: string | null
+          hierarchy?: string | null
           id: string
           is_active?: boolean
+          job_role?: string | null
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -484,8 +539,10 @@ export type Database = {
           department?: string | null
           email?: string | null
           first_name?: string | null
+          hierarchy?: string | null
           id?: string
           is_active?: boolean
+          job_role?: string | null
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]

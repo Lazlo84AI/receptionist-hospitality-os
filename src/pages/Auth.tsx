@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 
 const Auth = () => {
@@ -14,6 +15,8 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [jobRole, setJobRole] = useState('');
+  const [hierarchy, setHierarchy] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -49,7 +52,9 @@ const Auth = () => {
     
     const { error } = await signUp(email, password, {
       first_name: firstName,
-      last_name: lastName
+      last_name: lastName,
+      job_role: jobRole,
+      hierarchy: hierarchy
     });
     
     if (error) {
@@ -119,6 +124,34 @@ const Auth = () => {
             
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="job-role">What's your role</Label>
+                  <Select value={jobRole} onValueChange={setJobRole} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="a receptionist">a receptionist</SelectItem>
+                      <SelectItem value="a housekeeper">a housekeeper</SelectItem>
+                      <SelectItem value="a cleaning staff member">a cleaning staff member</SelectItem>
+                      <SelectItem value="restaurant staff">restaurant staff</SelectItem>
+                      <SelectItem value="tech maintenance team">tech maintenance team</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hierarchy">Hierarchy</Label>
+                  <Select value={hierarchy} onValueChange={setHierarchy} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your hierarchy level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Normal">Normal</SelectItem>
+                      <SelectItem value="Manager">Manager</SelectItem>
+                      <SelectItem value="Director">Director</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="first-name">First Name</Label>
