@@ -39,10 +39,9 @@ const categories = [
 ];
 
 const originTypes = [
+  { id: 'client', label: 'Client' },
   { id: 'maintenance', label: 'Maintenance' },
   { id: 'team', label: 'Team' },
-  { id: 'client', label: 'Client' },
-  { id: 'staff', label: 'Staff' },
 ];
 
 const priorityLevels = [
