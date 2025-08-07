@@ -48,9 +48,7 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
     locationsOfType.forEach(location => {
       let floorKey: string;
       
-      if (location.floor === null) {
-        floorKey = 'Other';
-      } else if (location.floor === -1) {
+      if (location.floor === -1) {
         floorKey = 'Basement';
       } else if (location.floor === 0) {
         floorKey = 'Ground Floor';
@@ -90,8 +88,6 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
       if (b === 'Basement') return 1;
       if (a === 'Ground Floor') return -1;
       if (b === 'Ground Floor') return 1;
-      if (a === 'Other') return 1;
-      if (b === 'Other') return -1;
       
       const numA = parseInt(a.replace('Floor ', ''));
       const numB = parseInt(b.replace('Floor ', ''));
