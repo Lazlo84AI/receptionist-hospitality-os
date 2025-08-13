@@ -57,6 +57,7 @@ const Auth = () => {
     setMessage('');
     
     const { error } = await signUp(email, password, {
+      full_name: `${firstName} ${lastName}`,
       first_name: firstName,
       last_name: lastName,
       job_role: jobRole,

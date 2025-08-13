@@ -67,7 +67,7 @@ const enhanceTaskData = async (taskData: any, profiles: any[] = [], locations: a
     
     if (profiles.length > 0) {
       const assignedProfile = profiles.find(p => 
-        `${p.first_name} ${p.last_name}` === memberName
+        (p.full_name || `${p.first_name} ${p.last_name}`) === memberName
       );
       if (assignedProfile) {
         payload.assigned_member_id = assignedProfile.id;
@@ -105,7 +105,7 @@ export const sendTaskCreatedEvent = async (
   enhancements: {
     checklists?: Array<{ id: string; title: string; items?: any[] }>;
     attachments?: Array<{ id: string; name: string; size: number; type?: string; url?: string }>;
-    reminders?: Array<{ id: string; title: string; reminder_time: string; frequency: string }>;
+    reminders?: Array<{ id: string; title: string; remind_at: string; frequency: string }>;
     comments?: Array<{ id: string; content: string; comment_type: string }>;
     members?: Array<{ id: string; user_id: string; role?: string }>;
     escalations?: Array<{ id: string; message: string; method: string; escalated_to?: string }>;
@@ -176,7 +176,7 @@ export const sendTaskUpdatedEvent = async (
   enhancements: {
     checklists?: Array<{ id: string; title: string; items?: any[] }>;
     attachments?: Array<{ id: string; name: string; size: number; type?: string; url?: string }>;
-    reminders?: Array<{ id: string; title: string; reminder_time: string; frequency: string }>;
+    reminders?: Array<{ id: string; title: string; remind_at: string; frequency: string }>;
     comments?: Array<{ id: string; content: string; comment_type: string }>;
     members?: Array<{ id: string; user_id: string; role?: string }>;
     escalations?: Array<{ id: string; message: string; method: string; escalated_to?: string }>;

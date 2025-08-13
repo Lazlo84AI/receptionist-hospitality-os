@@ -84,7 +84,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
     const reminderData = {
       id: editingReminder?.id || Date.now().toString(),
       title: subject || taskTitle || '',
-      reminder_time: startDate && startTime ? `${startDate.toISOString().split('T')[0]}T${startTime}:00.000Z` : new Date().toISOString(),
+      remind_at: startDate && startTime ? `${startDate.toISOString().split('T')[0]}T${startTime}:00.000Z` : new Date().toISOString(),
       frequency: `every ${repeatEvery} ${repeatUnit}`,
     };
     

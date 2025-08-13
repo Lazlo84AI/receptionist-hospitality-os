@@ -184,7 +184,7 @@ export function VoiceCommandButton() {
       const reminderPayload = {
         id: reminderId,
         title: reminderData.subject,
-        reminder_time: reminderData.date?.toISOString() || new Date().toISOString(),
+        remind_at: reminderData.date?.toISOString() || new Date().toISOString(),
         frequency: reminderData.frequency || 'once',
         schedule_type: reminderData.scheduleType,
         shifts: reminderData.shifts || [],
@@ -297,7 +297,7 @@ export function VoiceCommandButton() {
         reminders: reminders.map(reminder => ({
           id: reminder.id,
           title: reminder.subject,
-          reminder_time: reminder.scheduleType === 'datetime' && reminder.date && reminder.time 
+          remind_at: reminder.scheduleType === 'datetime' && reminder.date && reminder.time 
             ? new Date(`${reminder.date.toISOString().split('T')[0]}T${reminder.time}`).toISOString()
             : new Date().toISOString(),
           frequency: reminder.frequency || 'once',
@@ -601,8 +601,8 @@ export function VoiceCommandButton() {
                           }
                         })
                         .map((member) => (
-                          <SelectItem key={member.id} value={`${member.first_name} ${member.last_name}`}>
-                            {member.first_name} {member.last_name} - {member.role}
+                            <SelectItem key={member.id} value={member.full_name || `${member.first_name} ${member.last_name}`}>
+                            {member.full_name || `${member.first_name} ${member.last_name}`} - {member.role}
                           </SelectItem>
                         ))}
                     </SelectContent>

@@ -29,9 +29,9 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
   // Convert profiles to hotel members format
   const hotelMembers = profiles?.map(profile => ({
     id: profile.id,
-    name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+    name: profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
     role: profile.department || profile.role || 'Staff',
-    initials: `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'U'
+    initials: profile.full_name ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'U'
   })) || [];
 
   const filteredMembers = hotelMembers.filter(member =>
