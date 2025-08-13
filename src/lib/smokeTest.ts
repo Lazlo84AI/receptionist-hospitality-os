@@ -62,8 +62,29 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
       
       console.log('🎉 Smoke test des lectures terminé avec succès!');
       
-      // Note: Les tests d'écriture nécessiteraient des actions d'écriture qui n'existent pas encore
-      console.log('ℹ️  Tests d\'écriture : Actions upsertUserProfile/addTaskComment/addActivityLog/updateReminder à créer');
+      // Test d'écriture updateReminder
+      console.log('✏️ Test d\'écriture updateReminder...');
+      if (reminders?.[0]) {
+        const testId = reminders[0].id;
+        const futureDate = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // +10 minutes
+        
+        console.log('📝 Avant update - remind_at:', reminders[0].remind_at);
+        
+        const { default: updateReminder } = await import('@/lib/actions/updateReminder');
+        await updateReminder({ 
+          id: testId, 
+          remindAt: futureDate 
+        });
+        
+        // Relancer getReminders pour vérifier le changement
+        const updatedReminders = await getReminders({ limit: 3 });
+        const updatedReminder = updatedReminders?.find(r => r.id === testId);
+        
+        console.log('✅ Après update - remind_at:', updatedReminder?.remind_at);
+        console.log('🔄 Changement confirmé:', updatedReminder?.remind_at !== reminders[0].remind_at);
+      }
+      
+      console.log('ℹ️  Actions restantes : upsertUserProfile/addTaskComment/addActivityLog');
       
     } catch (error) {
       console.error('❌ Erreur dans le smoke test:', error);
