@@ -5,8 +5,6 @@ import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { IncidentsCard } from '@/components/IncidentsCard';
 import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { FollowUpsCard } from '@/components/FollowUpsCard';
-import TestActions from '@/components/TestActions';
-import DataDashboard from '@/components/DataDashboard';
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -43,17 +41,6 @@ const Index = () => {
             <FollowUpsCard />
           </div>
 
-          {/* Data Dashboard - New sections using JS actions */}
-          <div className="w-full mt-8">
-            <DataDashboard />
-          </div>
-
-          {/* Test Actions - Development Only */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="w-full mt-8">
-              <TestActions />
-            </div>
-          )}
 
         </div>
       </main>
