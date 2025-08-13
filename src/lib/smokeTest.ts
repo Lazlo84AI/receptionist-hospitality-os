@@ -53,9 +53,10 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
           id: reminders[0].id, 
           title: reminders[0].title, 
           task_type: reminders[0].task_type,
-          reminder_time: reminders[0].reminder_time,
+          remind_at: reminders[0].remind_at,
           frequency: reminders[0].frequency,
-          is_active: reminders[0].is_active
+          priority: reminders[0].priority,
+          status: reminders[0].status
         });
       }
       

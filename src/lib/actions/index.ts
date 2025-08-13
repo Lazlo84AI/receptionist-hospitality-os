@@ -3,3 +3,4 @@ export { default as getUserProfiles } from './getUserProfiles';
 export { default as getTaskComments } from './getTaskComments';
 export { default as getActivityLogs } from './getActivityLogs';
 export { default as getReminders } from './getReminders';
+export { default as updateReminder } from './updateReminder';
