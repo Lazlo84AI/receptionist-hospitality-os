@@ -44,13 +44,11 @@ export function ChecklistComponent({ title, onDelete, onItemsChange }: Checklist
     }
   }, [items, onItemsChange]);
 
-  // Transform profiles to member format
+  // Transform profiles to member format - Updated for new data model
   const members = profiles.map(profile => ({
-    name: profile.first_name && profile.last_name 
-      ? `${profile.first_name} ${profile.last_name}` 
-      : profile.email || 'Unknown',
-    avatar: profile.first_name && profile.last_name
-      ? `${profile.first_name[0]}${profile.last_name[0]}`
+    name: profile.full_name || profile.email || 'Unknown',
+    avatar: profile.full_name 
+      ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
       : profile.email ? profile.email[0].toUpperCase() : 'U'
   }));
 

@@ -197,9 +197,9 @@ export const useFollowUps = () => {
   return { followUps, loading, error, refetch: fetchFollowUps };
 };
 
-// Hook for fetching profiles
+// Hook for fetching profiles - Now using getUserProfiles action
 export const useProfiles = () => {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -207,13 +207,9 @@ export const useProfiles = () => {
     const fetchProfiles = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('is_active', true)
-          .order('first_name', { ascending: true });
-
-        if (error) throw error;
+        // Import and use the action
+        const { default: getUserProfiles } = await import('@/lib/actions/getUserProfiles');
+        const data = await getUserProfiles({ limit: 100 });
         setProfiles(data || []);
         setError(null);
       } catch (err) {

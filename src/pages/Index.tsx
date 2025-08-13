@@ -6,6 +6,7 @@ import { IncidentsCard } from '@/components/IncidentsCard';
 import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { FollowUpsCard } from '@/components/FollowUpsCard';
 import TestActions from '@/components/TestActions';
+import DataDashboard from '@/components/DataDashboard';
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,6 +41,11 @@ const Index = () => {
           {/* Zone 3: Relances - Full Width */}
           <div className="w-full">
             <FollowUpsCard />
+          </div>
+
+          {/* Data Dashboard - New sections using JS actions */}
+          <div className="w-full mt-8">
+            <DataDashboard />
           </div>
 
           {/* Test Actions - Development Only */}
