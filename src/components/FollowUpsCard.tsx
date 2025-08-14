@@ -1,5 +1,6 @@
 import { AlertCircle, Building2, CreditCard, Clock, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { TaskDetailModal } from './TaskDetailModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CommentsActivitySection } from '@/components/shared/CommentsActivitySection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -243,16 +244,71 @@ export function FollowUpsCard() {
       </div>
 
       {/* Modal de détails */}
-      {selectedTask && (
-        <TaskDetailModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedTask(null);
-          }}
-          task={selectedTask}
-        />
-      )}
+      <Dialog open={isModalOpen} onOpenChange={() => {
+        setIsModalOpen(false);
+        setSelectedTask(null);
+      }}>
+        <DialogContent className="max-w-2xl luxury-card">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-xl text-palace-navy">
+              Follow-up Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold text-lg text-palace-navy mb-3">
+                  {selectedTask.title}
+                </h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge className={getStatusColor(selectedTask.statut)}>
+                    {selectedTask.statut}
+                  </Badge>
+                  {selectedTask.priority === 'urgence' && (
+                    <Badge className="bg-urgence-red text-white animate-pulse">
+                      URGENCE
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-palace-navy">Client:</span>
+                  <p className="mt-1">{selectedTask.client}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-palace-navy">Assigned to:</span>
+                  <p className="mt-1">{selectedTask.assignedTo}</p>
+                </div>
+              </div>
+
+              {selectedTask.description && (
+                <div>
+                  <span className="font-medium text-palace-navy">Description:</span>
+                  <p className="mt-2 text-soft-pewter">{selectedTask.description}</p>
+                </div>
+              )}
+
+              {/* Comments & Activity */}
+              <CommentsActivitySection 
+                taskId={selectedTask.id}
+                taskType="follow_up"
+                comments={[]}
+                activities={[
+                  {
+                    id: '1',
+                    actor: { initials: 'RM', firstName: 'Reception', lastName: 'Manager' },
+                    action: 'scheduled follow-up',
+                    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+                    color: 'bg-purple-500'
+                  }
+                ]}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

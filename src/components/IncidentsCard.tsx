@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Clock, User, Eye, MessageCircle, ChevronDown, ChevronUp, CheckSquare, Users, X, Plus, ChevronLeft, ChevronRight, TrendingUp, Mail, MessageSquare, MoveUp, Paperclip } from 'lucide-react';
+import { CommentsActivitySection } from '@/components/shared/CommentsActivitySection';
 import { ChecklistComponent } from './ChecklistComponent';
 import { ReminderModal } from './modals/ReminderModal';
 import { Badge } from '@/components/ui/badge';
@@ -357,56 +358,20 @@ export function IncidentsCard() {
               )}
 
               {/* Comments & Activity */}
-              <div className="border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                  <h4 className="font-medium text-foreground">Comments & Activity</h4>
-                </div>
-                
-                {/* Comment input */}
-                <div className="space-y-2 mb-4">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="min-h-[80px]"
-                  />
-                  <div className="flex justify-end">
-                    <Button 
-                      size="sm"
-                      disabled={!comment.trim()}
-                    >
-                      Add Comment
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="border-t border-border/20 pt-4">
-                  <div className="space-y-3">
-                    {/* Posted comments */}
-                    {activities.map((activity) => (
-                      <div key={activity.id} className="flex space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-medium">
-                              {activity.user.split(' ').map(n => n[0]).join('')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-foreground">{activity.user}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))}h ago
-                            </span>
-                          </div>
-                          <p className="text-foreground">{activity.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <CommentsActivitySection 
+                taskId={selectedIncident.id}
+                taskType="incident"
+                comments={[]}
+                activities={[
+                  {
+                    id: '1',
+                    actor: { initials: 'JM', firstName: 'John', lastName: 'Manager' },
+                    action: 'escalated to technical team',
+                    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+                    color: 'bg-red-500'
+                  }
+                ]}
+              />
 
               <div className="flex justify-end space-x-3">
                 <DropdownMenu>
