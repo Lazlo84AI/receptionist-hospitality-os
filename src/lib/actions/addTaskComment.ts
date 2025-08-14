@@ -6,12 +6,12 @@ type Payload = {
   mentioned_users?: string[]; // optional: array of user UUIDs
 };
 
-export default async function addTaskComment({ task_id, content, mentioned_users = [] }: Payload) {
+export async function addTaskComment({ task_id, content, mentioned_users = [] }: Payload) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) throw new Error("Not signed in");
 
   const { data, error } = await (supabase as any)
-    .from("task_comments")
+    .from("comments")
     .insert([{
       task_id,
       user_id: auth.user.id,   // keep this if no DEFAULT auth.uid() in DB

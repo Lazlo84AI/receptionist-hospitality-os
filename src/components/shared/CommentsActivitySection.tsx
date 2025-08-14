@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import addTaskComment from '@/lib/actions/addTaskComment';
+import { addTaskComment } from '@/lib/actions/addTaskComment';
 import { getTaskComments } from '@/lib/actions/getTaskComments';
 import { format } from 'date-fns';
 

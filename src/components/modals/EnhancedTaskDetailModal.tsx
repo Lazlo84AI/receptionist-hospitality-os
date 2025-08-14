@@ -34,7 +34,7 @@ import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import addTaskComment from '@/lib/actions/addTaskComment';
+import { addTaskComment } from '@/lib/actions/addTaskComment';
 import { getTaskComments } from '@/lib/actions/getTaskComments';
 
 interface EnhancedTaskDetailModalProps {

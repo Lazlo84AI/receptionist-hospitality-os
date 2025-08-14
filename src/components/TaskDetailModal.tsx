@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import addTaskComment from '@/lib/actions/addTaskComment';
+import { addTaskComment } from '@/lib/actions/addTaskComment';
 import { getTaskComments } from '@/lib/actions/getTaskComments';
 
 interface TaskDetailModalProps {
