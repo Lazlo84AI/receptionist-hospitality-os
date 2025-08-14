@@ -3,7 +3,11 @@ import { X, User, MapPin, MessageSquare, Bell, AlertTriangle, Users } from 'luci
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -24,6 +28,11 @@ interface TaskDetailModalProps {
 }
 
 export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps) {
+  const [newComment, setNewComment] = useState('');
+  const [isCommentLoading, setIsCommentLoading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   if (!task) return null;
 
   const getStatusColor = (statut: string) => {
@@ -45,6 +54,56 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
 
   const typeConfig = getTypeIcon(task.type);
   const TypeIcon = typeConfig.icon;
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !task || !user?.id || isCommentLoading) return;
+    
+    setIsCommentLoading(true);
+    
+    try {
+      const { default: addTaskComment } = await import('@/lib/actions/addTaskComment');
+      
+      // Add to database
+      await addTaskComment({
+        taskId: task.id.toString(),
+        userId: user.id,
+        content: newComment.trim()
+      });
+      
+      toast({
+        title: "Comment Added",
+        description: "Your comment has been posted successfully",
+      });
+      
+      // Clear the input
+      setNewComment('');
+      
+      // Scroll to bottom of comments
+      setTimeout(() => {
+        const commentsContainer = document.querySelector('[data-comments-container]');
+        if (commentsContainer) {
+          commentsContainer.scrollTop = commentsContainer.scrollHeight;
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Comment Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCommentLoading(false);
+    }
+  };
+
+  const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAddComment();
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -119,15 +178,31 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
               <h4 className="font-medium text-foreground">Comments and Activity</h4>
             </div>
             
-            {/* Comment area (read-only) */}
-            <div className="mb-4 p-3 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
-              <p className="text-sm text-muted-foreground italic">
-                Comment area (view only)
-              </p>
+            {/* Comment input */}
+            <div className="space-y-2 mb-4">
+              <Textarea
+                placeholder="Add a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={handleCommentKeyDown}
+                className="min-h-[80px]"
+                disabled={isCommentLoading}
+              />
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleAddComment}
+                  disabled={!newComment.trim() || isCommentLoading}
+                  size="sm"
+                >
+                  {isCommentLoading ? 'Adding...' : 'Add Comment'}
+                </Button>
+              </div>
             </div>
 
+            <Separator />
+
             {/* Posted comments */}
-            <div className="space-y-3">
+            <div className="space-y-3" data-comments-container>
               <div className="flex space-x-3">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">

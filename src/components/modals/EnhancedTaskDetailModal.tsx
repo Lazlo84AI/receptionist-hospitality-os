@@ -32,6 +32,7 @@ import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { TaskItem } from '@/types/database';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 interface EnhancedTaskDetailModalProps {
@@ -83,6 +84,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   onUpdateTask
 }) => {
   const [newComment, setNewComment] = useState('');
+  const [isCommentLoading, setIsCommentLoading] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [isChecklistOpen, setIsChecklistOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(false);
@@ -94,6 +96,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   
   const { profiles } = useProfiles();
   const { locations } = useLocations();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   if (!task) return null;
@@ -102,52 +105,64 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const TypeIcon = typeConfig.icon;
 
   const handleAddComment = async () => {
-    if (newComment.trim() && task) {
-      try {
-        const commentData = {
-          id: Date.now().toString(),
-          content: newComment.trim(),
-          comment_type: 'user'
-        };
-
-        // Send webhook event for task update with comment
-        const webhookResult = await sendTaskUpdatedEvent(
-          task.id,
-          task,
-          task,
-          profiles,
-          locations,
-          {
-            comments: [commentData]
-          }
-        );
-
-        if (webhookResult.success) {
-          toast({
-            title: "Comment Added",
-            description: "Comment has been added and notification sent successfully",
-          });
-          // Call onUpdateTask to trigger data refresh
-          if (onUpdateTask) {
-            onUpdateTask(task);
-          }
-        } else {
-          toast({
-            title: "Webhook Error",
-            description: webhookResult.error || "Failed to send comment notification",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error sending webhook:', error);
-        toast({
-          title: "Comment Error",
-          description: "Failed to send comment notification",
-          variant: "destructive",
-        });
-      }
-
+    if (!newComment.trim() || !task || !user?.id || isCommentLoading) return;
+    
+    setIsCommentLoading(true);
+    
+    try {
+      const { default: addTaskComment } = await import('@/lib/actions/addTaskComment');
+      
+      // Optimistic update - add to local state immediately
+      const optimisticComment = {
+        id: Date.now().toString(),
+        content: newComment.trim(),
+        user_id: user.id,
+        task_id: task.id,
+        created_at: new Date().toISOString()
+      };
+      
+      // Add to database
+      await addTaskComment({
+        taskId: task.id,
+        userId: user.id,
+        content: newComment.trim()
+      });
+      
+      toast({
+        title: "Comment Added",
+        description: "Your comment has been posted successfully",
+      });
+      
+      // Clear the input and trigger refresh
       setNewComment('');
+      if (onUpdateTask) {
+        onUpdateTask(task);
+      }
+      
+      // Scroll to bottom of comments
+      setTimeout(() => {
+        const commentsContainer = document.querySelector('[data-comments-container]');
+        if (commentsContainer) {
+          commentsContainer.scrollTop = commentsContainer.scrollHeight;
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Comment Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCommentLoading(false);
+    }
+  };
+
+  const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAddComment();
     }
   };
 
@@ -425,22 +440,24 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                     placeholder="Add a comment..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={handleCommentKeyDown}
                     className="min-h-[80px]"
+                    disabled={isCommentLoading}
                   />
                   <div className="flex justify-end">
                     <Button 
                       onClick={handleAddComment}
-                      disabled={!newComment.trim()}
+                      disabled={!newComment.trim() || isCommentLoading}
                       size="sm"
                     >
-                      Add Comment
+                      {isCommentLoading ? 'Adding...' : 'Add Comment'}
                     </Button>
                   </div>
                 </div>
 
                 <Separator />
 
-                <div className="space-y-3">
+                <div className="space-y-3" data-comments-container>
                   <div className="flex space-x-3">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
