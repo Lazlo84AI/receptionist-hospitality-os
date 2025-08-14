@@ -35,7 +35,7 @@ import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import addTaskComment from '@/lib/actions/addTaskComment';
-import getTaskComments from '@/lib/actions/getTaskComments';
+import { getTaskComments } from '@/lib/actions/getTaskComments';
 
 interface EnhancedTaskDetailModalProps {
   isOpen: boolean;
@@ -131,7 +131,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
       
       // Refetch comments to show the new comment
       try {
-        await getTaskComments();
+        await getTaskComments(task?.id || '');
       } catch (fetchError) {
         console.warn('Failed to refetch comments:', fetchError);
       }

@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import addTaskComment from '@/lib/actions/addTaskComment';
-import getTaskComments from '@/lib/actions/getTaskComments';
+import { getTaskComments } from '@/lib/actions/getTaskComments';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -79,7 +79,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
       
       // Refetch comments to show the new comment
       try {
-        await getTaskComments();
+        await getTaskComments(task?.id?.toString() || '');
       } catch (fetchError) {
         console.warn('Failed to refetch comments:', fetchError);
       }

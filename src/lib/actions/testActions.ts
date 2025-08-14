@@ -1,5 +1,5 @@
 import getUserProfiles from './getUserProfiles';
-import getTaskComments from './getTaskComments';
+import { getTaskComments } from './getTaskComments';
 import getActivityLogs from './getActivityLogs';
 import getReminders from './getReminders';
 
@@ -13,7 +13,7 @@ export async function testAllActions() {
     console.log('✅ getUserProfiles success:', profiles?.length || 0, 'records');
     
     console.log('2️⃣ Testing getTaskComments...');
-    const comments = await getTaskComments({ limit: 5 });
+    const comments = await getTaskComments('sample-task-id');
     console.log('✅ getTaskComments success:', comments?.length || 0, 'records');
     
     console.log('3️⃣ Testing getActivityLogs...');

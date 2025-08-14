@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import getUserProfiles from '@/lib/actions/getUserProfiles';
-import getTaskComments from '@/lib/actions/getTaskComments';
+import { getTaskComments } from '@/lib/actions/getTaskComments';
 import getActivityLogs from '@/lib/actions/getActivityLogs';
 import getReminders from '@/lib/actions/getReminders';
 
@@ -40,7 +40,7 @@ export const useTaskComments = (limit = 50) => {
   const fetchComments = async () => {
     try {
       setLoading(true);
-      const data = await getTaskComments({ limit });
+      const data = await getTaskComments('all');
       setComments(data || []);
       setError(null);
     } catch (err) {

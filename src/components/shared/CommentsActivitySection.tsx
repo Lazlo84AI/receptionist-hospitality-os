@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import addTaskComment from '@/lib/actions/addTaskComment';
-import getTaskComments from '@/lib/actions/getTaskComments';
+import { getTaskComments } from '@/lib/actions/getTaskComments';
 import { format } from 'date-fns';
 
 interface Comment {
@@ -131,7 +131,7 @@ export function CommentsActivitySection({
 
       // Refetch comments to ensure synchronization
       try {
-        await getTaskComments();
+        await getTaskComments(taskId);
       } catch (fetchError) {
         console.warn('Failed to refetch comments:', fetchError);
       }

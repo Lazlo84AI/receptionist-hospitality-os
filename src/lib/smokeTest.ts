@@ -1,6 +1,6 @@
 // Smoke test pour valider les actions Supabase
 import getUserProfiles from '@/lib/actions/getUserProfiles';
-import getTaskComments from '@/lib/actions/getTaskComments';
+import { getTaskComments } from '@/lib/actions/getTaskComments';
 import getActivityLogs from '@/lib/actions/getActivityLogs';
 import getReminders from '@/lib/actions/getReminders';
 
@@ -24,7 +24,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
         });
       }
       
-      const comments = await getTaskComments({ limit: 3 });
+      const comments = await getTaskComments('sample-task-id');
       console.log('✅ getTaskComments:', comments?.length || 0, 'commentaires trouvés');
       if (comments?.[0]) {
         console.log('   Exemple:', { 

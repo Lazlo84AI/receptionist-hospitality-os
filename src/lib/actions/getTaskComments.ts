@@ -1,11 +1,26 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
-export default async function getTaskComments({ limit = 50 } = {}) {
-  const { data, error } = await (supabase as any)
-    .from('task_comments')
-    .select('id,task_id,user_id,content,mentioned_users,created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+export type TaskComment = {
+  id: string;
+  task_id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+};
+
+export async function getTaskComments(taskId: string): Promise<TaskComment[]> {
+  const { data, error } = await supabase
+    .from("comments")
+    .select(`
+      id,
+      task_id,
+      content,
+      created_at,
+      user_id
+    `)
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
+
   if (error) throw error;
-  return data;
+  return (data ?? []) as TaskComment[];
 }
