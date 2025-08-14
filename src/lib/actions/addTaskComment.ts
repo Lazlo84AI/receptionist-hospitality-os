@@ -1,55 +1,26 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
-export default async function addTaskComment({ 
-  taskId, 
-  userId, 
-  content 
-}: { 
-  taskId: string; 
-  userId: string; 
-  content: string; 
-}) {
-  // Insert into task_comments table (using any to bypass type constraints)
+type Payload = {
+  task_id: string;            // UUID of the task/card
+  content: string;            // comment text
+  mentioned_users?: string[]; // optional: array of user UUIDs
+};
+
+export default async function addTaskComment({ task_id, content, mentioned_users = [] }: Payload) {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth?.user) throw new Error("Not signed in");
+
   const { data, error } = await (supabase as any)
-    .from('task_comments')
-    .insert({
-      task_id: taskId,
-      user_id: userId,
-      content: content
-    })
-    .select('id, task_id, user_id, content, created_at')
+    .from("task_comments")
+    .insert([{
+      task_id,
+      user_id: auth.user.id,   // keep this if no DEFAULT auth.uid() in DB
+      content,
+      mentioned_users
+    }])
+    .select("id, task_id, user_id, content, mentioned_users, created_at")
     .single();
 
-  if (error) {
-    throw error;
-  }
-
-  // Fire-and-forget webhook call
-  try {
-    // Import webhook service dynamically to avoid blocking the main operation
-    const { sendTaskUpdatedEvent } = await import('@/lib/webhookService');
-    
-    // Trigger webhook in fire-and-forget mode (don't await)
-    sendTaskUpdatedEvent(
-      taskId,
-      'task', // task_type
-      {
-        comments: [{
-          id: data.id,
-          content: content,
-          comment_type: 'user'
-        }]
-      },
-      [], // profiles
-      []  // locations
-    ).catch(error => {
-      // Silent fail for webhook - log but don't throw
-      console.warn('Webhook notification failed for comment add:', error);
-    });
-  } catch (webhookError) {
-    // Silent fail for webhook import/call - log but don't throw
-    console.warn('Failed to send webhook for comment add:', webhookError);
-  }
-
+  if (error) throw error;
   return data;
 }

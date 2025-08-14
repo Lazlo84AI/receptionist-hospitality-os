@@ -96,8 +96,7 @@ export function CommentsActivitySection({
     try {
       // Call the API
       const result = await addTaskComment({
-        taskId,
-        userId: 'current-user-id', // This should come from auth context
+        task_id: taskId,
         content: newComment.trim()
       });
 

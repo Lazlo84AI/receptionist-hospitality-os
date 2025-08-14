@@ -123,8 +123,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
       
       // Add to database
       await addTaskComment({
-        taskId: task.id,
-        userId: user.id,
+        task_id: task.id,
         content: newComment.trim()
       });
       

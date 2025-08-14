@@ -65,8 +65,7 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
       
       // Add to database
       await addTaskComment({
-        taskId: task.id.toString(),
-        userId: user.id,
+        task_id: task.id.toString(),
         content: newComment.trim()
       });
       
