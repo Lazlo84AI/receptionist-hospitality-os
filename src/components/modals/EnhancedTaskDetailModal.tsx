@@ -427,50 +427,50 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
               </div>
             )}
 
-            {/* Comments */}
+            {/* Comments & Activity */}
             <div className="border-t pt-6">
               <div className="flex items-center gap-2 mb-4">
                 <MessageSquare className="h-5 w-5 text-muted-foreground" />
                 <h4 className="font-medium text-foreground">Comments & Activity</h4>
               </div>
               
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyDown={handleCommentKeyDown}
-                    className="min-h-[80px]"
-                    disabled={isCommentLoading}
-                  />
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim() || isCommentLoading}
-                      size="sm"
-                    >
-                      {isCommentLoading ? 'Adding...' : 'Add Comment'}
-                    </Button>
-                  </div>
+              {/* Comment input */}
+              <div className="space-y-2 mb-4">
+                <Textarea
+                  placeholder="Add a comment..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={handleCommentKeyDown}
+                  className="min-h-[80px]"
+                  disabled={isCommentLoading}
+                />
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || isCommentLoading}
+                    size="sm"
+                  >
+                    {isCommentLoading ? 'Adding...' : 'Add Comment'}
+                  </Button>
                 </div>
+              </div>
 
-                <Separator />
+              <Separator />
 
-                <div className="space-y-3" data-comments-container>
-                  <div className="flex space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-medium">JD</span>
-                      </div>
+              {/* Posted comments */}
+              <div className="space-y-3" data-comments-container>
+                <div className="flex space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">JD</span>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-foreground">Jean Dupont</span>
-                        <span className="text-sm text-muted-foreground">4 hours ago</span>
-                      </div>
-                      <p className="text-foreground">Problem resolved, air conditioning repaired</p>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-foreground">Jean Dupont</span>
+                      <span className="text-sm text-muted-foreground">4 hours ago</span>
                     </div>
+                    <p className="text-foreground">Problem resolved, air conditioning repaired</p>
                   </div>
                 </div>
               </div>
