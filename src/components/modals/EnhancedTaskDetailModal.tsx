@@ -34,6 +34,8 @@ import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import addTaskComment from '@/lib/actions/addTaskComment';
+import getTaskComments from '@/lib/actions/getTaskComments';
 
 interface EnhancedTaskDetailModalProps {
   isOpen: boolean;
@@ -110,17 +112,6 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
     setIsCommentLoading(true);
     
     try {
-      const { default: addTaskComment } = await import('@/lib/actions/addTaskComment');
-      
-      // Optimistic update - add to local state immediately
-      const optimisticComment = {
-        id: Date.now().toString(),
-        content: newComment.trim(),
-        user_id: user.id,
-        task_id: task.id,
-        created_at: new Date().toISOString()
-      };
-      
       // Add to database
       await addTaskComment({
         task_id: task.id,
@@ -128,7 +119,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
       });
       
       toast({
-        title: "Comment Added",
+        title: "Comment added",
         description: "Your comment has been posted successfully",
       });
       
@@ -138,19 +129,18 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
         onUpdateTask(task);
       }
       
-      // Scroll to bottom of comments
-      setTimeout(() => {
-        const commentsContainer = document.querySelector('[data-comments-container]');
-        if (commentsContainer) {
-          commentsContainer.scrollTop = commentsContainer.scrollHeight;
-        }
-      }, 100);
+      // Refetch comments to show the new comment
+      try {
+        await getTaskComments();
+      } catch (fetchError) {
+        console.warn('Failed to refetch comments:', fetchError);
+      }
       
     } catch (error) {
       console.error('Error adding comment:', error);
       toast({
-        title: "Comment Error",
-        description: "Failed to add comment. Please try again.",
+        title: "Failed to add comment",
+        description: "Please try again.",
         variant: "destructive",
       });
     } finally {

@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import addTaskComment from '@/lib/actions/addTaskComment';
+import getTaskComments from '@/lib/actions/getTaskComments';
 import { format } from 'date-fns';
 
 interface Comment {
@@ -123,16 +124,17 @@ export function CommentsActivitySection({
 
       setLocalActivities(prev => [newActivity, ...prev]);
 
-      // Notify parent components
       onCommentAdded?.(realComment);
       onActivityAdded?.(newActivity);
 
-      toast.success('Comment added successfully');
+      toast.success('Comment added');
 
-      // Scroll to top of comments container
-      setTimeout(() => {
-        commentsContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100);
+      // Refetch comments to ensure synchronization
+      try {
+        await getTaskComments();
+      } catch (fetchError) {
+        console.warn('Failed to refetch comments:', fetchError);
+      }
 
     } catch (error) {
       console.error('Error adding comment:', error);

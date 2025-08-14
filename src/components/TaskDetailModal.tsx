@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import addTaskComment from '@/lib/actions/addTaskComment';
+import getTaskComments from '@/lib/actions/getTaskComments';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -61,8 +63,6 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
     setIsCommentLoading(true);
     
     try {
-      const { default: addTaskComment } = await import('@/lib/actions/addTaskComment');
-      
       // Add to database
       await addTaskComment({
         task_id: task.id.toString(),
@@ -70,26 +70,25 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
       });
       
       toast({
-        title: "Comment Added",
+        title: "Comment added",
         description: "Your comment has been posted successfully",
       });
       
       // Clear the input
       setNewComment('');
       
-      // Scroll to bottom of comments
-      setTimeout(() => {
-        const commentsContainer = document.querySelector('[data-comments-container]');
-        if (commentsContainer) {
-          commentsContainer.scrollTop = commentsContainer.scrollHeight;
-        }
-      }, 100);
+      // Refetch comments to show the new comment
+      try {
+        await getTaskComments();
+      } catch (fetchError) {
+        console.warn('Failed to refetch comments:', fetchError);
+      }
       
     } catch (error) {
       console.error('Error adding comment:', error);
       toast({
-        title: "Comment Error",
-        description: "Failed to add comment. Please try again.",
+        title: "Failed to add comment",
+        description: "Please try again.",
         variant: "destructive",
       });
     } finally {
