@@ -258,45 +258,54 @@ export function ClientRequestsCard() {
                 </div>
               )}
 
-              {/* Comment section */}
+              {/* Comments & Activity */}
               <div className="border-t pt-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <MessageCircle className="h-5 w-5 text-palace-navy" />
-                  <h4 className="font-semibold text-palace-navy">Comments</h4>
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Comments & Activity</h4>
                 </div>
                 
-                <div className="mb-4">
+                {/* Comment input */}
+                <div className="space-y-2 mb-4">
                   <Textarea
                     placeholder="Add a comment..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     className="min-h-[80px]"
                   />
+                  <div className="flex justify-end">
+                    <Button 
+                      size="sm"
+                      disabled={!comment.trim()}
+                    >
+                      Add Comment
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Activity history */}
-                {activities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 mb-4">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-soft-pewter text-white text-xs">
-                        {activity.avatar}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="bg-muted/50 p-3 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-palace-navy">
-                            {activity.user} {activity.action}
-                          </span>
-                          <span className="text-xs text-soft-pewter">
-                            {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))}h ago
-                          </span>
+                <div className="border-t border-border/20 pt-4">
+                  <div className="space-y-3">
+                    {/* Posted comments */}
+                    {activities.map((activity) => (
+                      <div key={activity.id} className="flex space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-medium">{activity.avatar}</span>
+                          </div>
                         </div>
-                        <p className="text-sm">{activity.content}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{activity.user}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))}h ago
+                            </span>
+                          </div>
+                          <p className="text-foreground">{activity.content}</p>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           )}

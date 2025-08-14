@@ -356,96 +356,56 @@ export function IncidentsCard() {
                 />
               )}
 
-              {/* Commentaires et activité */}
+              {/* Comments & Activity */}
               <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <MessageCircle className="h-5 w-5 text-palace-navy" />
-                    <h4 className="font-semibold text-palace-navy">Comments and Activity</h4>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowActivityDetails(!showActivityDetails)}
-                    className="text-sm"
-                  >
-                    {showActivityDetails ? (
-                      <>
-                        <ChevronUp className="h-4 w-4 mr-1" />
-                        Hide details
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4 mr-1" />
-                        Show details
-                      </>
-                    )}
-                  </Button>
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Comments & Activity</h4>
                 </div>
-
-                {/* Zone de commentaire */}
-                <div className="mb-4">
+                
+                {/* Comment input */}
+                <div className="space-y-2 mb-4">
                   <Textarea
-                    placeholder="Write a comment…"
+                    placeholder="Add a comment..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     className="min-h-[80px]"
                   />
+                  <div className="flex justify-end">
+                    <Button 
+                      size="sm"
+                      disabled={!comment.trim()}
+                    >
+                      Add Comment
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Affichage des reminders actifs */}
-                {activities.filter(a => a.type === 'reminder').length > 0 && (
-                  <div className="mb-4">
-                    <h5 className="font-medium text-palace-navy mb-2">Configured Reminders:</h5>
-                    {activities.filter(a => a.type === 'reminder').map((reminder) => (
-                      <div key={reminder.id} className="bg-blue-50 p-3 rounded-lg mb-2">
-                        <p className="text-sm text-palace-navy">{reminder.content}</p>
-                        <p className="text-xs text-soft-pewter mt-1">
-                          Configuré par {reminder.user} - {new Date(reminder.timestamp).toLocaleDateString('fr-FR')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Historique d'activité */}
-                {showActivityDetails && (
-                  <div className="space-y-4">
-                    <h5 className="font-medium text-palace-navy">Recent Activities:</h5>
+                <div className="border-t border-border/20 pt-4">
+                  <div className="space-y-3">
+                    {/* Posted comments */}
                     {activities.map((activity) => (
-                      <div key={activity.id} className="flex items-start space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-blue-600 text-white text-xs">
-                            {activity.user.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
+                      <div key={activity.id} className="flex space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-medium">
+                              {activity.user.split(' ').map(n => n[0]).join('')}
+                            </span>
+                          </div>
+                        </div>
                         <div className="flex-1">
-                          {activity.type === 'comment' ? (
-                            <div className="bg-muted/50 p-3 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-palace-navy">Commentaire laissé</span>
-                                <span className="text-xs text-soft-pewter">
-                                   {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} hours ago
-                                </span>
-                              </div>
-                              <p className="text-sm">{activity.content}</p>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-soft-pewter">
-                              <span className="font-medium">{activity.user}</span> {activity.action}
-                              <span className="text-xs ml-2">
-                                il y a {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))} hours ago
-                              </span>
-                              {activity.content && (
-                                <div className="text-xs text-palace-navy mt-1">{activity.content}</div>
-                              )}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">{activity.user}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60))}h ago
+                            </span>
+                          </div>
+                          <p className="text-foreground">{activity.content}</p>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3">
