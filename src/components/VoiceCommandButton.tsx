@@ -378,23 +378,12 @@ export function VoiceCommandButton() {
 
         {/* Main Note Button */}
         <Button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('CLIC DÉTECTÉ sur le bouton principal!');
-            // Ne fonctionne que si on n'est pas en mode vocal
-            if (creationMode !== 'voice') {
-              handleMainButtonClick();
-            }
-          }}
+          onClick={handleMainButtonClick}
           className={cn(
-            "h-16 w-16 rounded-full transition-all duration-500 pointer-events-auto cursor-pointer",
+            "h-16 w-16 rounded-full transition-all duration-500",
             "bg-palace-navy hover:bg-palace-navy/90 border-2 border-champagne-gold/50 hover:border-champagne-gold",
-            "shadow-lg",
-            // Inactif en mode vocal (États 3 et 4)
-            creationMode === 'voice' ? "opacity-75 cursor-not-allowed" : ""
+            "shadow-lg pointer-events-auto cursor-pointer"
           )}
-          style={{ pointerEvents: 'auto' }}
         >
           <FileText className="h-6 w-6 text-champagne-gold" />
         </Button>
