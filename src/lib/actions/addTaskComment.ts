@@ -12,9 +12,9 @@ export async function addTaskComment({ task_id, content }: Payload) {
   const { data: auth } = await client.auth.getUser();
   if (!auth?.user) throw new Error("Not signed in");
 
-  // écrire dans la table du modèle B
+  // ✅ écrire dans la table DU NOUVEAU MODÈLE
   const { data, error } = await client
-    .from("task_comments") // IMPORTANT: modèle B
+    .from("task_comments")
     .insert([{ task_id, user_id: auth.user.id, content }])
     .select("id, task_id, user_id, content, created_at")
     .single();

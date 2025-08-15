@@ -8,8 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useTaskComments } from "@/hooks/useTaskComments";
 import { addTaskComment } from '@/lib/actions/addTaskComment';
-import { getTaskComments } from '@/lib/actions/getTaskComments';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -30,8 +30,9 @@ interface TaskDetailModalProps {
 }
 
 export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps) {
-  const [newComment, setNewComment] = useState('');
-  const [isCommentLoading, setIsCommentLoading] = useState(false);
+  const { items: comments, refetch } = useTaskComments(task?.id?.toString());
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -57,51 +58,20 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
   const typeConfig = getTypeIcon(task.type);
   const TypeIcon = typeConfig.icon;
 
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !task || !user?.id || isCommentLoading) return;
-    
-    setIsCommentLoading(true);
-    
+  async function onAddComment() {
+    const value = text.trim();
+    if (!value || !task?.id) return;
+    setSaving(true);
     try {
-      // Add to database
-      await addTaskComment({
-        task_id: task.id.toString(),
-        content: newComment.trim()
-      });
-      
-      toast({
-        title: "Comment added",
-        description: "Your comment has been posted successfully",
-      });
-      
-      // Clear the input
-      setNewComment('');
-      
-      // Refetch comments to show the new comment
-      try {
-        await getTaskComments(task?.id?.toString() || '');
-      } catch (fetchError) {
-        console.warn('Failed to refetch comments:', fetchError);
-      }
-      
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      toast({
-        title: "Failed to add comment",
-        description: "Please try again.",
-        variant: "destructive",
-      });
+      await addTaskComment({ task_id: task.id.toString(), content: value });
+      setText("");
+      await refetch();               // ✅ indispensable pour que ça reste après réouverture
+    } catch (e) {
+      console.error(e);
     } finally {
-      setIsCommentLoading(false);
+      setSaving(false);
     }
-  };
-
-  const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleAddComment();
-    }
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -180,19 +150,21 @@ export function TaskDetailModal({ isOpen, onClose, task }: TaskDetailModalProps)
             <div className="space-y-2 mb-4">
               <Textarea
                 placeholder="Add a comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={handleCommentKeyDown}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onAddComment(); }
+                }}
                 className="min-h-[80px]"
-                disabled={isCommentLoading}
+                disabled={saving}
               />
               <div className="flex justify-end">
                 <Button 
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim() || isCommentLoading}
+                  onClick={onAddComment}
+                  disabled={saving || !text.trim()}
                   size="sm"
                 >
-                  {isCommentLoading ? 'Adding...' : 'Add Comment'}
+                  {saving ? "Adding..." : "Add Comment"}
                 </Button>
               </div>
             </div>
