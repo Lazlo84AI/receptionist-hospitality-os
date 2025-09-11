@@ -1,0 +1,125 @@
+/* Typographies Decœur - Intégration des polices Jost */
+
+@font-face {
+  font-family: 'Jost';
+  src: url('/TYPOGRAPHIES DECOEUR/JOST/Jost-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jost';
+  src: url('/TYPOGRAPHIES DECOEUR/JOST/Jost-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jost';
+  src: url('/TYPOGRAPHIES DECOEUR/JOST/Jost-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jost';
+  src: url('/TYPOGRAPHIES DECOEUR/JOST/Jost-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jost';
+  src: url('/TYPOGRAPHIES DECOEUR/JOST/Jost-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Classes utilitaires pour les typographies Decœur */
+.font-jost {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+}
+
+.jost-regular {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.jost-medium-italic {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.jost-semibold {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.jost-bold {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.jost-extrabold {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Hiérarchie typographique Decœur */
+.decoeur-title {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.decoeur-subtitle {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.decoeur-heading {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.decoeur-body {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.decoeur-body-emphasis {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.decoeur-caption {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.decoeur-button {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.decoeur-label {
+  font-family: 'Jost', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}

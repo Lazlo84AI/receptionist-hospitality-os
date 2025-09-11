@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,10 @@ import {
   Paperclip,
   TrendingUp,
   Plus,
-  Edit3
+  Edit3,
+  Edit,
+  Heart,
+  UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReminderModal } from './ReminderModal';
@@ -36,44 +39,142 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTaskComments } from "@/hooks/useTaskComments";
 import { addTaskComment } from '@/lib/actions/addTaskComment';
+import { supabase } from '@/integrations/supabase/client';
+import { createCommentActivity } from '@/lib/actions/activityLogHelper';
 
 interface EnhancedTaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: TaskItem | null;
   onUpdateTask?: (task: TaskItem) => void;
+  forceDetailView?: boolean; // Nouveau prop pour forcer le mode detail
 }
+
+// Hook pour récupérer les activity logs d'une tâche
+const useActivityLogs = (taskId?: string) => {
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!taskId) return;
+
+    const fetchActivities = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('activity_log')
+          .select('*')
+          .eq('task_id', taskId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error) throw error;
+        setActivities(data || []);
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        setActivities([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, [taskId]);
+
+  return { activities, loading };
+};
+
+// Hook pour récupérer les commentaires depuis la table comments
+const useTaskCommentsFixed = (taskId?: string) => {
+  const [comments, setComments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refetch = async () => {
+    if (!taskId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setComments(data || []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setComments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refetch();
+  }, [taskId]);
+
+  return { comments, loading, refetch };
+};
+
+// Fonction pour calculer le temps écoulé
+const getTimeElapsed = (dateString: string): string => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  } else {
+    return `${diffDays}d ago`;
+  }
+};
+
+// Fonction pour obtenir les initiales d'un nom
+const getInitials = (name: string): string => {
+  if (!name) return 'UN';
+  return name.split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
 
 const getTypeConfig = (type: string) => {
   switch (type) {
     case 'incident':
       return { 
         icon: AlertTriangle, 
-        color: 'bg-urgence-red text-warm-cream',
+        color: 'bg-red-100 text-red-600', // Rouge pâle panneau signalétique
         label: 'Incident' 
       };
     case 'client_request':
       return { 
-        icon: Users, 
-        color: 'bg-champagne-gold text-palace-navy',
+        icon: Heart, 
+        color: 'bg-green-100 text-green-600', // Vert pâle cœur
         label: 'Client Request' 
       };
     case 'follow_up':
       return { 
         icon: Clock, 
-        color: 'bg-palace-navy text-warm-cream',
+        color: 'bg-gray-600 text-white', // Fond noir clair horloge
         label: 'Follow-up' 
       };
     case 'internal_task':
+    case 'personal_task':
       return { 
-        icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
-        label: 'Internal Task' 
+        icon: UserCircle, 
+        color: 'bg-yellow-100 text-yellow-600', // Jaune pâle profil
+        label: 'Personal Task' 
       };
     default:
       return { 
-        icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
+        icon: UserCircle, 
+        color: 'bg-yellow-100 text-yellow-600',
         label: 'Task' 
       };
   }
@@ -83,9 +184,11 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   isOpen, 
   onClose, 
   task,
-  onUpdateTask
+  onUpdateTask,
+  forceDetailView = false
 }) => {
-  const { items: comments, refetch } = useTaskComments(task?.id);
+  const { comments, refetch: refetchComments } = useTaskCommentsFixed(task?.id);
+  const { activities } = useActivityLogs(task?.id);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -97,10 +200,43 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const [reminders, setReminders] = useState<{ id: string; title: string; date: string; description: string }[]>([]);
   const [attachments, setAttachments] = useState<{ id: string; name: string; type: string; size: string }[]>([]);
   
+  // Hook pour récupérer les données utilisateur pour les commentaires
+  const [commentUsers, setCommentUsers] = useState<Record<string, any>>({});
+
   const { profiles } = useProfiles();
   const { locations } = useLocations();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Récupérer les informations des utilisateurs pour les commentaires
+  useEffect(() => {
+    const fetchCommentUsers = async () => {
+      if (!comments.length) return;
+
+      const userIds = [...new Set(comments.map(c => c.user_id))];
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, full_name')
+        .in('id', userIds);
+
+      if (error) {
+        console.error('Error fetching comment users:', error);
+        return;
+      }
+
+      const usersMap = users.reduce((acc: any, user: any) => {
+        acc[user.id] = {
+          name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User',
+          initials: getInitials(user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim())
+        };
+        return acc;
+      }, {});
+
+      setCommentUsers(usersMap);
+    };
+
+    fetchCommentUsers();
+  }, [comments]);
 
   if (!task) return null;
 
@@ -113,19 +249,16 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
     setSaving(true);
     try {
       await addTaskComment({ task_id: task.id, content: value });
+      // Créer une entrée d'activité pour le commentaire
+      await createCommentActivity(task.id, task.type, value.substring(0, 50));
       setText("");
-      await refetch();               // ✅ indispensable pour que ça reste après réouverture
+      await refetchComments();
     } catch (e) {
       console.error(e);
     } finally {
       setSaving(false);
     }
   }
-
-  const handleAddReminder = () => {
-    // The ReminderModal will handle the logic internally
-    console.log('Reminder added');
-  };
 
   const handleAddChecklist = async (title: string) => {
     const newChecklist = {
@@ -177,41 +310,46 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
     setChecklists([...checklists, newChecklist]);
   };
 
-  const handleAddAttachment = () => {
-    // The AttachmentModal will handle the logic internally
-    console.log('Attachment added');
-  };
-
-  const handleEscalation = () => {
-    // The EscalationModal will handle the logic internally
-    console.log('Escalation sent');
-  };
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
           <DialogHeader className="pb-4 border-b">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-semibold">
-                Task Details
-              </DialogTitle>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle className="text-lg font-semibold">
+              Task Details
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 pt-4">
             {/* Static Information */}
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className={cn("p-3 rounded-full", typeConfig.color)}>
-                  <TypeIcon className="h-6 w-6" />
+              <div className="flex items-center gap-6">
+                {/* Picto plus gros à gauche */}
+                <div className={cn("p-4 rounded-full", typeConfig.color)}>
+                  <TypeIcon className="h-8 w-8" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-3">{task.title}</h3>
-                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                
+                {/* Contenu principal aligné verticalement */}
+                <div className="flex-1 flex flex-col justify-center">
+                  {/* Première ligne : Titre + Bouton Edit */}
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xl font-semibold leading-tight">{task.title}</h3>
+                    {/* Bouton Edit plus gros */}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-soft-pewter hover:text-palace-navy ml-4 p-2"
+                      onClick={() => {
+                        // TODO: Ouvrir TaskFullEditView
+                        console.log('Open TaskFullEditView for task:', task?.id);
+                      }}
+                    >
+                      <Edit className="h-6 w-6" />
+                    </Button>
+                  </div>
+                  
+                  {/* Deuxième ligne : Status + Catégorie + Priorité */}
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Badge 
                       variant={task.status === 'completed' ? 'default' : 'secondary'}
                       className={task.status === 'pending' ? 'bg-green-500 text-white' : ''}
@@ -224,7 +362,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                       {typeConfig.label}
                     </Badge>
                     {task.priority === 'urgent' && (
-                      <Badge className="bg-urgence-red text-warm-cream">
+                      <Badge className="bg-red-500 text-white">
                         URGENT
                       </Badge>
                     )}
@@ -399,7 +537,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onAddComment(); }
                   }}
-                  className="min-h-[80px]"
+                  className="min-h-[80px] transition-all duration-300 hover:border-yellow-400 hover:shadow-sm hover:shadow-yellow-100 focus:border-yellow-400 focus:shadow-sm focus:shadow-yellow-100"
                   disabled={saving}
                 />
                 <div className="flex justify-end">
@@ -415,54 +553,65 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
 
               <Separator />
 
-              {/* Posted comments */}
+              {/* Posted comments - VRAIES DONNÉES */}
               <div className="space-y-3" data-comments-container>
-                <div className="flex space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">JD</span>
+                {comments.length === 0 && (
+                  <p className="text-muted-foreground text-sm italic">No comments yet</p>
+                )}
+                {comments.map((comment) => {
+                  const userInfo = commentUsers[comment.user_id] || { name: 'Unknown User', initials: 'UN' };
+                  return (
+                    <div key={comment.id} className="flex space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-medium">{userInfo.initials}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-foreground">{userInfo.name}</span>
+                          <span className="text-sm text-muted-foreground">{getTimeElapsed(comment.created_at)}</span>
+                        </div>
+                        <p className="text-foreground">{comment.content}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-foreground">Jean Dupont</span>
-                      <span className="text-sm text-muted-foreground">4 hours ago</span>
-                    </div>
-                    <p className="text-foreground">Problem resolved, air conditioning repaired</p>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Recent Activity */}
+            {/* Recent Activity - VRAIES DONNÉES */}
             <div className="border-t pt-6">
               <h4 className="font-medium text-foreground mb-4">Recent Activity</h4>
               
               <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>JD left a comment – 4h ago</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span>Sophie Martin scheduled a reminder – 48h ago</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Marie Dubois completed a checklist task – 6h ago</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span>An attachment was added by Pierre Leroy – 8h ago</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span>Pierre Leroy escalated via email – 12h ago</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Task assigned to {task.assignedTo} by Sophie Martin – 1d ago</span>
-                </div>
+                {activities.length === 0 && (
+                  <p className="text-muted-foreground italic">No recent activity</p>
+                )}
+                {activities.map((activity) => {
+                  const userName = activity.metadata?.user_name || 'Unknown User';
+                  const timeElapsed = getTimeElapsed(activity.created_at);
+                  
+                  // Couleurs selon le type d'action
+                  const getActivityColor = (action: string) => {
+                    switch (action) {
+                      case 'commented': return 'bg-blue-500';
+                      case 'reminder_added': return 'bg-purple-500';
+                      case 'checklist_added': return 'bg-green-500';
+                      case 'attachment_added': return 'bg-orange-500';
+                      case 'escalated': return 'bg-red-500';
+                      case 'member_assigned': return 'bg-blue-500';
+                      default: return 'bg-gray-500';
+                    }
+                  };
+
+                  return (
+                    <div key={activity.id} className="flex items-center gap-2 text-muted-foreground">
+                      <div className={cn("w-2 h-2 rounded-full", getActivityColor(activity.action))}></div>
+                      <span>{activity.description} – {timeElapsed}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

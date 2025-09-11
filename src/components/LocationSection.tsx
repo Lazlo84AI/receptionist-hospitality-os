@@ -22,16 +22,25 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
   const [openSections, setOpenSections] = useState<{
     rooms: boolean;
     commonAreas: boolean;
+    publicAreas: boolean;
     staffAreas: boolean;
     [key: string]: boolean;
   }>({
     rooms: false,
     commonAreas: false,
+    publicAreas: false,
     staffAreas: false,
   });
 
   const handleLocationSelect = (location: string) => {
-    setFormData(prev => ({ ...prev, location }));
+    // Stocker la location sélectionnée dans roomNumber (peu importe le type)
+    // roomNumber contient le nom de la location : chambre, common area, staff area
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      location,
+      roomNumber: location // Toujours stocker le nom de la location
+    }));
   };
 
   const toggleSection = (section: string) => {
@@ -72,6 +81,10 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
   
   const commonAreasByFloor = groupLocationsByFloor(
     locations.filter(location => location.type === 'common_area')
+  );
+  
+  const publicAreasByFloor = groupLocationsByFloor(
+    locations.filter(location => location.type === 'public_areas')
   );
   
   const staffAreasByFloor = groupLocationsByFloor(
@@ -166,7 +179,9 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
 
   return (
     <div className="space-y-4">
-      <label className="text-sm font-medium">Location</label>
+      <label className="text-sm font-medium">
+        Location {formData.category === 'client_request' ? '*' : ''}
+      </label>
       
       <div className="space-y-3">
         {/* Rooms Section */}
@@ -181,6 +196,13 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
           title="🧭 Common Areas"
           locationsByFloor={commonAreasByFloor}
           sectionKey="commonAreas"
+        />
+
+        {/* Public Areas Section */}
+        <FloorSection
+          title="🏢 Public Areas"
+          locationsByFloor={publicAreasByFloor}
+          sectionKey="publicAreas"
         />
 
         {/* Staff Areas Section */}

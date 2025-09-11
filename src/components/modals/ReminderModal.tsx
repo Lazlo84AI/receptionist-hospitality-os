@@ -41,6 +41,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
   const [endType, setEndType] = useState<'never' | 'date' | 'occurrences'>('never');
   const [endDateRecurrence, setEndDateRecurrence] = useState<Date>();
   const [occurrences, setOccurrences] = useState(13);
+  const [enableCustomRecurrence, setEnableCustomRecurrence] = useState(false);
 
   // Effect to populate form when editing
   useEffect(() => {
@@ -73,6 +74,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
       setEndType('never');
       setEndDateRecurrence(undefined);
       setOccurrences(13);
+      setEnableCustomRecurrence(false);
     }
   }, [editingReminder]);
 
@@ -335,8 +337,20 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
           )}
 
           {/* Custom recurrence */}
-          <div className="bg-muted/50 p-4 rounded-lg space-y-4">
-            <h3 className="font-medium">Custom Recurrence</h3>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="enableRecurrence"
+                checked={enableCustomRecurrence}
+                onCheckedChange={(checked) => setEnableCustomRecurrence(checked as boolean)}
+              />
+              <Label htmlFor="enableRecurrence" className="font-medium">
+                Enable Custom Recurrence
+              </Label>
+            </div>
+
+            {enableCustomRecurrence && (
+              <div className="bg-muted/50 p-4 rounded-lg space-y-4">
             
             {/* Repeat every... */}
             <div className="flex items-center gap-2">
@@ -431,6 +445,8 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
                 </div>
               </RadioGroup>
             </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between pt-4">

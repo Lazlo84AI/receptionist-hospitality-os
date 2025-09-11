@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
+import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
 import ShiftStartModal from '@/components/modals/ShiftStartModal';
 import { Button } from '@/components/ui/button';
@@ -16,14 +17,16 @@ import {
   Users,
   Clock,
   Wrench,
-  Calendar,
-  User,
-  MapPin,
-  GripVertical
+  GripVertical,
+  Heart,
+  UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTasks } from '@/hooks/useSupabaseData';
+import { formatTimeElapsed } from '@/utils/timeUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { sendTaskMovedEvent } from '@/lib/webhookService';
 import {
   DndContext,
   DragEndEvent,
@@ -48,43 +51,65 @@ const getTypeConfig = (type: string) => {
     case 'incident':
       return { 
         icon: AlertTriangle, 
-        color: 'bg-urgence-red text-warm-cream',
+        color: 'bg-red-100 text-red-600',
         label: 'Incident' 
       };
     case 'client_request':
       return { 
-        icon: Users, 
-        color: 'bg-champagne-gold text-palace-navy',
+        icon: Heart, 
+        color: 'bg-green-100 text-green-600',
         label: 'Client Request' 
       };
     case 'follow_up':
       return { 
         icon: Clock, 
-        color: 'bg-palace-navy text-warm-cream',
+        color: 'bg-gray-600 text-white',
         label: 'Follow-up' 
       };
     case 'internal_task':
+    case 'personal_task':
       return { 
-        icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
-        label: 'Internal Task' 
+        icon: UserCircle, 
+        color: 'bg-yellow-100 text-yellow-600',
+        label: 'Personal Task' 
       };
     default:
       return { 
-        icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
+        icon: UserCircle, 
+        color: 'bg-yellow-100 text-yellow-600',
         label: 'Task' 
       };
   }
 };
 
-const SortableTaskCard = ({ 
+// Transform TaskItem to CardFaceModal format
+const transformTaskForCard = (task: TaskItem) => {
+  const getStatus = (status: string) => {
+    switch (status) {
+      case 'pending': return 'To Process' as const;
+      case 'in_progress': return 'In Progress' as const;
+      case 'completed': return 'Completed' as const;
+      default: return 'Cancelled' as const;
+    }
+  };
+
+  return {
+    id: task.id,
+    title: task.title,
+    location: task.roomNumber ? `Room ${task.roomNumber}` : (task.location || 'No location'),
+    clientName: task.guestName,
+    status: getStatus(task.status),
+    priority: task.priority === 'urgent' ? 'URGENCE' as const : 'NORMAL' as const,
+    assignedTo: task.assignedTo || 'Unassigned',
+    timeElapsed: formatTimeElapsed(task.created_at)
+  };
+};
+
+const SortableCardFace = ({ 
   task, 
-  onStatusChange, 
   onCardClick 
 }: { 
   task: TaskItem; 
-  onStatusChange: (taskId: string, newStatus: string) => void;
   onCardClick: (task: TaskItem) => void;
 }) => {
   const {
@@ -101,101 +126,37 @@ const SortableTaskCard = ({
     transition,
   };
 
-  const typeConfig = getTypeConfig(task.type);
-  const TypeIcon = typeConfig.icon;
+  const transformedTask = transformTaskForCard(task);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "mb-4 transition-all duration-200",
-        isDragging ? "opacity-50" : "opacity-100"
+        "relative transition-all duration-300 w-full",
+        isDragging ? "opacity-30 scale-105 rotate-2 z-50" : "opacity-100"
       )}
     >
-      <Card className="transition-all duration-200 hover:shadow-md cursor-pointer group">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2 flex-1" onClick={() => onCardClick(task)}>
-              <div className={cn("p-1.5 rounded-full", typeConfig.color)}>
-                <TypeIcon className="h-4 w-4" />
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {typeConfig.label}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              {task.priority === 'urgent' && (
-                <Badge className="bg-urgence-red text-warm-cream">
-                  Urgent
-                </Badge>
-              )}
-              <div
-                {...attributes}
-                {...listeners}
-                className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-          </div>
-          <CardTitle 
-            className="text-sm font-medium leading-5 cursor-pointer"
-            onClick={() => onCardClick(task)}
-          >
-            {task.title}
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="pt-0">
-          {task.description && (
-            <p 
-              className="text-sm text-muted-foreground mb-3 line-clamp-2 cursor-pointer"
-              onClick={() => onCardClick(task)}
-            >
-              {task.description}
-            </p>
-          )}
-          
-          <div className="space-y-2" onClick={() => onCardClick(task)}>
-            {task.guestName && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <User className="h-3 w-3" />
-                <span>{task.guestName}</span>
-              </div>
-            )}
-            
-            {task.roomNumber && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                <span>Room {task.roomNumber}</span>
-              </div>
-            )}
-            
-            {task.location && !task.roomNumber && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                <span>{task.location}</span>
-              </div>
-            )}
-            
-            {task.dueDate && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>{new Date(task.dueDate).toLocaleDateString('en-US')}</span>
-              </div>
-            )}
-            
-            {task.recipient && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <User className="h-3 w-3" />
-                <span>→ {task.recipient}</span>
-              </div>
-            )}
-          </div>
-
-        </CardContent>
-      </Card>
+      {/* Zone de drag alignée horizontalement avec les badges status/priorité - fond blanc simple */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-20 right-3 w-8 h-8 cursor-grab active:cursor-grabbing z-10 flex items-center justify-center bg-white hover:bg-gray-50 transition-all duration-200"
+      >
+        <GripVertical className="h-5 w-5 text-gray-600" />
+      </div>
+      
+      <CardFaceModal
+        id={transformedTask.id}
+        title={transformedTask.title}
+        location={transformedTask.location}
+        clientName={transformedTask.clientName}
+        status={transformedTask.status}
+        priority={transformedTask.priority}
+        assignedTo={transformedTask.assignedTo}
+        timeElapsed={transformedTask.timeElapsed}
+        onClick={() => onCardClick(task)}
+      />
     </div>
   );
 };
@@ -205,16 +166,21 @@ const KanbanColumn = ({
   tasks, 
   status, 
   onStatusChange,
-  onCardClick
+  onCardClick,
+  draggedTask,
+  draggedFromColumn
 }: { 
   title: string; 
   tasks: TaskItem[]; 
   status: string;
   onStatusChange: (taskId: string, newStatus: string) => void;
   onCardClick: (task: TaskItem) => void;
+  draggedTask: TaskItem | null;
+  draggedFromColumn: string | null;
 }) => {
   const filteredTasks = tasks.filter(task => task.status === status);
-  const taskIds = filteredTasks.map(task => task.id);
+  const isDraggedFromThisColumn = draggedFromColumn === status;
+  const isTargetColumn = draggedTask && draggedTask.status !== status;
 
   const { setNodeRef, isOver } = useDroppable({
     id: `column-${status}`,
@@ -230,32 +196,57 @@ const KanbanColumn = ({
           </Badge>
         </div>
         
+        {/* Zone de drop avec feedback visuel intelligent */}
         <div
           ref={setNodeRef}
           className={cn(
-            "min-h-[500px] rounded-lg transition-colors duration-200",
-            isOver && "bg-muted/80"
+            "min-h-[520px] rounded-lg transition-all duration-300 p-4 border-2",
+            // Ne colorer que si c'est la colonne cible ET qu'on survole
+            isOver && isTargetColumn
+              ? "bg-green-50 border-green-300 border-dashed shadow-inner" 
+              : "bg-transparent border-transparent hover:border-gray-200"
           )}
         >
-          <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-              {filteredTasks.map(task => (
-                <SortableTaskCard 
-                  key={task.id} 
-                  task={task} 
-                  onStatusChange={onStatusChange}
-                  onCardClick={onCardClick}
-                />
-              ))}
+          {/* Plus de SortableContext local - utilisé globalement */}
+          <div className="space-y-5 max-h-[calc(100vh-300px)] overflow-y-auto">
+            {filteredTasks.map((task, index) => {
+              const isDraggedCard = draggedTask && task.id === draggedTask.id;
               
-              {filteredTasks.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
+              return (
+                <div key={task.id} className={cn(
+                  "transition-all duration-200",
+                  // Écartement uniquement dans la colonne cible pendant le hover
+                  isOver && isTargetColumn && "transform translate-y-1",
+                  // Masquer la carte en cours de drag tout en gardant l'espace (placeholder)
+                  isDraggedCard && isDraggedFromThisColumn && "opacity-30"
+                )}>
+                  {isDraggedCard && isDraggedFromThisColumn ? (
+                    // Placeholder : garde l'espace mais invisible
+                    <div className="w-full h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">
+                      Drop elsewhere to move
+                    </div>
+                  ) : (
+                    <SortableCardFace 
+                      task={task} 
+                      onCardClick={onCardClick}
+                    />
+                  )}
+                </div>
+              );
+            })}
+            
+            {filteredTasks.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <div className={cn(
+                  "border-2 border-dashed rounded-lg p-8 transition-all duration-300",
+                  isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted"
+                )}>
                   <p className="text-sm">No tasks</p>
                   <p className="text-xs mt-1">Drag a card here</p>
                 </div>
-              )}
-            </div>
-          </SortableContext>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -265,13 +256,14 @@ const KanbanColumn = ({
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tasks, loading, error, refetch } = useTasks();
-  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
+  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('active'); // ACTIVÉ POUR TEST
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
   const [isShiftStartOpen, setIsShiftStartOpen] = useState(false);
   const [shiftActive, setShiftActive] = useState(false);
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
+  const [draggedFromColumn, setDraggedFromColumn] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Drag and drop sensors
@@ -291,56 +283,159 @@ const ShiftManagement = () => {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const task = tasks.find(t => t.id === active.id);
-    setDraggedTask(task || null);
+    if (task) {
+      setDraggedTask(task);
+      setDraggedFromColumn(task.status); // Mémoriser la colonne d'origine
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggedTask(null);
+    setDraggedFromColumn(null); // Reset colonne d'origine
     
     if (!over) return;
 
-    const taskId = active.id as string;
+    const activeId = active.id as string;
     const overId = over.id as string;
     
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
+    const activeTask = tasks.find(t => t.id === activeId);
+    if (!activeTask) return;
 
     let newStatus: string;
+    let insertPosition: number = -1; // -1 means end of list
 
-    // Check if dropped on a column
+    // Determine the target status and position
     if (overId.startsWith('column-')) {
+      // Dropped on column header/empty area
       newStatus = overId.replace('column-', '');
+      insertPosition = -1; // End of list
     } else {
-      // If dropped on another task, get the status of that task's column
+      // Dropped on/near another task
       const overTask = tasks.find(t => t.id === overId);
       if (overTask) {
         newStatus = overTask.status;
+        // Find position of the target task in its column
+        const columnTasks = tasks.filter(t => t.status === newStatus).sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        insertPosition = columnTasks.findIndex(t => t.id === overId);
       } else {
         return;
       }
     }
 
-    if (task.status !== newStatus) {
-      // Send specific webhook event for task movement (drag and drop)
-      const { sendTaskMovedEvent } = await import('@/lib/webhookService');
-      const result = await sendTaskMovedEvent(taskId, task.status, newStatus, task);
-      
-      if (result.success) {
-        // Refetch data after successful webhook
-        refetch();
-        toast({
-          title: "Success",
-          description: "Task moved successfully",
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to move task. Please try again.",
-          variant: "destructive",
-        });
+    // If no status change and same position, do nothing
+    if (activeTask.status === newStatus) {
+      const activeColumnTasks = tasks.filter(t => t.status === activeTask.status);
+      const currentPosition = activeColumnTasks.findIndex(t => t.id === activeId);
+      if (insertPosition === currentPosition || (insertPosition === -1 && currentPosition === activeColumnTasks.length - 1)) {
+        return;
       }
+    }
+
+    try {
+      // Calculate the new position timestamp for ordering
+      const targetColumnTasks = tasks
+        .filter(t => t.status === newStatus && t.id !== activeId)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      
+      let newTimestamp: string;
+      
+      if (insertPosition === -1 || insertPosition >= targetColumnTasks.length) {
+        // Insert at end
+        const lastTask = targetColumnTasks[targetColumnTasks.length - 1];
+        newTimestamp = lastTask ? 
+          new Date(new Date(lastTask.created_at).getTime() + 1000).toISOString() :
+          new Date().toISOString();
+      } else if (insertPosition === 0) {
+        // Insert at beginning
+        const firstTask = targetColumnTasks[0];
+        newTimestamp = new Date(new Date(firstTask.created_at).getTime() - 1000).toISOString();
+      } else {
+        // Insert between tasks
+        const beforeTask = targetColumnTasks[insertPosition - 1];
+        const afterTask = targetColumnTasks[insertPosition];
+        const beforeTime = new Date(beforeTask.created_at).getTime();
+        const afterTime = new Date(afterTask.created_at).getTime();
+        newTimestamp = new Date((beforeTime + afterTime) / 2).toISOString();
+      }
+
+      // Update Supabase with new status and position
+      let updateResult;
+      
+      switch (activeTask.type) {
+        case 'incident':
+          updateResult = await supabase
+            .from('incidents')
+            .update({ 
+              status: newStatus,
+              updated_at: newTimestamp // Use calculated timestamp for ordering
+            })
+            .eq('id', activeId);
+          break;
+        case 'client_request':
+          updateResult = await supabase
+            .from('client_requests')
+            .update({ 
+              preparation_status: newStatus,
+              updated_at: newTimestamp
+            })
+            .eq('id', activeId);
+          break;
+        case 'follow_up':
+          updateResult = await supabase
+            .from('follow_ups')
+            .update({ 
+              status: newStatus,
+              updated_at: newTimestamp
+            })
+            .eq('id', activeId);
+          break;
+        case 'internal_task':
+        case 'personal_task':
+          updateResult = await supabase
+            .from('internal_tasks')
+            .update({ 
+              status: newStatus,
+              updated_at: newTimestamp
+            })
+            .eq('id', activeId);
+          break;
+        default:
+          throw new Error(`Unknown task type: ${activeTask.type}`);
+      }
+
+      if (updateResult?.error) {
+        throw updateResult.error;
+      }
+
+      // Refresh data
+      await refetch();
+
+      // Send webhook in background
+      sendTaskMovedEvent(activeId, activeTask.status, newStatus, activeTask).then(result => {
+        if (!result.success) {
+          console.warn('Webhook failed but task was updated successfully:', result.error);
+        }
+      }).catch(error => {
+        console.warn('Webhook error (task was still updated):', error);
+      });
+      
+      toast({
+        title: "Success",
+        description: `Task moved to ${newStatus.replace('_', ' ')}${insertPosition !== -1 ? ' at position ' + (insertPosition + 1) : ''}`,
+        variant: "default",
+      });
+      
+    } catch (error) {
+      console.error('Error updating task:', error);
+      refetch();
+      toast({
+        title: "Error",
+        description: "Failed to move task. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -465,53 +560,60 @@ const ShiftManagement = () => {
             <Button
               onClick={() => handleShiftAction('close')}
               disabled={shiftStatus !== 'active'}
-              variant="destructive"
-              className="h-12 text-base"
+              className="h-12 text-base end-shift-button"
             >
               <StopCircle className="h-5 w-5 mr-2" />
               End Shift
             </Button>
           </div>
 
-          {/* Kanban Board */}
+          {/* Kanban Board avec SortableContext global */}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-3 gap-6">
-              <KanbanColumn
-                title="To Process"
-                tasks={tasks}
-                status="pending"
-                onStatusChange={handleStatusChange}
-                onCardClick={handleCardClick}
-              />
-              
-              <KanbanColumn
-                title="In Progress"
-                tasks={tasks}
-                status="in_progress"
-                onStatusChange={handleStatusChange}
-                onCardClick={handleCardClick}
-              />
-              
-              <KanbanColumn
-                title="Resolved"
-                tasks={tasks}
-                status="completed"
-                onStatusChange={handleStatusChange}
-                onCardClick={handleCardClick}
-              />
-            </div>
+            {/* Global SortableContext pour toutes les tâches */}
+            <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              <div className="grid grid-cols-3 gap-6">
+                <KanbanColumn
+                  title="To Process"
+                  tasks={tasks}
+                  status="pending"
+                  onStatusChange={handleStatusChange}
+                  onCardClick={handleCardClick}
+                  draggedTask={draggedTask}
+                  draggedFromColumn={draggedFromColumn}
+                />
+                
+                <KanbanColumn
+                  title="In Progress"
+                  tasks={tasks}
+                  status="in_progress"
+                  onStatusChange={handleStatusChange}
+                  onCardClick={handleCardClick}
+                  draggedTask={draggedTask}
+                  draggedFromColumn={draggedFromColumn}
+                />
+                
+                <KanbanColumn
+                  title="Resolved"
+                  tasks={tasks}
+                  status="completed"
+                  onStatusChange={handleStatusChange}
+                  onCardClick={handleCardClick}
+                  draggedTask={draggedTask}
+                  draggedFromColumn={draggedFromColumn}
+                />
+              </div>
+            </SortableContext>
 
             <DragOverlay>
               {draggedTask ? (
-                <div className="rotate-3 scale-105">
-                  <SortableTaskCard
+                <div className="rotate-3 scale-105 opacity-80 shadow-xl">
+                  <SortableCardFace
                     task={draggedTask}
-                    onStatusChange={() => {}}
                     onCardClick={() => {}}
                   />
                 </div>

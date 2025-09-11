@@ -1,0 +1,54 @@
+import { useMemo } from 'react';
+import { useAuth } from './useAuth';
+import { Profile } from '@/types/database';
+
+/**
+ * Hook utilitaire pour récupérer les informations formatées du profil utilisateur
+ */
+export const useUserProfile = () => {
+  const { profile, loading } = useAuth();
+
+  // Génère les initiales automatiquement
+  const initials = useMemo(() => {
+    if (!profile?.first_name || !profile?.last_name) {
+      return 'WR'; // Fallback to Wilfried de Renty initials
+    }
+    return `${profile.first_name[0].toUpperCase()}${profile.last_name[0].toUpperCase()}`;
+  }, [profile]);
+
+  // Génère le nom complet
+  const fullName = useMemo(() => {
+    if (!profile?.first_name || !profile?.last_name) {
+      return 'Wilfried de Renty'; // Fallback
+    }
+    return `${profile.first_name} ${profile.last_name}`;
+  }, [profile]);
+
+  // Génère le nom d'affichage court (prénom + première lettre nom)
+  const displayName = useMemo(() => {
+    if (!profile?.first_name || !profile?.last_name) {
+      return 'Wilfried R.'; // Fallback
+    }
+    return `${profile.first_name} ${profile.last_name[0]}.`;
+  }, [profile]);
+
+  // Génère le nom attribué pour l'affichage des tâches
+  const assignedName = useMemo(() => {
+    if (!profile?.first_name || !profile?.last_name) {
+      return 'Wilfried de Renty'; // Fallback
+    }
+    return `${profile.first_name} ${profile.last_name}`;
+  }, [profile]);
+
+  return {
+    profile,
+    initials,
+    fullName,
+    displayName,
+    assignedName,
+    loading,
+    // Helpers
+    isAssigned: !!profile,
+    userId: profile?.id || null,
+  };
+};

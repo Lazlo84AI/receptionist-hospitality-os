@@ -18,62 +18,66 @@ export default {
 			}
 		},
 		extend: {
-			fontFamily: {
-				'playfair': ['Playfair Display', 'serif'],
-				'inter': ['Inter', 'sans-serif'],
-			},
-			colors: {
-				border: 'hsl(var(--border))',
-				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
-				background: 'hsl(var(--background))',
-				foreground: 'hsl(var(--foreground))',
-				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+		fontFamily: {
+		'playfair': ['Playfair Display', 'serif'],
+		'inter': ['Inter', 'sans-serif'],
+		'jost': ['Jost', 'system-ui', '-apple-system', 'sans-serif'],
+		},
+				colors: {
+					border: 'hsl(var(--border))',
+					input: 'hsl(var(--input))',
+					ring: 'hsl(var(--ring))',
+					background: 'hsl(var(--background))',
+					foreground: 'hsl(var(--foreground))',
+					primary: {
+						DEFAULT: 'hsl(var(--primary))',
+						foreground: 'hsl(var(--primary-foreground))'
+					},
+					secondary: {
+						DEFAULT: 'hsl(var(--secondary))',
+						foreground: 'hsl(var(--secondary-foreground))'
+					},
+					destructive: {
+						DEFAULT: 'hsl(var(--destructive))',
+						foreground: 'hsl(var(--destructive-foreground))'
+					},
+					muted: {
+						DEFAULT: 'hsl(var(--muted))',
+						foreground: 'hsl(var(--muted-foreground))'
+					},
+					accent: {
+						DEFAULT: 'hsl(var(--accent))',
+						foreground: 'hsl(var(--accent-foreground))'
+					},
+					popover: {
+						DEFAULT: 'hsl(var(--popover))',
+						foreground: 'hsl(var(--popover-foreground))'
+					},
+					card: {
+						DEFAULT: 'hsl(var(--card))',
+						foreground: 'hsl(var(--card-foreground))'
+					},
+					sidebar: {
+						DEFAULT: 'hsl(var(--sidebar-background))',
+						foreground: 'hsl(var(--sidebar-foreground))',
+						primary: 'hsl(var(--sidebar-primary))',
+						'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+						accent: 'hsl(var(--sidebar-accent))',
+						'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+						border: 'hsl(var(--sidebar-border))',
+						ring: 'hsl(var(--sidebar-ring))'
+					},
+					// Hotel Brand Colors
+					'hotel-navy': 'hsl(var(--hotel-navy))',
+					'hotel-yellow': 'hsl(var(--hotel-yellow))',
+					'hotel-gold': 'hsl(var(--hotel-gold))',
+					'hotel-white': 'hsl(var(--hotel-white))',
+					'hotel-sand': 'hsl(var(--hotel-sand))',
+					'hotel-gold-light': 'hsl(var(--hotel-gold-light))',
+					'hotel-gold-dark': 'hsl(var(--hotel-gold-dark))',
+					'selected': 'hsl(var(--selected))',
+					'selected-foreground': 'hsl(var(--selected-foreground))',
 				},
-				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
-				},
-				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
-				},
-				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
-				},
-				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
-				},
-				popover: {
-					DEFAULT: 'hsl(var(--popover))',
-					foreground: 'hsl(var(--popover-foreground))'
-				},
-				card: {
-					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
-				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
-				},
-				'palace-navy': 'hsl(var(--palace-navy))',
-				'champagne-gold': 'hsl(var(--champagne-gold))',
-				'warm-cream': 'hsl(var(--warm-cream))',
-				'soft-pewter': 'hsl(var(--soft-pewter))',
-				'urgence-red': 'hsl(var(--urgence-red))',
-				'success-green': 'hsl(var(--success-green))',
-				'warning-orange': 'hsl(var(--warning-orange))'
-			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',

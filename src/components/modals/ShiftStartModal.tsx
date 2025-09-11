@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { ShiftFacingCard } from '@/components/cards';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -14,11 +15,7 @@ import {
   SkipBack, 
   User, 
   MapPin, 
-  Calendar, 
-  AlertTriangle, 
-  Users, 
-  Clock, 
-  Wrench,
+  Calendar,
   Check,
   Eye,
   ChevronDown,
@@ -26,10 +23,17 @@ import {
   MessageCircle,
   CheckSquare,
   MoveUp,
-  Paperclip
+  Paperclip,
+  FileAudio,
+  FileText,
+  AlertTriangle, 
+  Users, 
+  Clock, 
+  Wrench
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
+import { useLatestShiftHandover } from '@/hooks/useShiftData';
 
 interface ShiftStartModalProps {
   isOpen: boolean;
@@ -38,36 +42,37 @@ interface ShiftStartModalProps {
   onShiftStarted: () => void;
 }
 
-const getTypeConfig = (type: string) => {
+// Configuration pour le modal de détails (toujours nécessaire)
+const getTypeConfigForDetails = (type: string) => {
   switch (type) {
     case 'incident':
       return { 
         icon: AlertTriangle, 
-        color: 'bg-urgence-red text-warm-cream',
+        color: 'bg-red-100 text-red-600',
         label: 'Incident' 
       };
     case 'client_request':
       return { 
         icon: Users, 
-        color: 'bg-champagne-gold text-palace-navy',
+        color: 'bg-green-100 text-green-600',
         label: 'Client Request' 
       };
     case 'follow_up':
       return { 
         icon: Clock, 
-        color: 'bg-palace-navy text-warm-cream',
+        color: 'bg-gray-600 text-white',
         label: 'Follow-up' 
       };
     case 'internal_task':
       return { 
         icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
+        color: 'bg-yellow-100 text-yellow-600',
         label: 'Internal Task' 
       };
     default:
       return { 
         icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
+        color: 'bg-gray-100 text-gray-600',
         label: 'Task' 
       };
   }
@@ -79,6 +84,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   tasks, 
   onShiftStarted 
 }) => {
+  const { shiftData, loading: shiftDataLoading, error: shiftDataError } = useLatestShiftHandover();
   const [currentStep, setCurrentStep] = useState<'voice' | 'tasks'>('voice');
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [readTasks, setReadTasks] = useState<Set<string>>(new Set());
@@ -149,9 +155,6 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const typeConfig = currentTask ? getTypeConfig(currentTask.type) : null;
-  const TypeIcon = typeConfig?.icon;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
@@ -189,10 +192,13 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
               <div className="space-y-6">
                 <div className="text-center mb-8">
                   <h3 className="text-lg font-semibold mb-2">
-                    Voice Note from Your Predecessor
+                    {shiftData ? 'Voice Note from Your Predecessor' : 'Shift Handover Information'}
                   </h3>
                   <p className="text-muted-foreground">
-                    Listen to key information from the previous team
+                    {shiftData 
+                      ? `Key information from ${shiftData.previous_shift_user || 'the previous team'}` 
+                      : 'No handover data available from previous shift'
+                    }
                   </p>
                 </div>
 
@@ -200,81 +206,83 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   {/* Audio Player - Left side */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Audio Player</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FileAudio className="h-4 w-4" />
+                        Audio Player
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {/* Progress Bar */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{formatTime(audioCurrentTime)}</span>
-                            <span>{formatTime(audioDuration)}</span>
-                          </div>
-                          <div className="w-full bg-muted h-2 rounded-full overflow-hidden cursor-pointer">
-                            <div 
-                              className="h-full bg-primary transition-all duration-300"
-                              style={{ width: `${(audioCurrentTime / audioDuration) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Controls */}
-                        <div className="flex items-center justify-center gap-4">
-                          <Button variant="outline" size="icon" onClick={skipBack}>
-                            <SkipBack className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" onClick={toggleAudio} className="h-12 w-12">
-                            {isPlaying ? (
-                              <Pause className="h-5 w-5" />
-                            ) : (
-                              <Play className="h-5 w-5" />
+                      {shiftData?.voice_note_url ? (
+                        <div className="space-y-4">
+                          {/* Audio element */}
+                          <audio 
+                            controls 
+                            className="w-full"
+                            preload="metadata"
+                          >
+                            <source src={shiftData.voice_note_url} type="audio/mpeg" />
+                            <source src={shiftData.voice_note_url} type="audio/wav" />
+                            Your browser does not support the audio element.
+                          </audio>
+                          <p className="text-xs text-muted-foreground">
+                            Left by {shiftData.previous_shift_user || 'Previous team member'}
+                            {shiftData.previous_shift_end_time && (
+                              <> • {new Date(shiftData.previous_shift_end_time).toLocaleString('fr-FR')}</>
                             )}
-                          </Button>
+                          </p>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <FileAudio className="h-12 w-12 text-muted-foreground mb-4" />
+                          <p className="text-sm text-muted-foreground">
+                            No voice note available from the previous shift
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
-                  {/* Text Transcript - Right side with scroll */}
+                  {/* Text Transcript or Handover Notes - Right side with scroll */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Transcription of the Voice Note</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        {shiftData?.voice_note_transcription ? 'Transcription of the Voice Note' : 'Handover Notes'}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="max-h-64 overflow-y-auto text-sm leading-relaxed space-y-3 pr-2">
-                        <p>
-                          Hello to the next shift team. Here are the key points to remember for your service:
-                        </p>
-                        <p>
-                          The air conditioning in the Presidential Suite is still out of order. The technician is scheduled to come at 9 AM. 
-                          Mr. Anderson, who is staying in the suite, will need to be assisted. Note that he is a very demanding VIP guest who already 
-                          expressed dissatisfaction last night.
-                        </p>
-                        <p>
-                          In Room 305, the Dubois family has a baby crib set up, but they've requested additional hypoallergenic products 
-                          for their child. Marie from the housekeeping team has the contact details for the specialized supplier.
-                        </p>
-                        <p>
-                          Dr. Williams in Suite 102 expressed satisfaction with the office setup. He wants to extend his stay by two 
-                          additional nights. His reservation needs to be modified and availability must be checked with reservations.
-                        </p>
-                        <p>
-                          The housekeeping team is short-staffed today. Prioritize VIP rooms and scheduled departures. 
-                          Please note, three team members are absent due to illness.
-                        </p>
-                        <p>
-                          The reservation system had some bugs yesterday afternoon. Please double-check all day's reservations 
-                          and don't hesitate to call technical support if anything seems unusual.
-                        </p>
-                        <p>
-                          There was also an issue with the main elevator. It has been fixed but keep an eye on it 
-                          and immediately notify maintenance if you hear any unusual noises.
-                        </p>
-                        <p>
-                          Don't forget that we have a group of 15 people arriving this afternoon for a corporate event. 
-                          They have specific requirements for the welcome cocktail.
-                        </p>
-                      </div>
+                      {(shiftData?.voice_note_transcription || shiftData?.handover_notes) ? (
+                        <div className="max-h-64 overflow-y-auto text-sm leading-relaxed space-y-3 pr-2">
+                          {shiftData.voice_note_transcription && (
+                            <div className="space-y-3">
+                              {shiftData.voice_note_transcription.split('\n\n').map((paragraph, index) => (
+                                <p key={index} className="text-foreground">
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          {shiftData.handover_notes && !shiftData.voice_note_transcription && (
+                            <div className="space-y-3">
+                              {shiftData.handover_notes.split('\n').map((line, index) => (
+                                <p key={index} className="text-foreground">
+                                  {line}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                          <p className="text-sm text-muted-foreground mb-2">
+                            No transcription or handover notes available
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            The previous shift didn't leave any written information
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -286,88 +294,24 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                 </div>
               </div>
             ) : (
-              // Tasks Review Section
+              // Tasks Review Section avec ShiftFacingCard
               <div className="space-y-6">
                 {/* Task Card */}
-                <Card>
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        {TypeIcon && (
-                          <div className={cn("p-2 rounded-full", typeConfig.color)}>
-                            <TypeIcon className="h-5 w-5" />
-                          </div>
-                        )}
-                        <div>
-                          <Badge variant="outline" className="mb-2">
-                            {typeConfig?.label}
-                          </Badge>
-                          <CardTitle className="text-lg">
-                            {currentTask?.title}
-                          </CardTitle>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {currentTask?.priority === 'urgent' && (
-                          <Badge className="bg-urgence-red text-warm-cream">
-                            Urgent
-                          </Badge>
-                        )}
-                        {readTasks.has(currentTask?.id || '') && (
-                          <div className="flex items-center gap-1 text-green-600">
-                            <Check className="h-4 w-4" />
-                            <span className="text-xs">Read</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
+                <div className="max-w-2xl mx-auto">
+                  <ShiftFacingCard 
+                    task={currentTask}
+                    onClick={() => setShowTaskDetail(true)}
+                    className="hover:border-blue-400 hover:shadow-lg"
+                  />
                   
-                  <CardContent className="space-y-4">
-                    {currentTask?.description && (
-                      <p className="text-muted-foreground">
-                        {currentTask.description}
-                      </p>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {currentTask?.guestName && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>{currentTask.guestName}</span>
-                        </div>
-                      )}
-                      
-                      {currentTask?.roomNumber && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>Room {currentTask.roomNumber}</span>
-                        </div>
-                      )}
-                      
-                      {currentTask?.location && !currentTask?.roomNumber && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{currentTask.location}</span>
-                        </div>
-                      )}
-                      
-                      {currentTask?.assignedTo && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>Assigned to {currentTask.assignedTo}</span>
-                        </div>
-                      )}
-                      
-                      {currentTask?.dueDate && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>{new Date(currentTask.dueDate).toLocaleDateString('fr-FR')}</span>
-                        </div>
-                      )}
+                  {/* Status de lecture */}
+                  {readTasks.has(currentTask?.id || '') && (
+                    <div className="mt-3 flex items-center justify-center gap-2 text-green-600">
+                      <Check className="h-4 w-4" />
+                      <span className="text-sm font-medium">Task Read</span>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -413,20 +357,24 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
               Task Details
             </DialogTitle>
           </DialogHeader>
-          {currentTask && (
+          {currentTask && (() => {
+            const typeConfig = getTypeConfigForDetails(currentTask.type);
+            const TypeIcon = typeConfig.icon;
+            
+            return (
             <div className="space-y-6">
               {/* Task Header */}
               <div className="flex items-start gap-3">
-                <div className={cn("p-3 rounded-full", typeConfig?.color)}>
-                  {TypeIcon && <TypeIcon className="h-6 w-6" />}
+                <div className={cn("p-3 rounded-full", typeConfig.color)}>
+                  <TypeIcon className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
                   <Badge variant="outline" className="mb-2">
-                    {typeConfig?.label}
+                    {typeConfig.label}
                   </Badge>
                   <h3 className="text-xl font-semibold mb-2">{currentTask.title}</h3>
                   {currentTask.priority === 'urgent' && (
-                    <Badge className="bg-urgence-red text-warm-cream">
+                    <Badge className="bg-red-500 text-white">
                       Urgent
                     </Badge>
                   )}
@@ -532,7 +480,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   </p>
                 </div>
 
-                {/* Commentaires postés */}
+                {/* Commentaires postés - TEMPORAIRE hardcodé */}
                 <div className="space-y-3">
                   <div className="flex space-x-3">
                     <div className="flex-shrink-0">
@@ -558,6 +506,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   <h4 className="font-medium text-foreground">Reminder(s) configuré(s)</h4>
                 </div>
                 
+                {/* TEMPORAIRE hardcodé */}
                 <div className="bg-muted/30 rounded-lg p-4">
                   <p className="text-foreground mb-2">
                     Vérification tous les vendredis à 16h pour la maintenance préventive
@@ -572,6 +521,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
               <div className="border-t pt-6">
                 <h4 className="font-medium text-foreground mb-4">Activités récentes</h4>
                 
+                {/* TEMPORAIRE hardcodé */}
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -580,22 +530,6 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     <span>Sophie Martin a programmé un reminder – il y a 48h</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>Marie Dubois a complété une tâche de checklist – il y a 6h</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <span>Une pièce jointe a été ajoutée par Pierre Leroy – il y a 8h</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span>Pierre Leroy a escaladé par email – il y a 12h</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Carte assignée à {currentTask.assignedTo} par Sophie Martin – il y a 1j</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
@@ -610,7 +544,8 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                 </Button>
               </div>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </Dialog>

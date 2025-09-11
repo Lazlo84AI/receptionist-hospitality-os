@@ -7,6 +7,34 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ReminderModal } from '@/components/modals/ReminderModal';
+import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { 
   X, 
   Users, 
@@ -15,7 +43,9 @@ import {
   AlertTriangle,
   CheckSquare,
   Edit3,
-  Check
+  Check,
+  MoveUp,
+  Paperclip
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
@@ -35,6 +65,18 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
   const [hasChanges, setHasChanges] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [originalTask] = useState<TaskItem>(task);
+  const [newLocation, setNewLocation] = useState<string>('');
+  
+  // States for modals
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [checklistTitle, setChecklistTitle] = useState('Checklist');
+  const [showChecklistDialog, setShowChecklistDialog] = useState(false);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
+  const [showEscaladeDialog, setShowEscaladeDialog] = useState(false);
+  const [showAttachmentDialog, setShowAttachmentDialog] = useState(false);
+  const [escaladeMethod, setEscaladeMethod] = useState('email');
+  const [selectedEscaladeMember, setSelectedEscaladeMember] = useState('');
   
   const { profiles } = useProfiles();
   const { locations } = useLocations();
@@ -48,6 +90,13 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
   const handleFieldChange = (field: keyof TaskItem, value: any) => {
     setEditedTask(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
+  };
+
+  const confirmLocationChange = () => {
+    if (newLocation) {
+      handleFieldChange('location', newLocation);
+      setNewLocation('');
+    }
   };
 
   const handleSave = async () => {
@@ -74,7 +123,6 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
         });
       }
 
-      // Save the task regardless of webhook success
       onSave(editedTask);
     } catch (error) {
       console.error('Error sending webhook:', error);
@@ -94,23 +142,6 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
     setHasChanges(false);
     onClose();
   };
-
-  const getTypeConfig = (type: string) => {
-    switch (type) {
-      case 'incident':
-        return { color: 'bg-urgence-red text-warm-cream', label: 'Incident' };
-      case 'client_request':
-        return { color: 'bg-champagne-gold text-palace-navy', label: 'Demande client' };
-      case 'follow_up':
-        return { color: 'bg-palace-navy text-warm-cream', label: 'Relance' };
-      case 'internal_task':
-        return { color: 'bg-muted text-muted-foreground', label: 'Tâche interne' };
-      default:
-        return { color: 'bg-muted text-muted-foreground', label: 'Tâche' };
-    }
-  };
-
-  const typeConfig = getTypeConfig(editedTask.type);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -147,52 +178,28 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                 />
               </div>
 
-              {/* Catégorie et Priorité */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Catégorie</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {(['incident', 'client_request', 'follow_up', 'internal_task'] as const).map((type) => {
-                      const config = getTypeConfig(type);
-                      return (
-                        <Button
-                          key={type}
-                          variant={editedTask.type === type ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleFieldChange('type', type)}
-                          className={cn(
-                            editedTask.type === type && config.color
-                          )}
-                        >
-                          {config.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Niveau de priorité</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={editedTask.priority === 'normal' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFieldChange('priority', 'normal')}
-                    >
-                      Normale
-                    </Button>
-                    <Button
-                      variant={editedTask.priority === 'urgent' ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFieldChange('priority', 'urgent')}
-                      className={cn(
-                        editedTask.priority === 'urgent' && "bg-urgence-red text-warm-cream"
-                      )}
-                    >
-                      <AlertTriangle className="h-4 w-4 mr-1" />
-                      Urgence
-                    </Button>
-                  </div>
+              {/* Priorité */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Niveau de priorité</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={editedTask.priority === 'normal' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleFieldChange('priority', 'normal')}
+                  >
+                    Normale
+                  </Button>
+                  <Button
+                    variant={editedTask.priority === 'urgent' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleFieldChange('priority', 'urgent')}
+                    className={cn(
+                      editedTask.priority === 'urgent' && "bg-urgence-red text-warm-cream"
+                    )}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    Urgence
+                  </Button>
                 </div>
               </div>
 
@@ -216,21 +223,87 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                 </div>
               </div>
 
-              {/* Assignation */}
+              {/* Barre d'outils Task Enhancement */}
+              <div className="border rounded-lg p-4 bg-muted/30">
+                <h3 className="text-sm font-medium mb-3">Task Enhancement</h3>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                    onClick={() => setShowReminderModal(true)}
+                  >
+                    <Clock className="h-4 w-4 text-palace-navy" />
+                    <span className="text-sm text-palace-navy">Reminder</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                    onClick={() => setShowChecklistDialog(true)}
+                  >
+                    <CheckSquare className="h-4 w-4 text-palace-navy" />
+                    <span className="text-sm text-palace-navy">Checklist</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                    onClick={() => setShowMembersDialog(true)}
+                  >
+                    <Users className="h-4 w-4 text-palace-navy" />
+                    <span className="text-sm text-palace-navy">Members</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                    onClick={() => setShowEscaladeDialog(true)}
+                  >
+                    <MoveUp className="h-4 w-4 text-palace-navy" />
+                    <span className="text-sm text-palace-navy">Escalation</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2 px-3 py-2 border border-border rounded-md bg-background hover:bg-muted"
+                    onClick={() => setShowAttachmentDialog(true)}
+                  >
+                    <Paperclip className="h-4 w-4 text-palace-navy" />
+                    <span className="text-sm text-palace-navy">Attachment</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Assignation - Lecture seule + Bouton Members */}
               <div className="space-y-2">
                 <Label htmlFor="assignedTo" className="text-sm font-medium">
                   <Users className="h-4 w-4 inline mr-1" />
                   Assigned Member
                 </Label>
-                <Input
-                  id="assignedTo"
-                  value={editedTask.assignedTo || ''}
-                  onChange={(e) => handleFieldChange('assignedTo', e.target.value)}
-                  placeholder="Nom du membre assigné"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="assignedTo"
+                    value={editedTask.assignedTo || 'Non assigné'}
+                    readOnly
+                    className="flex-1 bg-muted/50 cursor-not-allowed"
+                    placeholder="Aucun membre assigné"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center space-x-2 px-3 py-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span className="text-sm">Members</span>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Utilisez le bouton "Members" pour ajouter des membres ayant la même fonction
+                </p>
               </div>
 
-              {/* Localisation */}
+              {/* Localisation - Sélecteur avec double validation */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {editedTask.roomNumber && (
                   <div className="space-y-2">
@@ -248,15 +321,88 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
 
                 {editedTask.location && (
                   <div className="space-y-2">
-                    <Label htmlFor="location" className="text-sm font-medium">
+                    <Label className="text-sm font-medium">
                       <MapPin className="h-4 w-4 inline mr-1" />
                       Localisation
                     </Label>
-                    <Input
-                      id="location"
-                      value={editedTask.location}
-                      onChange={(e) => handleFieldChange('location', e.target.value)}
-                    />
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 p-2 bg-muted/50 rounded border">
+                        <span className="text-sm">{editedTask.location}</span>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            Modifier
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Modifier la localisation</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Êtes-vous sûr de vouloir modifier la localisation ? Cette action changera l'emplacement de la tâche.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <div className="py-4">
+                            <Label className="text-sm font-medium">Location *</Label>
+                            <div className="mt-2 space-y-4">
+                              {/* Rooms */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                                  <span className="text-sm font-medium">Rooms</span>
+                                </div>
+                                <Select onValueChange={(value) => setNewLocation(value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a room" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {locations
+                                      .filter(loc => loc.type === 'room')
+                                      .map(location => (
+                                        <SelectItem key={location.id} value={location.name}>
+                                          {location.name}
+                                        </SelectItem>
+                                      ))
+                                    }
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {/* Common Areas */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                                  <span className="text-sm font-medium">Common Areas</span>
+                                </div>
+                                <Select onValueChange={(value) => setNewLocation(value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a common area" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {locations
+                                      .filter(loc => loc.type === 'common_area')
+                                      .map(location => (
+                                        <SelectItem key={location.id} value={location.name}>
+                                          {location.name}
+                                        </SelectItem>
+                                      ))
+                                    }
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={confirmLocationChange}
+                              disabled={!newLocation}
+                            >
+                              Confirmer la modification
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 )}
               </div>
@@ -304,6 +450,14 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
                     onChange={(e) => handleFieldChange('dueDate', e.target.value)}
                   />
                 </div>
+              )}
+
+              {/* Affichage de la checklist si créée */}
+              {showChecklist && (
+                <ChecklistComponent
+                  title={checklistTitle}
+                  onDelete={() => setShowChecklist(false)}
+                />
               )}
 
               {/* Description */}
@@ -372,6 +526,212 @@ export const EditTaskModal = ({ isOpen, onClose, task, onSave }: EditTaskModalPr
           </div>
         </div>
       </DialogContent>
+      
+      {/* Reminder Modal */}
+      <ReminderModal
+        isOpen={showReminderModal}
+        onClose={() => setShowReminderModal(false)}
+      />
+      
+      {/* Dialog Checklist */}
+      <Dialog open={showChecklistDialog} onOpenChange={setShowChecklistDialog}>
+        <DialogContent className="max-w-md">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Add a Checklist</h2>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Title</Label>
+                <Input
+                  value={checklistTitle}
+                  onChange={(e) => setChecklistTitle(e.target.value)}
+                  placeholder="Checklist"
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowChecklistDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowChecklist(true);
+                    setShowChecklistDialog(false);
+                  }}
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog Membres */}
+      <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
+        <DialogContent className="max-w-md">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Attribution de membres</h2>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Rechercher des membres</Label>
+                <Input
+                  placeholder="Rechercher des membres..."
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <h5 className="text-sm font-medium mb-3">Membres de l'annuaire de l'hôtel</h5>
+                <div className="space-y-2">
+                  {profiles.slice(0, 4).map((profile) => (
+                    <div key={profile.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-medium">
+                          {profile.first_name?.[0]}{profile.last_name?.[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">{profile.first_name} {profile.last_name}</span>
+                        <p className="text-xs text-muted-foreground">{profile.role}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => setShowMembersDialog(false)}
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Assigner
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog Escalade */}
+      <Dialog open={showEscaladeDialog} onOpenChange={setShowEscaladeDialog}>
+        <DialogContent className="max-w-md">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Choix du canal</h2>
+            <div className="space-y-6">
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Canal de communication</Label>
+                <RadioGroup value={escaladeMethod} onValueChange={setEscaladeMethod} className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="email" id="email" />
+                    <Label htmlFor="email" className="text-sm">Envoi d'un email</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="whatsapp" id="whatsapp" />
+                    <Label htmlFor="whatsapp" className="text-sm">Envoi d'un message WhatsApp</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Destinataire</Label>
+                <Input
+                  placeholder="Rechercher des membres..."
+                  className="mb-3"
+                />
+                
+                <div className="space-y-2">
+                  {profiles.slice(0, 3).map((profile) => (
+                    <div 
+                      key={profile.id} 
+                      className={`flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors ${
+                        selectedEscaladeMember === profile.id ? 'bg-blue-100 border border-blue-300' : ''
+                      }`}
+                      onClick={() => setSelectedEscaladeMember(profile.id)}
+                    >
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-medium">
+                          {profile.first_name?.[0]}{profile.last_name?.[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">{profile.first_name} {profile.last_name}</span>
+                        <p className="text-xs text-muted-foreground">{profile.role}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    console.log(`Escalade via ${escaladeMethod} vers ${selectedEscaladeMember}`);
+                    setShowEscaladeDialog(false);
+                  }}
+                  disabled={!selectedEscaladeMember}
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Envoyer
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog Attachment */}
+      <Dialog open={showAttachmentDialog} onOpenChange={setShowAttachmentDialog}>
+        <DialogContent className="max-w-md">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Add attachment
+            </h2>
+            <div className="space-y-6">
+              <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 text-muted-foreground">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7,10 12,15 17,10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium mb-1">Drag and drop your files here</p>
+                <p className="text-xs text-muted-foreground mb-4">or click to browse</p>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-3">OR</p>
+                <p className="text-sm font-medium mb-2">PASTE A LINK TO THIS DOCUMENT</p>
+                <p className="text-xs text-muted-foreground mb-3">Internet URL, company drive link, etc.</p>
+                <Input
+                  placeholder="https://exemple.com/document or drive.co..."
+                  className="mb-3"
+                />
+                <Button size="sm" variant="outline">
+                  Add Link
+                </Button>
+              </div>
+              
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAttachmentDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button className="bg-blue-600 text-white hover:bg-blue-700">
+                  Add
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

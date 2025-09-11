@@ -47,17 +47,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: metadata
-      }
-    });
-    return { error };
+    try {
+      console.log('=== DEBUG SIGNUP START ===');
+      console.log('Email:', email);
+      console.log('Password length:', password.length);
+      console.log('Raw metadata:', metadata);
+      
+      // Test direct avec supabase pour voir si les métadonnées passent
+      const signUpData = {
+        email,
+        password,
+        options: {
+          data: metadata || {}
+        }
+      };
+      
+      console.log('Sending to Supabase:', JSON.stringify(signUpData, null, 2));
+      
+      const response = await supabase.auth.signUp(signUpData);
+      
+      console.log('Full Supabase response:', response);
+      console.log('Response data:', response.data);
+      console.log('Response error:', response.error);
+      console.log('User data:', response.data?.user);
+      console.log('User metadata:', response.data?.user?.user_metadata);
+      console.log('=== DEBUG SIGNUP END ===');
+      
+      return { error: response.error };
+    } catch (err) {
+      console.error('SignUp catch error:', err);
+      return { error: err };
+    }
   };
 
   const signOut = async () => {

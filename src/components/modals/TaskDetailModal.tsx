@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,15 +12,18 @@ import {
   Clock, 
   Wrench,
   MessageSquare,
-  Bell
+  Bell,
+  Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
+import { TaskFullEditView } from '@/components/modules/TaskFullEditView';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: TaskItem | null;
+  onUpdateTask?: (updatedTask: TaskItem) => void;
 }
 
 const getTypeConfig = (type: string) => {
@@ -61,12 +64,29 @@ const getTypeConfig = (type: string) => {
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
   isOpen, 
   onClose, 
-  task 
+  task,
+  onUpdateTask
 }) => {
+  const [isFullEditOpen, setIsFullEditOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+
   if (!task) return null;
 
   const typeConfig = getTypeConfig(task.type);
   const TypeIcon = typeConfig.icon;
+
+  const handleEditClick = () => {
+    setEditingTask(task);
+    setIsFullEditOpen(true);
+  };
+
+  const handleSaveTask = (updatedTask: TaskItem) => {
+    if (onUpdateTask) {
+      onUpdateTask(updatedTask);
+    }
+    setIsFullEditOpen(false);
+    setEditingTask(null);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -76,9 +96,20 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             <DialogTitle className="text-lg font-semibold">
               Task Details
             </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleEditClick}
+                className="flex items-center gap-2"
+              >
+                <Edit3 className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -222,6 +253,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
         </div>
       </DialogContent>
+      
+      {/* TaskFullEditView - Full Editable Card */}
+      {editingTask && (
+        <TaskFullEditView
+          isOpen={isFullEditOpen}
+          onClose={() => {
+            setIsFullEditOpen(false);
+            setEditingTask(null);
+          }}
+          task={editingTask}
+          onSave={handleSaveTask}
+        />
+      )}
     </Dialog>
   );
 };

@@ -34,7 +34,51 @@ export const useTasks = () => {
         return;
       }
       
-      // Fetch all task types in parallel - for now, show all tasks until we implement proper user assignment
+      // Try to use unified_tasks view first, fallback to individual tables
+      try {
+        const { data, error } = await supabase
+          .from('unified_tasks')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.warn('unified_tasks view not available, falling back to individual tables:', error);
+          throw error;
+        }
+
+        // Transform unified tasks to TaskItem format with proper date handling
+        const unifiedTasks: TaskItem[] = (data || []).map((task: any) => ({
+          id: task.id,
+          title: task.title,
+          type: task.task_category, // Use task_category from the view
+          priority: mapPriority(task.priority),
+          status: task.status,
+          description: task.description || undefined,
+          assignedTo: task.assigned_to || undefined,
+          location: task.location || undefined,
+          guestName: task.guest_name || undefined,
+          roomNumber: task.room_number || undefined,
+          recipient: task.recipient || undefined,
+          dueDate: task.due_date || task.arrival_date || undefined,
+          created_at: new Date(task.created_at),
+          updated_at: new Date(task.updated_at)
+        })).sort((a, b) => {
+          // Sort by status first, then by updated_at for position within column
+          if (a.status !== b.status) {
+            const statusOrder = { 'pending': 0, 'in_progress': 1, 'completed': 2 };
+            return (statusOrder[a.status as keyof typeof statusOrder] || 999) - (statusOrder[b.status as keyof typeof statusOrder] || 999);
+          }
+          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        });
+
+        setTasks(unifiedTasks);
+        setError(null);
+        return;
+      } catch (viewError) {
+        console.log('Falling back to individual table queries...');
+      }
+      
+      // Fallback: Fetch all task types in parallel from individual tables
       const [incidentsResult, clientRequestsResult, followUpsResult, internalTasksResult] = await Promise.all([
         supabase.from('incidents').select('*'),
         supabase.from('client_requests').select('*'),
@@ -58,8 +102,8 @@ export const useTasks = () => {
         description: incident.description || undefined,
         assignedTo: incident.assigned_to || undefined,
         location: incident.location || undefined,
-        created_at: incident.created_at,
-        updated_at: incident.updated_at
+        created_at: new Date(incident.created_at),
+        updated_at: new Date(incident.updated_at)
       }));
 
       // Transform client requests
@@ -74,8 +118,8 @@ export const useTasks = () => {
         guestName: request.guest_name,
         roomNumber: request.room_number,
         dueDate: request.arrival_date || undefined,
-        created_at: request.created_at,
-        updated_at: request.updated_at
+        created_at: new Date(request.created_at),
+        updated_at: new Date(request.updated_at)
       }));
 
       // Transform follow-ups
@@ -89,8 +133,8 @@ export const useTasks = () => {
         assignedTo: followUp.assigned_to || undefined,
         recipient: followUp.recipient,
         dueDate: followUp.due_date || undefined,
-        created_at: followUp.created_at,
-        updated_at: followUp.updated_at
+        created_at: new Date(followUp.created_at),
+        updated_at: new Date(followUp.updated_at)
       }));
 
       // Transform internal tasks
@@ -104,12 +148,20 @@ export const useTasks = () => {
         assignedTo: task.assigned_to || undefined,
         location: task.location || undefined,
         dueDate: task.due_date || undefined,
-        created_at: task.created_at,
-        updated_at: task.updated_at
+        created_at: new Date(task.created_at),
+        updated_at: new Date(task.updated_at)
       }));
 
-      // Combine all tasks
-      const allTasks = [...incidents, ...clientRequests, ...followUps, ...internalTasks];
+      // Combine all tasks and sort them properly
+      const allTasks = [...incidents, ...clientRequests, ...followUps, ...internalTasks]
+        .sort((a, b) => {
+          // Sort by status first, then by updated_at for position within column
+          if (a.status !== b.status) {
+            const statusOrder = { 'pending': 0, 'in_progress': 1, 'completed': 2 };
+            return (statusOrder[a.status as keyof typeof statusOrder] || 999) - (statusOrder[b.status as keyof typeof statusOrder] || 999);
+          }
+          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        });
       setTasks(allTasks);
       setError(null);
     } catch (err) {
@@ -123,32 +175,17 @@ export const useTasks = () => {
   useEffect(() => {
     fetchTasks();
 
-    // Set up real-time subscriptions
-    const incidentsSubscription = supabase
-      .channel('incidents-channel')
+    // Set up real-time subscriptions to individual tables (more reliable)
+    const subscription = supabase
+      .channel('all-tasks-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, fetchTasks)
-      .subscribe();
-
-    const clientRequestsSubscription = supabase
-      .channel('client-requests-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_requests' }, fetchTasks)
-      .subscribe();
-
-    const followUpsSubscription = supabase
-      .channel('follow-ups-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follow_ups' }, fetchTasks)
-      .subscribe();
-
-    const internalTasksSubscription = supabase
-      .channel('internal-tasks-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_tasks' }, fetchTasks)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(incidentsSubscription);
-      supabase.removeChannel(clientRequestsSubscription);
-      supabase.removeChannel(followUpsSubscription);
-      supabase.removeChannel(internalTasksSubscription);
+      supabase.removeChannel(subscription);
     };
   }, []);
 

@@ -1,0 +1,164 @@
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import { useUserProfile } from './useUserProfile';
+import { toast } from 'sonner';
+
+/**
+ * Hook pour créer automatiquement des tâches avec assignation à l'utilisateur courant
+ */
+export const useTaskCreation = () => {
+  const { user } = useAuth();
+  const { userId, fullName } = useUserProfile();
+
+  const createIncident = async (incidentData: {
+    title: string;
+    description?: string;
+    incident_type: string;
+    location?: string;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+  }) => {
+    if (!user || !userId) {
+      toast.error('You must be logged in to create tasks');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .insert({
+          ...incidentData,
+          assigned_to: userId, // Auto-assign to current user
+          created_by: userId,
+          priority: incidentData.priority || 'medium'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Incident created and assigned to ${fullName}`);
+      return data;
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      toast.error('Failed to create incident');
+      return null;
+    }
+  };
+
+  const createClientRequest = async (requestData: {
+    guest_name: string;
+    room_number: string;
+    request_type: string;
+    request_details?: string;
+    arrival_date?: string;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+  }) => {
+    if (!user || !userId) {
+      toast.error('You must be logged in to create tasks');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('client_requests')
+        .insert({
+          ...requestData,
+          assigned_to: userId, // Auto-assign to current user
+          priority: requestData.priority || 'medium'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Client request created and assigned to ${fullName}`);
+      return data;
+    } catch (error) {
+      console.error('Error creating client request:', error);
+      toast.error('Failed to create client request');
+      return null;
+    }
+  };
+
+  const createFollowUp = async (followUpData: {
+    title: string;
+    follow_up_type: string;
+    recipient: string;
+    notes?: string;
+    due_date?: string;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+  }) => {
+    if (!user || !userId) {
+      toast.error('You must be logged in to create tasks');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('follow_ups')
+        .insert({
+          ...followUpData,
+          assigned_to: userId, // Auto-assign to current user
+          priority: followUpData.priority || 'medium'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Follow-up created and assigned to ${fullName}`);
+      return data;
+    } catch (error) {
+      console.error('Error creating follow-up:', error);
+      toast.error('Failed to create follow-up');
+      return null;
+    }
+  };
+
+  const createInternalTask = async (taskData: {
+    title: string;
+    description?: string;
+    task_type: string;
+    department?: string;
+    location?: string;
+    due_date?: string;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+  }) => {
+    if (!user || !userId) {
+      toast.error('You must be logged in to create tasks');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('internal_tasks')
+        .insert({
+          ...taskData,
+          assigned_to: userId, // Auto-assign to current user
+          created_by: userId,
+          priority: taskData.priority || 'medium'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Internal task created and assigned to ${fullName}`);
+      return data;
+    } catch (error) {
+      console.error('Error creating internal task:', error);
+      toast.error('Failed to create internal task');
+      return null;
+    }
+  };
+
+  return {
+    createIncident,
+    createClientRequest,
+    createFollowUp,
+    createInternalTask,
+    isLoggedIn: !!user && !!userId,
+    currentUserId: userId,
+    currentUserName: fullName
+  };
+};

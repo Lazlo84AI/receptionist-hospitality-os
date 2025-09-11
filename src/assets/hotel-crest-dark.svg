@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blason Decceur Hôtels Exact - Couleur #DEAE35 -->
+  
+  <!-- Couronne supérieure -->
+  <g fill="#DEAE35">
+    <!-- Partie centrale de la couronne avec créneaux -->
+    <path d="M 120 20 L 120 60 L 140 60 L 140 40 L 160 40 L 160 60 L 180 60 L 180 20 L 200 20 L 200 60 L 220 60 L 220 40 L 240 40 L 240 60 L 260 60 L 260 40 L 280 40 L 280 60 L 300 60 L 300 20 L 280 20 L 280 0 L 240 0 L 240 20 L 220 20 L 220 0 L 200 0 L 200 20 L 180 20 L 180 0 L 160 0 L 160 20 L 140 20 L 140 0 L 120 0 Z" />
+  </g>
+
+  <!-- Contour principal du blason -->
+  <g fill="none" stroke="#DEAE35" stroke-width="20">
+    <!-- Forme principale en bouclier -->
+    <path d="M 60 80 
+             L 340 80 
+             L 340 120 
+             L 360 140 
+             L 360 180 
+             L 340 200 
+             L 340 280 
+             L 320 300 
+             L 300 320 
+             L 280 340 
+             L 260 360 
+             L 240 380 
+             L 220 400 
+             L 200 420 
+             L 180 400 
+             L 160 380 
+             L 140 360 
+             L 120 340 
+             L 100 320 
+             L 80 300 
+             L 60 280 
+             L 60 200 
+             L 40 180 
+             L 40 140 
+             L 60 120 
+             Z" />
+  </g>
+
+  <!-- Tours latérales gauche -->
+  <g fill="none" stroke="#DEAE35" stroke-width="20">
+    <!-- Tour extérieure gauche -->
+    <rect x="0" y="160" width="60" height="120" />
+    <rect x="20" y="240" width="40" height="80" />
+    
+    <!-- Tour intérieure gauche avec forme hexagonale -->
+    <path d="M 80 200 L 80 240 L 60 260 L 60 300 L 80 320 L 120 320 L 140 300 L 140 260 L 120 240 L 120 200 Z" />
+    <rect x="100" y="300" width="20" height="40" />
+  </g>
+
+  <!-- Tours latérales droite (symétrie) -->
+  <g fill="none" stroke="#DEAE35" stroke-width="20">
+    <!-- Tour extérieure droite -->
+    <rect x="340" y="160" width="60" height="120" />
+    <rect x="340" y="240" width="40" height="80" />
+    
+    <!-- Tour intérieure droite avec forme hexagonale -->
+    <path d="M 320 200 L 320 240 L 340 260 L 340 300 L 320 320 L 280 320 L 260 300 L 260 260 L 280 240 L 280 200 Z" />
+    <rect x="280" y="300" width="20" height="40" />
+  </g>
+
+  <!-- Rectangle central du blason -->
+  <g fill="none" stroke="#DEAE35" stroke-width="20">
+    <rect x="140" y="120" width="120" height="180" />
+  </g>
+
+  <!-- Ancre centrale stylisée -->
+  <g fill="#DEAE35" stroke="#DEAE35" stroke-width="8">
+    <!-- Tige principale de l'ancre -->
+    <rect x="190" y="140" width="20" height="140" />
+    
+    <!-- Barre horizontale supérieure -->
+    <rect x="160" y="150" width="80" height="15" />
+    
+    <!-- Courbe droite de l'ancre -->
+    <path d="M 210 240 
+             Q 240 250 250 280 
+             Q 250 300 230 300 
+             L 220 290 
+             L 230 280 
+             Q 235 270 230 265 
+             L 210 260" 
+          fill="#DEAE35" />
+    
+    <!-- Courbe gauche de l'ancre (symétrie) -->
+    <path d="M 190 240 
+             Q 160 250 150 280 
+             Q 150 300 170 300 
+             L 180 290 
+             L 170 280 
+             Q 165 270 170 265 
+             L 190 260" 
+          fill="#DEAE35" />
+  </g>
+
+  <!-- Base en V du blason -->
+  <g fill="none" stroke="#DEAE35" stroke-width="20">
+    <path d="M 140 380 L 200 450 L 260 380" />
+    <path d="M 160 360 L 200 420 L 240 360" />
+  </g>
+</svg>

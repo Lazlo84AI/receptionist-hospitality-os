@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, X, File, Image, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Upload, X, File, Image, FileText, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
@@ -18,8 +19,9 @@ interface UploadedFile {
   id: string;
   name: string;
   size: number;
-  type: string;
-  url: string;
+  type: 'file' | 'link';
+  url?: string;
+  fileType?: string; // MIME type for files
 }
 
 export const AttachmentModal: React.FC<AttachmentModalProps> = ({ 
@@ -29,7 +31,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
   onUpdate
 }) => {
   const [dragActive, setDragActive] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachments, setAttachments] = useState<UploadedFile[]>([]);
+  const [linkUrl, setLinkUrl] = useState('');
   
   const { profiles } = useProfiles();
   const { locations } = useLocations();
@@ -68,15 +71,30 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
         id: Date.now().toString() + Math.random(),
         name: file.name,
         size: file.size,
-        type: file.type,
+        type: 'file' as const,
+        fileType: file.type,
         url: URL.createObjectURL(file)
       };
-      setUploadedFiles(prev => [...prev, newFile]);
+      setAttachments(prev => [...prev, newFile]);
     });
   };
 
+  const handleAddLink = () => {
+    if (linkUrl.trim()) {
+      const newAttachment: UploadedFile = {
+        id: Date.now().toString() + Math.random(),
+        name: linkUrl.length > 50 ? linkUrl.substring(0, 47) + '...' : linkUrl,
+        size: 0,
+        type: 'link' as const,
+        url: linkUrl
+      };
+      setAttachments(prev => [...prev, newAttachment]);
+      setLinkUrl('');
+    }
+  };
+
   const removeFile = (fileId: string) => {
-    setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+    setAttachments(prev => prev.filter(file => file.id !== fileId));
   };
 
   const formatFileSize = (bytes: number) => {
@@ -87,81 +105,173 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return <Image className="h-6 w-6" />;
-    if (type.includes('pdf') || type.includes('document')) return <FileText className="h-6 w-6" />;
+  const getFileIcon = (attachment: UploadedFile) => {
+    if (attachment.type === 'link') return <Paperclip className="h-6 w-6" />;
+    if (attachment.fileType?.startsWith('image/')) return <Image className="h-6 w-6" />;
+    if (attachment.fileType?.includes('pdf') || attachment.fileType?.includes('document')) return <FileText className="h-6 w-6" />;
     return <File className="h-6 w-6" />;
+  };
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleClickBrowse = () => {
+    inputRef.current?.click();
+  };
+
+  const handleSubmit = async () => {
+    if (task && attachments.length > 0) {
+      try {
+        const attachmentsData = attachments.map(attachment => ({
+          id: attachment.id,
+          name: attachment.name,
+          size: attachment.size,
+          type: attachment.type,
+          url: attachment.type === 'link' ? attachment.url : `drive-path-to-be-defined/${attachment.name}` // URL réelle pour links, chemin drive pour files
+        }));
+
+        // Send webhook event for task update with attachments
+        const webhookResult = await sendTaskUpdatedEvent(
+          task.id,
+          task,
+          task,
+          profiles,
+          locations,
+          {
+            attachments: attachmentsData
+          }
+        );
+
+        if (webhookResult.success) {
+          toast({
+            title: "Attachments Added",
+            description: "Attachments have been added and notification sent successfully",
+          });
+          // Call onUpdate to trigger data refresh
+          if (onUpdate) {
+            onUpdate();
+          }
+        } else {
+          toast({
+            title: "Webhook Error",
+            description: webhookResult.error || "Failed to send attachment notification",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+        toast({
+          title: "Attachment Error",
+          description: "Failed to send attachment notification",
+          variant: "destructive",
+        });
+      }
+    }
+    
+    // Reset and close
+    setAttachments([]);
+    setLinkUrl('');
+    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-playfair text-xl text-palace-navy">
-            Ajouter des pièces jointes
+          <DialogTitle className="flex items-center gap-2">
+            <Paperclip className="h-5 w-5" />
+            Add attachment
           </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Zone de drag & drop */}
-          <div
+        
+        <div className="space-y-4">
+          {/* Drag and Drop Zone */}
+          <div 
             className={cn(
-              "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors",
-              dragActive 
-                ? "border-palace-navy bg-palace-navy/5" 
-                : "border-border hover:border-palace-navy/50"
+              "border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center space-y-4 hover:border-primary/50 transition-colors cursor-pointer",
+              dragActive && "border-primary bg-primary/5"
             )}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
+            onClick={handleClickBrowse}
           >
+            <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Drag and drop your files here</p>
+              <p className="text-xs text-muted-foreground">or click to browse</p>
+            </div>
             <input
+              ref={inputRef}
               type="file"
+              className="hidden"
               multiple
               onChange={handleChange}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            
-            <Upload className="mx-auto h-12 w-12 text-soft-pewter mb-4" />
-            <h3 className="text-lg font-medium text-palace-navy mb-2">
-              Glissez vos fichiers ici
-            </h3>
-            <p className="text-sm text-soft-pewter mb-4">
-              ou cliquez pour sélectionner des fichiers
-            </p>
-            <p className="text-xs text-soft-pewter">
-              Formats supportés : Images, PDF, Documents
-            </p>
           </div>
 
-          {/* Liste des fichiers uploadés */}
-          {uploadedFiles.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-medium text-palace-navy">Fichiers ajoutés :</h4>
-              {uploadedFiles.map((file) => (
-                <div 
-                  key={file.id} 
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="text-palace-navy">
-                      {getFileIcon(file.type)}
+          {/* OR Separator */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 border-t border-muted-foreground/20"></div>
+            <span className="text-sm text-muted-foreground font-medium">OR</span>
+            <div className="flex-1 border-t border-muted-foreground/20"></div>
+          </div>
+
+          {/* Link Section */}
+          <div className="space-y-3">
+            <div className="text-center">
+              <p className="text-sm font-medium">PASTE A LINK TO THIS DOCUMENT</p>
+              <p className="text-xs text-muted-foreground mt-1">Internet URL, company drive link, etc.</p>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="https://example.com/document or drive.company.com/file..."
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && linkUrl.trim()) {
+                    handleAddLink();
+                  }
+                }}
+              />
+              <Button
+                onClick={handleAddLink}
+                disabled={!linkUrl.trim()}
+                size="sm"
+              >
+                Add Link
+              </Button>
+            </div>
+          </div>
+
+          {/* Attachments List */}
+          {attachments.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Selected attachments:</p>
+              {attachments.map((attachment) => (
+                <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <div className="flex items-center gap-2">
+                    <div className="text-muted-foreground">
+                      {getFileIcon(attachment)}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-palace-navy truncate max-w-48">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-soft-pewter">
-                        {formatFileSize(file.size)}
-                      </p>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-sm font-medium truncate">
+                        {attachment.type === 'link' ? 'Link: ' : ''}{attachment.name}
+                      </span>
+                      {attachment.type === 'link' ? (
+                        <span className="text-xs text-muted-foreground truncate">{attachment.url}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize(attachment.size)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeFile(file.id)}
-                    className="text-soft-pewter hover:text-urgence-red h-8 w-8 p-0"
+                    onClick={() => removeFile(attachment.id)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -170,67 +280,23 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             </div>
           )}
 
-          {/* Boutons d'action */}
-          <div className="flex justify-end space-x-3">
-            <Button variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button 
-              onClick={async () => {
-                if (task && uploadedFiles.length > 0) {
-                  try {
-                    const attachmentsData = uploadedFiles.map(file => ({
-                      id: file.id,
-                      name: file.name,
-                      size: file.size,
-                      type: file.type,
-                      url: file.url
-                    }));
-
-                    // Send webhook event for task update with attachments
-                    const webhookResult = await sendTaskUpdatedEvent(
-                      task.id,
-                      task,
-                      task,
-                      profiles,
-                      locations,
-                      {
-                        attachments: attachmentsData
-                      }
-                    );
-
-                    if (webhookResult.success) {
-                      toast({
-                        title: "Attachments Added",
-                        description: "Attachments have been added and notification sent successfully",
-                      });
-                      // Call onUpdate to trigger data refresh
-                      if (onUpdate) {
-                        onUpdate();
-                      }
-                    } else {
-                      toast({
-                        title: "Webhook Error",
-                        description: webhookResult.error || "Failed to send attachment notification",
-                        variant: "destructive",
-                      });
-                    }
-                  } catch (error) {
-                    console.error('Error sending webhook:', error);
-                    toast({
-                      title: "Attachment Error",
-                      description: "Failed to send attachment notification",
-                      variant: "destructive",
-                    });
-                  }
-                }
-                
-                setUploadedFiles([]);
+              variant="outline" 
+              onClick={() => {
+                setAttachments([]);
+                setLinkUrl('');
                 onClose();
               }}
-              disabled={uploadedFiles.length === 0}
             >
-              Ajouter {uploadedFiles.length > 0 && `(${uploadedFiles.length})`}
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={attachments.length === 0}
+            >
+              Add {attachments.length > 0 && `(${attachments.length})`}
             </Button>
           </div>
         </div>

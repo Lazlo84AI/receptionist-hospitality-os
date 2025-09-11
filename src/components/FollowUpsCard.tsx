@@ -1,314 +1,232 @@
-import { AlertCircle, Building2, CreditCard, Clock, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CommentsActivitySection } from '@/components/shared/CommentsActivitySection';
-import { Badge } from '@/components/ui/badge';
+import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useFollowUps } from '@/hooks/useSupabaseData';
 import { FollowUp } from '@/types/database';
+import { formatTimeElapsed } from '@/utils/timeUtils';
+import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
+import { TaskItem } from '@/types/database';
 
-// Helper function to calculate hours elapsed
-const getHoursElapsed = (createdAt: string): number => {
-  const now = new Date();
-  const created = new Date(createdAt);
-  return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
-};
 
-// Helper function to determine if a task is overdue
-const isOverdue = (createdAt: string, dueDate?: string | null): boolean => {
-  if (dueDate) {
-    return new Date() > new Date(dueDate);
-  }
-  // Consider tasks overdue if they're over 24 hours old and not completed
-  const hoursElapsed = getHoursElapsed(createdAt);
-  return hoursElapsed > 24;
-};
 
-// Transform database FollowUp to UI format
-const transformFollowUp = (followUp: FollowUp) => ({
+// Transform FollowUp to TaskItem format for EnhancedTaskDetailModal
+const transformFollowUpToTask = (followUp: FollowUp): TaskItem => ({
   id: followUp.id,
   title: followUp.title,
-  location: '', // This could be extracted from notes or a separate field
-  client: followUp.recipient,
-  statut: followUp.status === 'pending' ? 'To Process' : 
-          followUp.status === 'in_progress' ? 'In Progress' : 
-          followUp.status === 'completed' ? 'Completed' : 'Cancelled',
-  priority: followUp.priority === 'urgent' ? 'urgence' : null,
-  assignedTo: followUp.assigned_to || 'Unassigned',
-  hoursElapsed: getHoursElapsed(followUp.created_at),
-  overdue: isOverdue(followUp.created_at, followUp.due_date),
   description: followUp.notes,
-  type: 'Relance',
-  dueDate: followUp.due_date
+  type: 'follow_up',
+  status: followUp.status,
+  priority: followUp.priority,
+  assignedTo: followUp.assigned_to,
+  roomNumber: null,
+  location: null,
+  guestName: followUp.recipient,
+  created_at: followUp.created_at,
+  updated_at: followUp.updated_at,
+  due_date: followUp.due_date,
+  user_id: followUp.user_id,
+  assigned_to: followUp.assigned_to
+});
+
+// Transform database FollowUp to UI format for TaskCard
+const transformFollowUpForCard = (followUp: FollowUp) => ({
+  id: followUp.id,
+  title: followUp.title,
+  location: followUp.recipient || 'No recipient', // Client/recipient comme location
+  clientName: undefined, // Pas de double affichage
+  status: followUp.status === 'pending' ? 'To Process' as const : 
+          followUp.status === 'in_progress' ? 'In Progress' as const : 
+          followUp.status === 'completed' ? 'Completed' as const : 'Cancelled' as const,
+  priority: followUp.priority === 'urgent' ? 'URGENCE' as const : 'NORMAL' as const,
+  assignedTo: followUp.assigned_to || 'Unassigned',
+  timeElapsed: formatTimeElapsed(followUp.created_at),
+  originalFollowUp: followUp
 });
 
 export function FollowUpsCard() {
-  const { followUps: rawFollowUps, loading, error } = useFollowUps();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedTask, setSelectedTask] = useState<ReturnType<typeof transformFollowUp> | null>(null);
+  const { followUps: rawFollowUps, loading, error, refetch } = useFollowUps();
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
   
   // Transform raw follow-ups to UI format
-  const followUps = rawFollowUps.map(transformFollowUp);
-  
-  const itemsPerPage = 2;
+  const followUps = rawFollowUps.map(transformFollowUpForCard);
+
+  // Navigation configuration
+  const itemsPerPage = 2; // Afficher 2 cartes à la fois
   const maxIndex = Math.max(0, followUps.length - itemsPerPage);
-
-  const getStatusColor = (statut: string) => {
-    if (statut === 'To Process') return 'bg-green-500 text-white';
-    if (statut === 'In Progress') return 'bg-palace-navy text-white';
-    return 'bg-muted text-soft-pewter border-border';
-  };
-
-  const formatElapsedTime = (hours: number) => {
-    if (hours < 24) {
-      return `${hours}h ago`;
-    } else {
-      const days = Math.floor(hours / 24);
-      return `${days}d ago`;
-    }
-  };
-
-  const overdueCount = followUps.filter(item => item.overdue).length;
-  const visibleItems = followUps.slice(currentIndex, currentIndex + itemsPerPage);
-
-  const nextSlide = () => {
-    setCurrentIndex(Math.min(currentIndex + 1, maxIndex));
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex(Math.max(currentIndex - 1, 0));
-  };
-
-  const handleTaskClick = (task: ReturnType<typeof transformFollowUp>) => {
-    setSelectedTask(task);
+  const canGoLeft = currentIndex > 0;
+  const canGoRight = currentIndex < maxIndex;
+  
+  // Get visible items for current page
+  const visibleFollowUps = followUps.slice(currentIndex, currentIndex + itemsPerPage);
+  
+  const handleTaskClick = (followUpItem: ReturnType<typeof transformFollowUpForCard>) => {
+    // Convert the follow-up item to TaskItem format for the modal
+    const taskItem = transformFollowUpToTask(followUpItem.originalFollowUp);
+    setSelectedTask(taskItem);
     setIsModalOpen(true);
   };
 
-  // Loading state
+  const handleTaskUpdate = (updatedTask: TaskItem) => {
+    // Refetch data when task is updated
+    refetch();
+  };
+
+  // Navigation functions
+  const goLeft = () => {
+    setCurrentIndex(Math.max(currentIndex - 1, 0));
+  };
+
+  const goRight = () => {
+    setCurrentIndex(Math.min(currentIndex + 1, maxIndex));
+  };
+
   if (loading) {
     return (
-      <div className="luxury-card p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-palace-navy mx-auto mb-4"></div>
-            <p className="text-soft-pewter">Loading follow-ups...</p>
-          </div>
+      <div className="bg-card rounded-lg border shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-foreground">Follow-ups and Tasks</h2>
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="luxury-card p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
-            <p className="text-red-500">Error loading follow-ups: {error}</p>
-          </div>
+      <div className="bg-card rounded-lg border shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-foreground">Follow-ups and Tasks</h2>
+        </div>
+        <div className="text-center text-muted-foreground">
+          Error loading follow-ups: {error.message}
         </div>
       </div>
     );
   }
 
+  // Calculate counts for ALL follow-ups (not just visible ones)
+  const toProcessCount = followUps.filter(f => f.status === 'To Process').length;
+  const inProgressCount = followUps.filter(f => f.status === 'In Progress').length;
+  const completedCount = followUps.filter(f => f.status === 'Completed').length;
+
   return (
-    <div className="luxury-card p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-500/10 rounded-lg">
-            <AlertCircle className="h-6 w-6 text-blue-500" />
-          </div>
-          <div>
-            <h2 className="text-xl font-playfair font-semibold text-palace-navy">
-              Follow-ups and Tasks
-            </h2>
-            <p className="text-sm text-soft-pewter">
-              Critical deadline tracking
-            </p>
-          </div>
-        </div>
-        <span className="text-sm text-soft-pewter font-medium">
-          {overdueCount} overdue
-        </span>
-      </div>
-
-      {/* Carousel Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={prevSlide}
-          disabled={currentIndex === 0}
-          className="h-8 w-8 p-0"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        
-        <span className="text-sm text-soft-pewter">
-          {currentIndex + 1}-{Math.min(currentIndex + itemsPerPage, followUps.length)} of {followUps.length}
-        </span>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={nextSlide}
-          disabled={currentIndex >= maxIndex}
-          className="h-8 w-8 p-0"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Cards with new UI structure */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {visibleItems.map((item) => (
-          <div
-            key={item.id}
-            className="p-6 rounded-lg border bg-background hover-luxury transition-all duration-300 cursor-pointer"
-          >
-            {/* Ligne 1: Titre + icône œil */}
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-bold text-foreground text-base flex-1">
-                {item.title}
-              </h3>
-              <Eye 
-                className="h-4 w-4 text-soft-pewter hover:text-palace-navy cursor-pointer" 
-                onClick={() => handleTaskClick(item)}
-              />
+    <>
+      <div className="luxury-card p-6 col-span-full lg:col-span-2">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Clock className="h-6 w-6 text-yellow-600" />
             </div>
-
-            {/* Ligne 2: Informations de localisation */}
-            <div className="mb-3">
-              <span className="text-sm font-medium text-foreground">{item.location}</span>
-              {item.client && <span className="text-sm text-soft-pewter ml-2">{item.client}</span>}
+            <div>
+              <h2 className="text-xl font-playfair font-semibold text-hotel-navy">
+                Follow-ups and Tasks
+              </h2>
+              <p className="text-sm text-hotel-navy/60">
+                Reminders and personal tasks
+              </p>
             </div>
-
-            {/* Ligne 3: Badges de statut et priorité */}
-            <div className="flex items-center space-x-2 mb-4">
-              <Badge className={getStatusColor(item.statut)}>
-                {item.statut}
-              </Badge>
-              {item.priority === 'urgence' && (
-                <Badge className="bg-urgence-red text-white">
-                  URGENCE
-                </Badge>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-hotel-navy/60 font-medium">
+              {followUps.length} requests
+            </span>
+            {/* Navigation Chevrons */}
+            <div className="flex items-center space-x-1">
+              {canGoLeft && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goLeft}
+                  className="h-8 w-8 text-hotel-navy/60 hover:text-hotel-navy"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+              {canGoRight && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goRight}
+                  className="h-8 w-8 text-hotel-navy/60 hover:text-hotel-navy"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               )}
             </div>
+          </div>
+        </div>
 
-            {/* Dernière ligne: Assignation à gauche, horloge à droite */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm text-soft-pewter">Assigned to: </span>
-                <span className="text-sm font-medium text-palace-navy">
-                  {item.assignedTo}
-                </span>
+        {followUps.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No follow-ups scheduled</p>
+            <p className="text-xs mt-1">All caught up!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {visibleFollowUps.map((followUp) => (
+              <CardFaceModal
+                key={followUp.id}
+                id={followUp.id}
+                title={followUp.title}
+                location={followUp.location}
+                clientName={undefined} // Pas de nom client pour les follow-ups
+                status={followUp.status}
+                priority={followUp.priority}
+                assignedTo={followUp.assignedTo}
+                timeElapsed={followUp.timeElapsed}
+                onClick={() => handleTaskClick(followUp)}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 pt-4 border-t border-hotel-navy/20">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-4">
+              <span className="text-hotel-navy/60">Today's Status:</span>
+              {/* Pagination indicator */}
+              {followUps.length > itemsPerPage && (
+                <div className="flex items-center space-x-1 text-xs text-hotel-navy/60">
+                  <span>Page {Math.floor(currentIndex / itemsPerPage) + 1} of {Math.ceil(followUps.length / itemsPerPage)}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-1">
+                <div className="h-2 w-2 rounded-full bg-green-600" />
+                <span className="text-xs">{toProcessCount} to process</span>
               </div>
               <div className="flex items-center space-x-1">
-                <Clock className={cn(
-                  "h-4 w-4",
-                  item.overdue ? "text-urgence-red" : "text-soft-pewter"
-                )} />
-                <span className={cn(
-                  "text-sm font-medium",
-                  item.overdue ? "text-urgence-red" : "text-soft-pewter"
-                )}>
-                  {formatElapsedTime(item.hoursElapsed)}
-                </span>
+                <div className="h-2 w-2 rounded-full bg-gray-300" />
+                <span className="text-xs">{inProgressCount} in progress</span>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6 pt-4 border-t border-border/20">
-        <div className="flex flex-col items-center text-sm space-y-3">
-          <span className="text-soft-pewter">Today's Status:</span>
-          <div className="flex space-x-4">
-            <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-urgence-red" />
-              <span className="text-xs">{overdueCount} overdue</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-xs">{followUps.filter(item => item.statut === 'To Process').length} to process</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="h-2 w-2 rounded-full bg-palace-navy" />
-              <span className="text-xs">{followUps.filter(item => item.statut === 'In Progress').length} in progress</span>
+              <div className="flex items-center space-x-1">
+                <div className="h-2 w-2 rounded-full bg-white border border-gray-200" />
+                <span className="text-xs">{completedCount} completed</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal de détails */}
-      <Dialog open={isModalOpen} onOpenChange={() => {
-        setIsModalOpen(false);
-        setSelectedTask(null);
-      }}>
-        <DialogContent className="max-w-2xl luxury-card">
-          <DialogHeader>
-            <DialogTitle className="font-playfair text-xl text-palace-navy">
-              Follow-up Details
-            </DialogTitle>
-          </DialogHeader>
-          {selectedTask && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold text-lg text-palace-navy mb-3">
-                  {selectedTask.title}
-                </h3>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge className={getStatusColor(selectedTask.statut)}>
-                    {selectedTask.statut}
-                  </Badge>
-                  {selectedTask.priority === 'urgence' && (
-                    <Badge className="bg-urgence-red text-white animate-pulse">
-                      URGENCE
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-palace-navy">Client:</span>
-                  <p className="mt-1">{selectedTask.client}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-palace-navy">Assigned to:</span>
-                  <p className="mt-1">{selectedTask.assignedTo}</p>
-                </div>
-              </div>
-
-              {selectedTask.description && (
-                <div>
-                  <span className="font-medium text-palace-navy">Description:</span>
-                  <p className="mt-2 text-soft-pewter">{selectedTask.description}</p>
-                </div>
-              )}
-
-              {/* Comments & Activity */}
-              <CommentsActivitySection 
-                taskId={selectedTask.id}
-                taskType="follow_up"
-                comments={[]}
-                activities={[
-                  {
-                    id: '1',
-                    actor: { initials: 'RM', firstName: 'Reception', lastName: 'Manager' },
-                    action: 'scheduled follow-up',
-                    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-                    color: 'bg-purple-500'
-                  }
-                ]}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+      {/* Enhanced Task Detail Modal */}
+      <EnhancedTaskDetailModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        task={selectedTask}
+        onUpdateTask={handleTaskUpdate}
+      />
+    </>
   );
 }

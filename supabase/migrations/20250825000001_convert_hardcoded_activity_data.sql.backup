@@ -1,0 +1,49 @@
+-- Migration pour convertir les données hardcodées du front en vraies données dans activity_log
+-- Basé sur les données hardcodées de EnhancedTaskDetailModal.tsx
+
+-- Ajout d'activités réalistes pour les cartes existantes
+INSERT INTO public.activity_log (user_id, task_id, task_type, action, description, metadata, created_at) VALUES
+
+-- Activités pour l'incident "Presidential Suite Air Conditioning Issue" (850e8400-e29b-41d4-a716-446655440001)
+('550e8400-e29b-41d4-a716-446655440002', '850e8400-e29b-41d4-a716-446655440001', 'incident', 'commented', 'JD left a comment', '{"comment_content": "Problem resolved, air conditioning repaired"}', NOW() - INTERVAL '4 hours'),
+('550e8400-e29b-41d4-a716-446655440001', '850e8400-e29b-41d4-a716-446655440001', 'incident', 'reminder_added', 'Sophie Martin scheduled a reminder', '{"reminder_type": "technician_followup", "due_date": "2025-01-29T08:45:00Z"}', NOW() - INTERVAL '48 hours'),
+('550e8400-e29b-41d4-a716-446655440003', '850e8400-e29b-41d4-a716-446655440001', 'incident', 'checklist_completed', 'Marie Dubois completed a checklist task', '{"checklist_item": "Temperature check and adjustment", "completion_status": "completed"}', NOW() - INTERVAL '6 hours'),
+('550e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440001', 'incident', 'attachment_added', 'An attachment was added by Pierre Leroy', '{"attachment_name": "ac_repair_invoice.pdf", "attachment_type": "file"}', NOW() - INTERVAL '8 hours'),
+('550e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440001', 'incident', 'escalated', 'Pierre Leroy escalated via email', '{"escalation_method": "email", "escalated_to": "Marcus Johnson", "reason": "VIP guest complaint"}', NOW() - INTERVAL '12 hours'),
+('550e8400-e29b-41d4-a716-446655440001', '850e8400-e29b-41d4-a716-446655440001', 'incident', 'member_assigned', 'Task assigned to Thomas Anderson by Sophie Martin', '{"assigned_to": "Thomas Anderson", "assigned_by": "Sophie Martin", "role": "maintenance_technician"}', NOW() - INTERVAL '1 day'),
+
+-- Activités pour la demande client VIP (950e8400-e29b-41d4-a716-446655440001)
+('550e8400-e29b-41d4-a716-446655440005', '950e8400-e29b-41d4-a716-446655440001', 'client_request', 'commented', 'Emma Wilson left a comment', '{"comment_content": "VIP amenities prepared successfully, guest satisfied with champagne service"}', NOW() - INTERVAL '2 hours'),
+('550e8400-e29b-41d4-a716-446655440005', '950e8400-e29b-41d4-a716-446655440001', 'client_request', 'checklist_added', 'Emma Wilson added VIP preparation checklist', '{"checklist_name": "VIP Guest Preparation Checklist", "items_count": 5}', NOW() - INTERVAL '8 hours'),
+('550e8400-e29b-41d4-a716-446655440001', '950e8400-e29b-41d4-a716-446655440001', 'client_request', 'status_changed', 'Sophie Martin updated status to In Progress', '{"old_status": "pending", "new_status": "in_progress", "reason": "VIP guest arrival confirmed"}', NOW() - INTERVAL '12 hours'),
+('550e8400-e29b-41d4-a716-446655440005', '950e8400-e29b-41d4-a716-446655440001', 'client_request', 'member_assigned', 'Butler assigned to VIP guest by Emma Wilson', '{"assigned_to": "Jean-Philippe Dubois", "assigned_by": "Emma Wilson", "service_type": "personal_butler"}', NOW() - INTERVAL '18 hours'),
+
+-- Activités pour l'incident piscine (850e8400-e29b-41d4-a716-446655440003)
+('550e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440003', 'incident', 'completed', 'Pierre Leroy marked incident as resolved', '{"resolution": "Pool chemistry rebalanced, pH normalized to 7.4", "completion_time": "14:00"}', NOW() - INTERVAL '3 hours'),
+('550e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440003', 'incident', 'commented', 'Pierre Leroy added final report', '{"comment_content": "Pool reopened successfully, new testing schedule implemented every 2 hours"}', NOW() - INTERVAL '3 hours'),
+('550e8400-e29b-41d4-a716-446655440002', '850e8400-e29b-41d4-a716-446655440003', 'incident', 'reminder_added', 'Thomas Anderson scheduled maintenance reminder', '{"reminder_type": "routine_check", "frequency": "daily", "next_check": "tomorrow_16:00"}', NOW() - INTERVAL '5 hours'),
+
+-- Activités pour les tâches internes
+('550e8400-e29b-41d4-a716-446655440008', 'b50e8400-e29b-41d4-a716-446655440001', 'internal_task', 'created', 'Marcus Johnson created maintenance task', '{"task_type": "routine_maintenance", "priority": "normal", "location": "Pool Area"}', NOW() - INTERVAL '2 days'),
+('550e8400-e29b-41d4-a716-446655440004', 'b50e8400-e29b-41d4-a716-446655440001', 'internal_task', 'member_assigned', 'Pierre Leroy self-assigned maintenance task', '{"self_assigned": true, "estimated_duration": "2 hours"}', NOW() - INTERVAL '1 day'),
+
+-- Activités pour les follow-ups
+('550e8400-e29b-41d4-a716-446655440001', 'a50e8400-e29b-41d4-a716-446655440001', 'follow_up', 'created', 'Sophie Martin created guest satisfaction follow-up', '{"follow_up_type": "satisfaction_survey", "guest_name": "Mr. Anderson", "priority": "high"}', NOW() - INTERVAL '6 hours'),
+('550e8400-e29b-41d4-a716-446655440005', 'a50e8400-e29b-41d4-a716-446655440001', 'follow_up', 'reminder_added', 'Emma Wilson set reminder for guest call', '{"reminder_time": "tomorrow_14:00", "call_type": "satisfaction_check"}', NOW() - INTERVAL '4 hours'),
+
+-- Activités générales d'actualité récente pour toutes les cartes
+('550e8400-e29b-41d4-a716-446655440006', '850e8400-e29b-41d4-a716-446655440002', 'incident', 'commented', 'Maintenance team left status update', '{"comment_content": "Elevator inspection completed, safety certification renewed"}', NOW() - INTERVAL '1 hour'),
+('550e8400-e29b-41d4-a716-446655440001', '950e8400-e29b-41d4-a716-446655440004', 'client_request', 'attachment_added', 'Wedding coordinator uploaded floor plan', '{"attachment_name": "wedding_setup_plan.pdf", "attachment_type": "file"}', NOW() - INTERVAL '30 minutes'),
+('550e8400-e29b-41d4-a716-446655440008', 'b50e8400-e29b-41d4-a716-446655440002', 'internal_task', 'status_changed', 'Marcus Johnson approved staff training schedule', '{"old_status": "pending_approval", "new_status": "approved", "training_date": "2025-02-01"}', NOW() - INTERVAL '15 minutes');
+
+-- Mise à jour des timestamps pour des activités plus réalistes et récentes
+UPDATE public.activity_log 
+SET created_at = NOW() - INTERVAL '10 minutes'
+WHERE description LIKE '%left a comment%' AND created_at < NOW() - INTERVAL '1 hour';
+
+-- Ajout d'index pour améliorer les performances des requêtes d'activité
+CREATE INDEX IF NOT EXISTS idx_activity_log_task_id_created_at 
+ON public.activity_log(task_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_activity_log_user_id_created_at 
+ON public.activity_log(user_id, created_at DESC);

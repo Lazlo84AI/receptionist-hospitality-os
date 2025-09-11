@@ -2,109 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Import des typographies Decœur */
+@import './styles/decoeur-typography.css';
+
+/* 
+HospitalityOS - Charte Graphique Hôtel
+Nouvelle palette selon spécifications client
 */
 
 @layer base {
   :root {
-    /* Professional Clean Palette */
-    --palace-navy: 210 32% 19%;        /* Deep navy #1a2332 */
-    --champagne-gold: 45 75% 52%;      /* Gold accent #d4af37 */
-    --warm-cream: 0 0% 100%;           /* Pure white #ffffff */
-    --soft-pewter: 220 15% 60%;        /* Neutral gray #8b9dc3 */
+    /* Nouvelle Charte Graphique Hôtel */
+    --hotel-navy: 248 36% 16%;         /* WARM RAL Pantone 5255C - #1E1A37 */
+    --hotel-yellow: 43 72% 54%;        /* Yellow RAL Pantone 6004C - #DEAE35 */
+    --hotel-gold: 45 77% 45%;          /* Gold Metallics Solid Coated RAL 1036 Pantone 10354C */
+    --hotel-white: 0 0% 100%;          /* Blanc RAL 9016 - #FFFFFF */
+    --hotel-sand: 42 42% 79%;          /* Sand RAL Pantone 7500C - C7 M10 Y31 N0 R224 G211 B180 HTML E0D3B4 */
+    --hotel-gold-light: 42 42% 79%;    /* Sand RAL Pantone 7500C - #E0D3B4 */
+    --hotel-gold-dark: 40 32% 61%;     /* Gold RAL Pantone 4006C - R187 G165 B122 HTML BBA57A */
     
-    /* Status Colors - Minimal */
-    --urgence-red: 0 84% 60%;          /* Red for urgent items only */
+    /* System Colors Mappings */
+    --background: var(--hotel-white);
+    --foreground: var(--hotel-navy);
     
-    /* Design System */
-    --background: var(--warm-cream);
-    --foreground: var(--palace-navy);
+    --card: var(--hotel-white);
+    --card-foreground: var(--hotel-navy);
     
-    --card: var(--warm-cream);
-    --card-foreground: var(--palace-navy);
+    --popover: var(--hotel-white);
+    --popover-foreground: var(--hotel-navy);
     
-    --popover: var(--warm-cream);
-    --popover-foreground: var(--palace-navy);
+    /* Primary = Navy pour les headers/menus */
+    --primary: var(--hotel-navy);
+    --primary-foreground: var(--hotel-white);
     
-    --primary: var(--palace-navy);
-    --primary-foreground: var(--warm-cream);
+    /* Secondary = Sand pour les colonnes */
+    --secondary: var(--hotel-sand);
+    --secondary-foreground: var(--hotel-navy);
     
-    --secondary: var(--soft-pewter);
-    --secondary-foreground: var(--warm-cream);
+    --muted: var(--hotel-sand);
+    --muted-foreground: var(--hotel-navy);
     
-    --muted: 220 10% 96%;
-    --muted-foreground: var(--soft-pewter);
+    /* Accent = Yellow pour les hovers - Unified System */
+    --accent: 43 72% 54%;  /* Force yellow #DEAE35 for all hover states */
+    --accent-foreground: var(--hotel-navy);
     
-    --accent: var(--champagne-gold);
-    --accent-foreground: var(--palace-navy);
+    /* Selection = Gold */
+    --selected: var(--hotel-gold);
+    --selected-foreground: var(--hotel-navy);
     
-    --destructive: var(--urgence-red);
-    --destructive-foreground: var(--warm-cream);
+    --destructive: 0 84% 60%;
+    --destructive-foreground: var(--hotel-white);
     
-    --border: 220 10% 90%;
-    --input: 220 5% 97%;
-    --ring: var(--champagne-gold);
+    --border: var(--hotel-sand);
+    --input: var(--hotel-white);
+    --ring: var(--hotel-yellow);
     
     --radius: 0.75rem;
     
-    /* Luxury Gradients */
-    --gradient-luxury: linear-gradient(135deg, hsl(var(--palace-navy)), hsl(var(--palace-navy) / 0.8));
-    --gradient-gold: linear-gradient(135deg, hsl(var(--champagne-gold)), hsl(var(--champagne-gold) / 0.8));
-    --gradient-glass: linear-gradient(135deg, hsl(var(--warm-cream) / 0.1), hsl(var(--warm-cream) / 0.05));
-    
-    /* Luxury Shadows */
-    --shadow-luxury: 0 20px 40px -10px hsl(var(--palace-navy) / 0.15);
-    --shadow-gold: 0 10px 30px -5px hsl(var(--champagne-gold) / 0.3);
-    --shadow-glass: 0 8px 32px hsl(var(--palace-navy) / 0.1);
-    
-    /* Sidebar */
-    --sidebar-background: var(--palace-navy);
-    --sidebar-foreground: var(--warm-cream);
-    --sidebar-primary: var(--champagne-gold);
-    --sidebar-primary-foreground: var(--palace-navy);
-    --sidebar-accent: hsl(var(--palace-navy) / 0.8);
-    --sidebar-accent-foreground: var(--warm-cream);
-    --sidebar-border: hsl(var(--soft-pewter) / 0.3);
-    --sidebar-ring: var(--champagne-gold);
+    /* Sidebar Colors */
+    --sidebar-background: var(--hotel-navy);
+    --sidebar-foreground: var(--hotel-white);
+    --sidebar-primary: var(--hotel-yellow);
+    --sidebar-primary-foreground: var(--hotel-navy);
+    --sidebar-accent: var(--hotel-gold);
+    --sidebar-accent-foreground: var(--hotel-navy);
+    --sidebar-border: hsl(var(--hotel-yellow) / 0.2);
+    --sidebar-ring: var(--hotel-yellow);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: var(--hotel-navy);
+    --foreground: var(--hotel-white);
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: var(--hotel-navy);
+    --card-foreground: var(--hotel-white);
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: var(--hotel-navy);
+    --popover-foreground: var(--hotel-white);
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: var(--hotel-white);
+    --primary-foreground: var(--hotel-navy);
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: var(--hotel-gold);
+    --secondary-foreground: var(--hotel-white);
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: hsl(var(--hotel-navy) / 0.8);
+    --muted-foreground: var(--hotel-white);
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: var(--hotel-yellow);
+    --accent-foreground: var(--hotel-navy);
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: var(--hotel-white);
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: hsl(var(--hotel-yellow) / 0.2);
+    --input: hsl(var(--hotel-navy) / 0.8);
+    --ring: var(--hotel-yellow);
+    
+    --sidebar-background: var(--hotel-navy);
+    --sidebar-foreground: var(--hotel-white);
+    --sidebar-primary: var(--hotel-yellow);
+    --sidebar-primary-foreground: var(--hotel-navy);
+    --sidebar-accent: var(--hotel-gold);
+    --sidebar-accent-foreground: var(--hotel-navy);
+    --sidebar-border: hsl(var(--hotel-yellow) / 0.2);
+    --sidebar-ring: var(--hotel-yellow);
   }
 }
 
@@ -114,37 +116,186 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply bg-background text-foreground;
+    font-family: 'Jost', system-ui, -apple-system, sans-serif;
+    font-weight: 400;
   }
 }
 
 @layer components {
-  /* Professional Components */
-  .luxury-card {
+  /* Hotel Brand Components */
+  .hotel-card {
     @apply bg-card border border-border/30 rounded-xl;
-    box-shadow: 0 2px 8px hsl(var(--palace-navy) / 0.08);
+    box-shadow: 0 2px 8px hsl(var(--hotel-navy) / 0.08);
   }
   
-  .glass-morphism {
-    @apply backdrop-blur-md border border-white/20;
-    background: var(--gradient-glass);
+  .luxury-card {
+    @apply bg-hotel-sand border border-hotel-sand/50 rounded-xl;
+    box-shadow: 0 4px 12px hsl(var(--hotel-navy) / 0.12);
   }
   
-  .gold-accent {
-    @apply border-accent/30;
-    box-shadow: var(--shadow-gold);
+  /* Unified Hotel Yellow Hover System - #DEAE35 */
+  .hotel-hover {
+    @apply transition-all duration-300;
   }
   
-  .priority-urgent {
-    @apply animate-pulse;
-    background: linear-gradient(135deg, hsl(var(--urgence-red)), hsl(var(--urgence-red) / 0.8));
+  .hotel-hover:hover {
+    border-color: #DEAE35 !important;
+    box-shadow: 0 0 0 1px #DEAE35, 0 4px 12px rgba(222, 174, 53, 0.2) !important;
   }
   
-  .hover-luxury {
-    @apply transition-all duration-300 hover:scale-[1.02];
+  .hotel-button-hover {
+    @apply transition-all duration-300;
   }
   
-  .hover-luxury:hover {
-    box-shadow: var(--shadow-gold);
+  .hotel-button-hover:hover {
+    background-color: #DEAE35 !important;
+    border-color: #DEAE35 !important;
+    color: hsl(var(--hotel-navy)) !important;
+  }
+  
+  .hotel-text-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .hotel-text-hover:hover {
+    color: #DEAE35 !important;
+  }
+  
+  .hotel-accent-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .hotel-accent-hover:hover {
+    background-color: rgba(222, 174, 53, 0.1) !important;
+    border-color: #DEAE35 !important;
+  }
+  
+  .gold-metallic-gradient {
+    background: linear-gradient(135deg, hsl(var(--hotel-gold-light)) 0%, hsl(var(--hotel-gold-dark)) 50%, hsl(var(--hotel-gold-light)) 100%);
+    position: relative;
+    box-shadow: 
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      inset 0 -1px 0 rgba(0,0,0,0.2),
+      0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .gold-metallic-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  
+  .gold-metallic-text {
+    background: linear-gradient(135deg, hsl(var(--hotel-gold-dark)) 0%, hsl(var(--hotel-navy)) 50%, hsl(var(--hotel-gold-dark)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  
+  .avatar-gold {
+    background-color: #BBA57A !important;
+    color: white !important;
+  }
+  
+  .end-shift-button {
+    background-color: hsl(var(--hotel-navy)) !important;
+    color: hsl(var(--hotel-yellow)) !important;
+    border: 1px solid hsl(var(--hotel-navy)) !important;
+  }
+  
+  .end-shift-button:hover {
+    background-color: hsl(var(--hotel-navy) / 0.9) !important;
+    color: hsl(var(--hotel-yellow)) !important;
+  }
+  
+  .hotel-column {
+    @apply bg-secondary border border-border rounded-xl p-4;
+  }
+  
+  .hotel-header {
+    @apply bg-primary text-primary-foreground;
+  }
+  
+  .hotel-hover {
+    @apply transition-all duration-300 hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  .hotel-selected {
+    @apply bg-selected text-selected-foreground;
+  }
+  
+  .hotel-crest {
+    @apply w-8 h-10 flex-shrink-0;
+  }
+  
+  /* Status Indicators */
+  .status-success {
+    @apply bg-green-500 text-white;
+  }
+  
+  .status-warning {
+    @apply bg-yellow-500 text-black;
+  }
+  
+  .status-danger {
+    @apply bg-red-500 text-white;
+  }
+  
+  /* Card Category Selection Styles */
+  .card-category-button {
+    @apply relative p-4 rounded-lg border-2 transition-all duration-300 cursor-pointer;
+    border-color: hsl(var(--border));
+    background-color: transparent;
+  }
+  
+  .card-category-button:hover {
+    border-color: #DEAE35 !important;
+    background-color: rgba(222, 174, 53, 0.05) !important;
+    box-shadow: 0 0 0 1px #DEAE35, 0 4px 12px rgba(222, 174, 53, 0.15) !important;
+  }
+  
+  .card-category-button.selected {
+    border-color: #DEAE35 !important;
+    background-color: rgba(222, 174, 53, 0.1) !important;
+    box-shadow: 0 0 0 2px #DEAE35 !important;
+  }
+  
+  .card-category-button.selected:hover {
+    background-color: rgba(222, 174, 53, 0.15) !important;
+  }
+  
+  /* Priority and Status Button Styles */
+  .priority-button {
+    @apply transition-all duration-300;
+  }
+  
+  .priority-button:hover {
+    border-color: #DEAE35 !important;
+    background-color: rgba(222, 174, 53, 0.1) !important;
+    color: hsl(var(--hotel-navy)) !important;
+  }
+  
+  .priority-button.selected {
+    background-color: #DEAE35 !important;
+    border-color: #DEAE35 !important;
+    color: hsl(var(--hotel-navy)) !important;
+  }
+  
+  /* Animations */
+  .fade-in {
+    @apply animate-in fade-in-0 duration-300;
+  }
+  
+  .slide-up {
+    @apply animate-in slide-in-from-bottom-4 duration-300;
   }
 }

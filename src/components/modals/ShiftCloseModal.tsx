@@ -1,24 +1,22 @@
 import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { ShiftFacingCard } from '@/components/cards';
 import { 
   ChevronLeft, 
   ChevronRight, 
   Mic, 
   Check,
-  AlertTriangle,
-  Users,
-  Clock,
-  Wrench,
-  User,
-  MapPin,
-  Calendar,
-  Edit3
+  Edit3,
+  MicOff,
+  Type,
+  Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { EditTaskModal } from './EditTaskModal';
+import { TaskFullEditView } from '@/components/modules/TaskFullEditView';
 import { TaskItem } from '@/types/database';
 
 interface ShiftCloseModalProps {
@@ -28,45 +26,18 @@ interface ShiftCloseModalProps {
   onCardClick?: (task: TaskItem) => void;
 }
 
-const getTypeConfig = (type: string) => {
-  switch (type) {
-    case 'incident':
-      return { 
-        icon: AlertTriangle, 
-        color: 'bg-urgence-red text-warm-cream',
-        label: 'Incident' 
-      };
-    case 'client_request':
-      return { 
-        icon: Users, 
-        color: 'bg-champagne-gold text-palace-navy',
-        label: 'Demande client' 
-      };
-    case 'follow_up':
-      return { 
-        icon: Clock, 
-        color: 'bg-palace-navy text-warm-cream',
-        label: 'Relance' 
-      };
-    case 'internal_task':
-      return { 
-        icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
-        label: 'Tâche interne' 
-      };
-    default:
-      return { 
-        icon: Wrench, 
-        color: 'bg-muted text-muted-foreground',
-        label: 'Tâche' 
-      };
-  }
-};
-
 export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCloseModalProps) => {
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  
+  // États pour la note de fin de shift
+  const [noteMode, setNoteMode] = useState<'voice' | 'text'>('voice');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
+  const [textNote, setTextNote] = useState('');
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
@@ -107,9 +78,80 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
     setEditingTask(null);
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
+
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        setRecordedAudio(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Erreur d\'accès au microphone:', error);
+      alert('Impossible d\'accéder au microphone. Vérifiez les permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
   const handleVoiceNote = () => {
-    // Logic for voice note
-    console.log('Recording voice note for task:', currentTask?.id);
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const submitShiftEnd = async () => {
+    setIsSubmitting(true);
+    try {
+      const shiftData = {
+        shift_id: `shift_${Date.now()}`, // Générer un ID unique
+        user_id: 'current_user', // Récupérer l'ID de l'utilisateur actuel
+        shift_end_time: new Date().toISOString(),
+        tasks_reviewed: tasks.map(task => task.id),
+        voicenote_file: recordedAudio ? 'recorded_audio.wav' : null,
+        voicenote_transcript: noteMode === 'text' ? textNote : null,
+        note_type: noteMode,
+        created_at: new Date().toISOString()
+      };
+
+      // Ici vous devriez envoyer les données à Supabase
+      // await supabase.from('shifts').insert(shiftData);
+      
+      console.log('Données de fin de shift:', shiftData);
+      
+      // Si audio, on devrait aussi l'uploader vers Supabase Storage
+      if (recordedAudio) {
+        console.log('Audio à uploader:', recordedAudio);
+        // await supabase.storage.from('shift-recordings').upload(`${shiftData.shift_id}.wav`, recordedAudio);
+      }
+      
+      alert('Fin de shift enregistrée avec succès!');
+      onClose();
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement:', error);
+      alert('Erreur lors de l\'enregistrement de la fin de shift.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Vérifier si c'est le dernier écran (note vocale pour collègue)
@@ -117,9 +159,6 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
   const isVoiceNoteScreen = isLastScreen;
 
   if (!currentTask && !isVoiceNoteScreen) return null;
-
-  const typeConfig = currentTask ? getTypeConfig(currentTask.type) : null;
-  const TypeIcon = typeConfig?.icon;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -165,18 +204,103 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
           {/* Question ou Note Vocale */}
           {isVoiceNoteScreen ? (
-            <div className="flex-1 flex items-center justify-center p-6">
-              <div className="text-center">
-                <Button
-                  onClick={handleVoiceNote}
-                  size="lg"
-                  className="h-32 w-32 rounded-full bg-champagne-gold hover:bg-champagne-gold/90 text-palace-navy shadow-lg text-lg font-medium"
-                >
-                  <Mic className="h-12 w-12" />
-                </Button>
-                <p className="mt-4 text-muted-foreground">
-                  Appuyez pour enregistrer votre message
-                </p>
+            <div className="flex-1 p-6 overflow-y-auto">
+              <div className="max-w-2xl mx-auto space-y-6">
+                {/* Choix du mode */}
+                <div className="flex justify-center gap-4 mb-8">
+                  <Button
+                  variant={noteMode === 'voice' ? 'default' : 'outline'}
+                  onClick={() => setNoteMode('voice')}
+                  className="flex items-center gap-2 hotel-button-hover"
+                  >
+                  <Mic className="h-4 w-4" />
+                  Note vocale
+                  </Button>
+                  <Button
+                  variant={noteMode === 'text' ? 'default' : 'outline'}
+                  onClick={() => setNoteMode('text')}
+                  className="flex items-center gap-2 hotel-button-hover"
+                  >
+                    <Type className="h-4 w-4" />
+                    Note écrite
+                  </Button>
+                </div>
+
+                {/* Mode vocal */}
+                {noteMode === 'voice' && (
+                  <div className="text-center space-y-6">
+                    <Button
+                      onClick={handleVoiceNote}
+                      size="lg"
+                      className={cn(
+                        "h-32 w-32 rounded-full shadow-lg text-lg font-medium transition-all",
+                        isRecording 
+                          ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" 
+                          : "bg-champagne-gold hover:bg-champagne-gold/90 text-palace-navy"
+                      )}
+                    >
+                      {isRecording ? (
+                        <MicOff className="h-12 w-12" />
+                      ) : (
+                        <Mic className="h-12 w-12" />
+                      )}
+                    </Button>
+                    <div className="space-y-2">
+                      <p className="text-muted-foreground">
+                        {isRecording 
+                          ? "🎙️ Enregistrement en cours... Cliquez pour arrêter" 
+                          : "Appuyez pour enregistrer votre message"
+                        }
+                      </p>
+                      {recordedAudio && (
+                        <p className="text-green-600 font-medium">
+                          ✓ Message vocal enregistré
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode texte */}
+                {noteMode === 'text' && (
+                  <div className="space-y-4">
+                    <Label htmlFor="textNote" className="text-lg font-medium">
+                      Message pour votre collègue
+                    </Label>
+                    <Textarea
+                      id="textNote"
+                      value={textNote}
+                      onChange={(e) => setTextNote(e.target.value)}
+                      placeholder="Expliquez à votre collègue ce qu'il doit savoir pour le prochain shift..."
+                      className="min-h-[200px] text-base hotel-hover"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {textNote.length} caractères
+                    </p>
+                  </div>
+                )}
+
+                {/* Bouton Submit */}
+                <div className="flex justify-center pt-8">
+                  <Button
+                    onClick={submitShiftEnd}
+                    disabled={isSubmitting || (noteMode === 'voice' && !recordedAudio && !isRecording) || (noteMode === 'text' && !textNote.trim())}
+                    size="lg"
+                    className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px]"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5" />
+                        Terminer le shift
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -187,98 +311,14 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                 </h3>
               </div>
 
-              {/* Card Display */}
+              {/* Card Display - Utilisation du nouveau composant ShiftFacingCard */}
               <div className="flex-1 p-6 overflow-y-auto">
                 <div className="max-w-2xl mx-auto">
-                  <Card className="transition-all duration-200 hover:shadow-lg">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          {typeConfig && TypeIcon && (
-                            <>
-                              <div className={cn("p-2 rounded-full", typeConfig.color)}>
-                                <TypeIcon className="h-5 w-5" />
-                              </div>
-                              <Badge variant="outline" className="text-sm">
-                                {typeConfig.label}
-                              </Badge>
-                            </>
-                          )}
-                        </div>
-                        {currentTask?.priority === 'urgent' && (
-                          <Badge className="bg-urgence-red text-warm-cream">
-                            Urgent
-                          </Badge>
-                        )}
-                      </div>
-                      <CardTitle className="text-xl font-medium leading-6">
-                        {currentTask?.title}
-                      </CardTitle>
-                    </CardHeader>
-                    
-                     <CardContent className="space-y-4">
-                       {currentTask?.description && (
-                         <p className="text-base text-foreground leading-relaxed">
-                           {currentTask.description}
-                         </p>
-                       )}
-                       
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         {currentTask?.guestName && (
-                           <div className="flex items-center gap-3 text-sm">
-                             <User className="h-4 w-4 text-muted-foreground" />
-                             <span>{currentTask.guestName}</span>
-                           </div>
-                         )}
-                         
-                         {currentTask?.roomNumber && (
-                           <div className="flex items-center gap-3 text-sm">
-                             <MapPin className="h-4 w-4 text-muted-foreground" />
-                             <span>Chambre {currentTask.roomNumber}</span>
-                           </div>
-                         )}
-                         
-                         {currentTask?.location && !currentTask.roomNumber && (
-                           <div className="flex items-center gap-3 text-sm">
-                             <MapPin className="h-4 w-4 text-muted-foreground" />
-                             <span>{currentTask.location}</span>
-                           </div>
-                         )}
-                         
-                         {currentTask?.dueDate && (
-                           <div className="flex items-center gap-3 text-sm">
-                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                             <span>{new Date(currentTask.dueDate).toLocaleDateString('fr-FR')}</span>
-                           </div>
-                         )}
-                         
-                         {currentTask?.recipient && (
-                           <div className="flex items-center gap-3 text-sm">
-                             <User className="h-4 w-4 text-muted-foreground" />
-                             <span>→ {currentTask.recipient}</span>
-                           </div>
-                         )}
-                         
-                         {currentTask?.assignedTo && (
-                           <div className="flex items-center gap-3 text-sm">
-                             <User className="h-4 w-4 text-muted-foreground" />
-                             <span>Assigné à: {currentTask.assignedTo}</span>
-                           </div>
-                         )}
-                       </div>
-
-                       <div className="pt-4 border-t">
-                         <Badge 
-                           variant={currentTask?.status === 'completed' ? 'default' : 'secondary'}
-                           className="text-sm"
-                         >
-                           {currentTask?.status === 'pending' && 'À traiter'}
-                           {currentTask?.status === 'in_progress' && 'En cours'}
-                           {currentTask?.status === 'completed' && 'Résolu'}
-                         </Badge>
-                       </div>
-                     </CardContent>
-                  </Card>
+                  <ShiftFacingCard 
+                    task={currentTask}
+                    onClick={() => onCardClick?.(currentTask)}
+                    className="hover:border-yellow-400 hover:shadow-lg"
+                  />
                 </div>
               </div>
             </>
@@ -304,9 +344,9 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
             </div>
           )}
 
-          {/* Edit Task Modal */}
+          {/* TaskFullEditView - Full Editable Card */}
           {editingTask && (
-            <EditTaskModal
+            <TaskFullEditView
               isOpen={isEditModalOpen}
               onClose={() => {
                 setIsEditModalOpen(false);

@@ -1,30 +1,11 @@
-import { Heart, User, CheckCircle, Clock, Star, Eye, Calendar, Users, TrendingUp, MessageCircle, Send, X, Trash2, Plus, Search, Paperclip } from 'lucide-react';
-import { CommentsActivitySection } from '@/components/shared/CommentsActivitySection';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Heart } from 'lucide-react';
+import { CardFaceModal } from '@/components/shared/CardFaceModal';
+import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
 import { useState } from 'react';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { ReminderModal } from './modals/ReminderModal';
 import { useTasks, useProfiles } from '@/hooks/useSupabaseData';
 import { TaskItem } from '@/types/database';
-
-// Helper function to calculate days since creation
-const getDaysSince = (createdAt: string): number => {
-  const now = new Date();
-  const created = new Date(createdAt);
-  return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-};
+import { formatTimeElapsed } from '@/utils/timeUtils';
 
 // Transform database TaskItem (client request) to UI format
 const transformClientRequest = (request: TaskItem) => ({
@@ -38,26 +19,37 @@ const transformClientRequest = (request: TaskItem) => ({
           request.status === 'completed' ? 'Completed' : 'Cancelled',
   gouvernante: request.assignedTo || 'Unassigned',
   avatar: request.assignedTo ? request.assignedTo.split(' ').map(n => n[0]).join('') : 'UN',
-  daysSince: getDaysSince(request.created_at),
+  timeElapsed: formatTimeElapsed(request.created_at),
   priority: request.priority === 'urgent' ? 'URGENCE' : 'NORMAL',
   created_at: request.created_at,
   updated_at: request.updated_at
 });
 
 export function ClientRequestsCard() {
-  const { tasks, loading, error } = useTasks();
+  const { tasks, loading, error, refetch } = useTasks();
   const { profiles } = useProfiles();
   
   // Filter client requests from all tasks
   const clientRequests = tasks
     .filter(task => task.type === 'client_request')
-    .map(transformClientRequest)
-    .slice(0, 4); // Show only top 4 requests
+    .map(transformClientRequest); // Show all client requests - no hardcoded limit
 
-  const [selectedRequest, setSelectedRequest] = useState<ReturnType<typeof transformClientRequest> | null>(null);
+  // State pour la modale - EXACTEMENT COMME INCIDENTS CARD
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  
+  // Handler de click - EXACTEMENT COMME INCIDENTS CARD
+  const handleClientRequestClick = (clientRequestItem: ReturnType<typeof transformClientRequest>) => {
+    // Retrouver la TaskItem originale
+    const originalTask = tasks.find(task => task.id === clientRequestItem.id);
+    if (originalTask) {
+      setSelectedTask(originalTask);
+      setIsTaskDetailOpen(true);
+    }
+  };
+
+  // États pour l'ancienne modale (à supprimer plus tard)
   const [showReminderModal, setShowReminderModal] = useState(false);
-  const [showActivities, setShowActivities] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(new Date());
 
   if (loading) {
     return (
@@ -95,19 +87,19 @@ export function ClientRequestsCard() {
       <div className="luxury-card p-6 col-span-full lg:col-span-2">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-soft-pewter/10 rounded-lg">
-              <Heart className="h-6 w-6 text-soft-pewter" />
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Heart className="h-6 w-6 text-green-500" />
             </div>
             <div>
-              <h2 className="text-xl font-playfair font-semibold text-palace-navy">
+              <h2 className="text-xl font-playfair font-semibold text-hotel-navy">
                 Client Requests
               </h2>
-              <p className="text-sm text-soft-pewter">
+              <p className="text-sm text-hotel-navy/60">
                 Special occasions & preparations
               </p>
             </div>
           </div>
-          <span className="text-sm text-soft-pewter font-medium">
+          <span className="text-sm text-hotel-navy/60 font-medium">
             {clientRequests.length} requests
           </span>
         </div>
@@ -119,73 +111,36 @@ export function ClientRequestsCard() {
         ) : (
           <div className="space-y-4">
             {clientRequests.map((clientRequest) => (
-              <div 
+              <CardFaceModal
                 key={clientRequest.id}
-                className="p-4 bg-muted/30 rounded-lg border border-border/50 hover-luxury cursor-pointer transition-all duration-300"
-                onClick={() => setSelectedRequest(clientRequest)}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-palace-navy">
-                        {clientRequest.clientName}
-                      </h3>
-                      <Button variant="ghost" size="sm" className="shrink-0">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="text-sm text-soft-pewter mb-2">
-                      {clientRequest.room} • {clientRequest.request}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <Badge 
-                        variant={clientRequest.status === 'To Process' ? 'secondary' : 'outline'}
-                        className={clientRequest.status === 'To Process' ? 'bg-green-500 text-white' : ''}
-                      >
-                        {clientRequest.status}
-                      </Badge>
-                      {clientRequest.priority === 'URGENCE' && (
-                        <Badge className="bg-urgence-red text-white animate-pulse">
-                          {clientRequest.priority}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-soft-pewter" />
-                    <span className="text-sm text-soft-pewter">
-                      {clientRequest.gouvernante}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-soft-pewter" />
-                    <span className="text-sm font-medium text-palace-navy">
-                      {clientRequest.daysSince} day{clientRequest.daysSince > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                id={clientRequest.id}
+                title={clientRequest.clientName}
+                location={clientRequest.room}
+                clientName={undefined} // Pas de double affichage du nom client
+                status={clientRequest.status as any}
+                priority={clientRequest.priority as any}
+                assignedTo={clientRequest.gouvernante}
+                timeElapsed={clientRequest.timeElapsed}
+                onClick={() => handleClientRequestClick(clientRequest)}
+              />
             ))}
           </div>
         )}
 
-        <div className="mt-6 pt-4 border-t border-border/20">
+        <div className="mt-6 pt-4 border-t border-hotel-navy/20">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-soft-pewter">Today's Status:</span>
+            <span className="text-hotel-navy/60">Today's Status:</span>
             <div className="flex space-x-4">
               <div className="flex items-center space-x-1">
-                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <div className="h-2 w-2 rounded-full bg-hotel-gold-dark" />
                 <span className="text-xs">{clientRequests.filter(r => r.status === 'To Process').length} to process</span>
               </div>
               <div className="flex items-center space-x-1">
-                <div className="h-2 w-2 rounded-full bg-soft-pewter" />
+                <div className="h-2 w-2 rounded-full bg-gray-300" />
                 <span className="text-xs">{clientRequests.filter(r => r.status === 'In Progress').length} in progress</span>
               </div>
               <div className="flex items-center space-x-1">
-                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <div className="h-2 w-2 rounded-full bg-white border border-gray-200" />
                 <span className="text-xs">{clientRequests.filter(r => r.status === 'Completed').length} completed</span>
               </div>
             </div>
@@ -193,77 +148,18 @@ export function ClientRequestsCard() {
         </div>
       </div>
 
-      {/* Request Detail Modal */}
-      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <DialogContent className="max-w-2xl luxury-card">
-          <DialogHeader>
-            <DialogTitle className="font-playfair text-xl text-palace-navy">
-              Client Request Details
-            </DialogTitle>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold text-lg text-palace-navy mb-3">
-                  {selectedRequest.clientName}
-                </h3>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge 
-                    variant={selectedRequest.status === 'To Process' ? 'secondary' : 'outline'}
-                    className={selectedRequest.status === 'To Process' ? 'bg-green-500 text-white' : ''}
-                  >
-                    {selectedRequest.status}
-                  </Badge>
-                  {selectedRequest.priority === 'URGENCE' && (
-                    <Badge className="bg-urgence-red text-white animate-pulse">
-                      {selectedRequest.priority}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-palace-navy">Room:</span>
-                  <p className="mt-1">{selectedRequest.room}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-palace-navy">Assigned to:</span>
-                  <p className="mt-1">{selectedRequest.gouvernante}</p>
-                </div>
-              </div>
-
-              <div>
-                <span className="font-medium text-palace-navy">Request:</span>
-                <p className="mt-2 text-soft-pewter">{selectedRequest.request}</p>
-              </div>
-
-              {selectedRequest.occasion && (
-                <div>
-                  <span className="font-medium text-palace-navy">Occasion:</span>
-                  <p className="mt-2 text-soft-pewter">{selectedRequest.occasion}</p>
-                </div>
-              )}
-
-              {/* Comments & Activity */}
-              <CommentsActivitySection 
-                taskId={selectedRequest.id}
-                taskType="client_request"
-                comments={[]}
-                activities={[
-                  {
-                    id: '1',
-                    actor: { initials: 'SM', firstName: 'Staff', lastName: 'Member' },
-                    action: 'added a comment',
-                    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                    color: 'bg-blue-500'
-                  }
-                ]}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Enhanced Task Detail Modal - EXACTEMENT COMME INCIDENTS CARD */}
+      <EnhancedTaskDetailModal
+        task={selectedTask}
+        isOpen={isTaskDetailOpen}
+        onClose={() => {
+          setIsTaskDetailOpen(false);
+          setSelectedTask(null);
+        }}
+        onUpdateTask={(updatedTask) => {
+          refetch();
+        }}
+      />
 
       {/* Reminder Modal */}
       <ReminderModal

@@ -56,22 +56,35 @@ const Auth = () => {
     setError('');
     setMessage('');
     
-    const { error } = await signUp(email, password, {
-      full_name: `${firstName} ${lastName}`,
+    // Debug: vérifier les valeurs avant envoi
+    const metadata = {
+      full_name: `${firstName} ${lastName}`.trim(),
       first_name: firstName,
       last_name: lastName,
       job_role: jobRole,
       hierarchy: hierarchy
+    };
+    
+    console.log('Form data:', {
+      email,
+      firstName,
+      lastName,
+      jobRole,
+      hierarchy,
+      metadata
     });
     
+    const { error } = await signUp(email, password, metadata);
+    
     if (error) {
+      console.error('SignUp error received:', error);
       if (error.message === 'User already registered') {
         setError('An account with this email already exists. Please sign in instead.');
       } else {
         setError(error.message);
       }
     } else {
-      setMessage('Please check your email to confirm your account!');
+      setMessage('Account created successfully! You can now sign in.');
     }
     
     setLoading(false);
@@ -96,15 +109,32 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Hotel Management</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your account or create a new one
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: '#1E1A37' }}>
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16">
+        
+        {/* Logo Decœur Hotels - Côté Gauche */}
+        <div className="flex-1 flex justify-center">
+          <div className="w-96 h-96 lg:w-[48rem] lg:h-[48rem]">
+            <img 
+              src="/LOGO_DECOEUR_Gold.svg" 
+              alt="Decœur Hotels Logo" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
+        
+        {/* Module de Login - Côté Droit */}
+        <div className="flex-1 flex justify-center w-full">
+          <Card className="w-full max-w-md bg-white shadow-2xl">
+            <CardHeader className="space-y-1 text-center">
+              <CardTitle className="text-3xl decoeur-title text-hotel-navy mb-2">
+                SOKLE
+              </CardTitle>
+              <CardDescription className="decoeur-body text-hotel-navy/70">
+                Sign in to your account or create a new one
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -121,6 +151,7 @@ const Auth = () => {
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="hotel-hover"
                     required
                   />
                 </div>
@@ -132,6 +163,7 @@ const Auth = () => {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="hotel-hover"
                     required
                   />
                   <div className="flex justify-end">
@@ -139,7 +171,7 @@ const Auth = () => {
                       <DialogTrigger asChild>
                         <button
                           type="button"
-                          className="text-sm text-primary hover:underline"
+                          className="text-sm text-primary hover:underline hover:text-hotel-yellow transition-colors duration-300"
                         >
                           Forgot your password?
                         </button>
@@ -160,6 +192,7 @@ const Auth = () => {
                               placeholder="Enter your email"
                               value={resetEmail}
                               onChange={(e) => setResetEmail(e.target.value)}
+                              className="hotel-hover"
                               required
                             />
                           </div>
@@ -173,7 +206,7 @@ const Auth = () => {
                               <AlertDescription>{resetMessage}</AlertDescription>
                             </Alert>
                           )}
-                          <Button type="submit" className="w-full" disabled={resetLoading}>
+                          <Button type="submit" className="w-full gold-metallic-gradient text-hotel-navy hover:shadow-xl border border-hotel-gold-dark/30 shadow-lg" disabled={resetLoading}>
                             {resetLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Reset Password
                           </Button>
@@ -187,7 +220,7 @@ const Auth = () => {
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full gold-metallic-gradient text-hotel-navy hover:shadow-xl border border-hotel-gold-dark/30 shadow-lg" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Sign In
                 </Button>
@@ -199,13 +232,13 @@ const Auth = () => {
                 <div className="space-y-2">
                   <Label htmlFor="job-role">What's your role</Label>
                   <Select value={jobRole} onValueChange={setJobRole} required>
-                    <SelectTrigger>
+                    <SelectTrigger className="hotel-hover">
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="a receptionist">a receptionist</SelectItem>
-                      <SelectItem value="a housekeeper">a housekeeper</SelectItem>
-                      <SelectItem value="a cleaning staff member">a cleaning staff member</SelectItem>
+                      <SelectItem value="Housekeeping Supervisor">Housekeeping Supervisor</SelectItem>
+                      <SelectItem value="Room Attendant">Room Attendant</SelectItem>
                       <SelectItem value="restaurant staff">restaurant staff</SelectItem>
                       <SelectItem value="tech maintenance team">tech maintenance team</SelectItem>
                     </SelectContent>
@@ -214,7 +247,7 @@ const Auth = () => {
                 <div className="space-y-2">
                   <Label htmlFor="hierarchy">Hierarchy</Label>
                   <Select value={hierarchy} onValueChange={setHierarchy} required>
-                    <SelectTrigger>
+                    <SelectTrigger className="hotel-hover">
                       <SelectValue placeholder="Select your hierarchy level" />
                     </SelectTrigger>
                     <SelectContent>
@@ -233,6 +266,7 @@ const Auth = () => {
                       placeholder="First name"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      className="hotel-hover"
                       required
                     />
                   </div>
@@ -244,6 +278,7 @@ const Auth = () => {
                       placeholder="Last name"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      className="hotel-hover"
                       required
                     />
                   </div>
@@ -256,6 +291,7 @@ const Auth = () => {
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="hotel-hover"
                     required
                   />
                 </div>
@@ -267,6 +303,7 @@ const Auth = () => {
                     placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="hotel-hover"
                     required
                     minLength={6}
                   />
@@ -281,15 +318,17 @@ const Auth = () => {
                     <AlertDescription>{message}</AlertDescription>
                   </Alert>
                 )}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full gold-metallic-gradient text-hotel-navy hover:shadow-xl border border-hotel-gold-dark/30 shadow-lg" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create Account
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

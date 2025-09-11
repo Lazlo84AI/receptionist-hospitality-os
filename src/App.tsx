@@ -11,6 +11,10 @@ import ShiftManagement from "./pages/ShiftManagement";
 import Connaissances from "./pages/Connaissances";
 import Assistant from "./pages/Assistant";
 import MesShifts from "./pages/MesShifts";
+import TeamDispatch from "./pages/TeamDispatch";
+import ServiceControl from "./pages/ServiceControl";
+import ServiceControl2 from "./pages/ServiceControl2";
+import LocationCleanupPage from "./pages/LocationCleanup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +33,10 @@ const App = () => (
             <Route path="/connaissances" element={<ProtectedRoute><Connaissances /></ProtectedRoute>} />
             <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
             <Route path="/mes-shifts" element={<ProtectedRoute><MesShifts /></ProtectedRoute>} />
+            <Route path="/team-dispatch" element={<ProtectedRoute><TeamDispatch /></ProtectedRoute>} />
+            <Route path="/service-control" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
+            <Route path="/service-control2" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
+            <Route path="/location-cleanup" element={<ProtectedRoute><LocationCleanupPage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
