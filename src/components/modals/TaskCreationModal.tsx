@@ -11,6 +11,7 @@ import { LocationSection } from '@/components/LocationSection';
 import { ChecklistModal } from '@/components/modals/ChecklistModal';
 import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { ReminderModal } from '@/components/modals/ReminderModal';
+import { AttachmentModal } from '@/components/modals/AttachmentModal';
 import { cn } from '@/lib/utils';
 
 const categories = [
@@ -46,18 +47,16 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const { profiles: hotelMembers } = useProfiles();
   const { locations } = useLocations();
   
-  // Checklist state
+  // Modal states
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
-  const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items: any[] }>>([]);
-  
-  // Reminder state
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [reminders, setReminders] = useState<Array<{ id: string; subject: string; scheduleType: string; date?: Date; time?: string; shifts?: string[]; frequency?: string; endDate?: Date }>>([]);
-  const [editingReminder, setEditingReminder] = useState<any>(null);
-  
-  // Attachment state
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
+  
+  // Data states
+  const [checklists, setChecklists] = useState<Array<{ id: string; title: string; items: any[] }>>([]);
+  const [reminders, setReminders] = useState<Array<{ id: string; subject: string; scheduleType: string; date?: Date; time?: string; shifts?: string[]; frequency?: string; endDate?: Date }>>([]);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; size: number; type?: 'file' | 'link'; url?: string }>>([]);
+  const [editingReminder, setEditingReminder] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -74,11 +73,12 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     dueDate: null as Date | null,
   });
 
+  // Handlers
   const handleAddChecklist = (title: string) => {
     const newChecklist = {
       id: Date.now().toString(),
       title: title,
-      items: [], // Initialize with empty items array
+      items: [],
     };
     setChecklists(prev => [...prev, newChecklist]);
   };
@@ -204,27 +204,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
               className="transition-all duration-200 hover:border-hotel-yellow focus:border-hotel-yellow focus:ring-2 focus:ring-hotel-yellow/20"
             />
           </div>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Edit3 className="h-5 w-5" />
-            Create New Card / New task - Edit Mode
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6 pt-4">
-          {/* Card Title */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground">
-              Card Title *
-            </label>
-            <Input 
-              placeholder="Descriptive card title"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="transition-all duration-200 hover:border-hotel-yellow focus:border-hotel-yellow focus:ring-2 focus:ring-hotel-yellow/20"
-            />
-          </div>
 
           {/* Card Category Selection */}
           <div className="space-y-3">
@@ -248,10 +227,9 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                     onClick={() => setFormData(prev => ({ 
                       ...prev, 
                       category: category.id,
-                      // Auto-sélectionner origin type selon la catégorie
                       originType: category.id === 'client_request' ? 'client' : 
                                   category.id === 'internal_task' ? 'team' : prev.originType
-                    }))}}
+                    }))}
                   >
                     <CardContent className="p-4 flex items-center gap-3">
                       <div className={cn(
@@ -349,7 +327,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                 onValueChange={(value) => setFormData(prev => ({ 
                   ...prev, 
                   service: value,
-                  assignedMember: '' // Reset member when service changes
+                  assignedMember: ''
                 }))}
               >
                 <SelectTrigger>
@@ -378,7 +356,6 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                   <SelectContent>
                     {hotelMembers
                       .filter(member => {
-                        // Map service selection to department values
                         switch (formData.service) {
                           case 'housekeeping':
                             return member.department === 'Housekeeping';
@@ -405,7 +382,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
             </div>
           </div>
 
-          {/* Location Section - Using real LocationSection component */}
+          {/* Location Section */}
           <LocationSection
             formData={formData}
             setFormData={setFormData}
@@ -473,10 +450,10 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
             <Button
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => console.log('Attachment feature temporarily disabled')}
+              onClick={() => setIsAttachmentModalOpen(true)}
             >
               <span className="text-sm">📎</span>
-              Attachment (disabled)
+              Attachment
             </Button>
           </div>
 
@@ -588,7 +565,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
         </div>
       </DialogContent>
 
-      {/* Reminder Modal */}
+      {/* Sub-Modals */}
       <ReminderModal
         isOpen={isReminderModalOpen}
         onClose={() => {
@@ -606,11 +583,16 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
         }}
       />
 
-      {/* Checklist Modal */}
       <ChecklistModal
         isOpen={isChecklistModalOpen}
         onClose={() => setIsChecklistModalOpen(false)}
         onAdd={handleAddChecklist}
+      />
+
+      <AttachmentModal
+        isOpen={isAttachmentModalOpen}
+        onClose={() => setIsAttachmentModalOpen(false)}
+        onUpdate={() => {}}
       />
     </Dialog>
   );
