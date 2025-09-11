@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ShiftFacingCard } from '@/components/cards';
 import { supabase } from '@/integrations/supabase/client';
+import { saveShiftHandover } from '@/lib/shiftContinuityManager';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -179,71 +180,102 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
   const submitShiftEnd = async () => {
     setIsSubmitting(true);
-    
-    console.log('=== DÉBUT TEST UPLOAD AUDIO ===');
+    addLog('Début de la sauvegarde du shift...');
     
     try {
+      // 1. Upload audio si présent
       let voiceNoteUrl = null;
-      
       if (recordedAudio) {
-        console.log('Audio détecté:', {
-          size: recordedAudio.size,
-          type: recordedAudio.type
-        });
-        
-        // Test ultra-simple d'upload
-        const fileName = `test_${Date.now()}.wav`;
-        console.log('Tentative upload fichier:', fileName);
+        addLog(`Upload audio: ${recordedAudio.size} bytes`);
+        const fileName = `shift_${Date.now()}.wav`;
         
         const { data, error } = await supabase.storage
           .from('shift-recordings')
           .upload(fileName, recordedAudio);
         
-        console.log('Résultat upload:', { data, error });
-        
         if (error) {
-          console.error('ERREUR UPLOAD:', error);
-          alert(`ERREUR UPLOAD: ${JSON.stringify(error)}`);
+          addLog(`Erreur upload: ${error.message}`);
         } else {
-          console.log('UPLOAD RÉUSSI!');
           const { data: { publicUrl } } = supabase.storage
             .from('shift-recordings')
             .getPublicUrl(fileName);
           voiceNoteUrl = publicUrl;
-          console.log('URL générée:', voiceNoteUrl);
+          addLog('Audio uploadé avec succès');
         }
-      } else {
-        console.log('Aucun audio enregistré');
       }
       
-      // Sauvegarder le shift
+      // 2. Créer l'enregistrement du shift
       const { data: userData } = await supabase.auth.getUser();
-      
       const shiftData = {
         user_id: userData.user?.id,
         end_time: new Date().toISOString(),
         status: 'completed',
         voice_note_url: voiceNoteUrl,
-        handover_notes: voiceNoteUrl ? 'Audio enregistré' : 'Pas d\'audio'
+        voice_note_transcription: noteMode === 'text' ? textNote : null,
+        handover_notes: noteMode === 'text' ? textNote : (recordedAudio ? 'Voice note recorded' : 'No handover notes'),
       };
       
-      console.log('Données shift à insérer:', shiftData);
-      
-      const { data: result, error: shiftError } = await supabase
+      const { data: shiftResult, error: shiftError } = await supabase
         .from('shifts')
-        .insert(shiftData);
+        .insert(shiftData)
+        .select()
+        .single();
       
-      if (shiftError) {
-        console.error('Erreur shift:', shiftError);
-        throw shiftError;
+      if (shiftError) throw shiftError;
+      addLog(`Shift créé: ${shiftResult.id}`);
+      
+      // 3. NOUVEAU: Utiliser le Shift Continuity Manager
+      addLog('Application des règles de transfert intelligent...');
+      await saveShiftHandover(
+        shiftResult.id,
+        tasks, // Toutes les cartes
+        voiceNoteUrl,
+        noteMode === 'text' ? textNote : null,
+        'Shift handover avec règles de continuité appliquées'
+      );
+      
+      addLog('Shift Continuity Manager: TOUTES les cartes archivées');
+      addLog('Les règles de transfert seront appliquées au prochain shift');
+      
+      // Compter les cartes par catégorie pour le résumé
+      const stats = {
+        incidents: tasks.filter(t => t.type === 'incident').length,
+        clientRequests: tasks.filter(t => t.type === 'client_request').length,
+        followUps: tasks.filter(t => t.type === 'follow_up').length,
+        internalTasks: tasks.filter(t => t.type === 'internal_task').length,
+        resolved: tasks.filter(t => t.status === 'completed' || t.status === 'resolved').length
+      };
+      
+      const message = `Shift terminé avec succès!
+
+` +
+        `• ${tasks.length} cartes archivées
+` +
+        `• ${stats.incidents} incidents (seront transférés)
+` +
+        `• ${stats.clientRequests} demandes clients (seront transférées)
+` +
+        `• ${stats.followUps} follow-ups (si assignés)
+` +
+        `• ${stats.internalTasks} tâches internes (si assignées)
+` +
+        `• ${stats.resolved} cartes résolues (archivées seulement)
+
+` +
+        `${voiceNoteUrl ? 'Audio' : 'Notes texte'} enregistré(es) pour l'équipe suivante`;
+      
+      addLog('Shift terminé avec succès!');
+      alert(message);
+      
+      // Nettoyer le stream audio
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
       }
       
-      console.log('=== FIN TEST - SUCCÈS ===');
-      alert(voiceNoteUrl ? 'SUCCÈS AVEC AUDIO!' : 'Succès sans audio');
       onClose();
       
-    } catch (error) {
-      console.error('=== ERREUR GÉNÉRALE ===', error);
+    } catch (error: any) {
+      addLog(`Erreur générale: ${error.message}`);
       alert(`Erreur: ${error.message}`);
     } finally {
       setIsSubmitting(false);

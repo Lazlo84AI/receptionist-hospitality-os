@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { ShiftFacingCard } from '@/components/cards';
+import { useShiftHandover } from '@/hooks/useShiftHandover';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -29,7 +31,10 @@ import {
   AlertTriangle, 
   Users, 
   Clock, 
-  Wrench
+  Wrench,
+  RefreshCw,
+  Archive,
+  ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
@@ -85,18 +90,36 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   onShiftStarted 
 }) => {
   const { shiftData, loading: shiftDataLoading, error: shiftDataError } = useLatestShiftHandover();
-  const [currentStep, setCurrentStep] = useState<'voice' | 'tasks'>('voice');
+  
+  // NOUVEAU: Récupération intelligente des cartes
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const { data: handoverData, loading: handoverLoading, acceptHandover, error: handoverError } = useShiftHandover(currentUserId);
+  
+  const [currentStep, setCurrentStep] = useState<'voice' | 'handover' | 'tasks'>('voice');
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [readTasks, setReadTasks] = useState<Set<string>>(new Set());
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(180); // 3 minutes example
   const [showTaskDetail, setShowTaskDetail] = useState(false);
-  const [showActivityDetails, setShowActivityDetails] = useState(false);
   const [comment, setComment] = useState('');
-
-  const currentTask = tasks[currentTaskIndex];
-  const totalTasks = tasks.length;
+  
+  // Récupérer l'utilisateur actuel au montage
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+  
+  // Combiner les tâches actuelles avec les cartes transférées
+  const combinedTasks = [
+    ...(handoverData?.tasks || []), // Cartes du shift précédent
+    ...tasks // Cartes actuelles
+  ];
+  
+  const currentTask = combinedTasks[currentTaskIndex];
+  const totalTasks = combinedTasks.length;
   const allTasksRead = readTasks.size === totalTasks;
 
   const handlePrevious = () => {
@@ -123,7 +146,38 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   };
 
   const handleStartTasks = () => {
-    setCurrentStep('tasks');
+    if (handoverData && handoverData.tasks.length > 0) {
+      setCurrentStep('handover'); // Montrer d'abord les cartes transférées
+    } else {
+      setCurrentStep('tasks'); // Pas de handover, aller directement aux tâches
+    }
+  };
+  
+  const handleAcceptHandover = async () => {
+    if (!handoverData) return;
+    
+    try {
+      // Créer un nouveau shift pour l'utilisateur actuel
+      const { data: newShift, error } = await supabase
+        .from('shifts')
+        .insert({
+          user_id: currentUserId,
+          status: 'active'
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Finaliser le handover
+      await acceptHandover(newShift.id);
+      
+      // Passer aux tâches
+      setCurrentStep('tasks');
+    } catch (error) {
+      console.error('Erreur acceptation handover:', error);
+      alert('Erreur lors de l\'acceptation du handover');
+    }
   };
 
   const handleFinishShift = () => {
