@@ -361,50 +361,14 @@ const ShiftManagement = () => {
         newTimestamp = new Date((beforeTime + afterTime) / 2).toISOString();
       }
 
-      // Update Supabase with new status and position
-      let updateResult;
-      
-      switch (activeTask.type) {
-        case 'incident':
-          updateResult = await supabase
-            .from('incidents')
-            .update({ 
-              status: newStatus,
-              updated_at: newTimestamp // Use calculated timestamp for ordering
-            })
-            .eq('id', activeId);
-          break;
-        case 'client_request':
-          updateResult = await supabase
-            .from('client_requests')
-            .update({ 
-              preparation_status: newStatus,
-              updated_at: newTimestamp
-            })
-            .eq('id', activeId);
-          break;
-        case 'follow_up':
-          updateResult = await supabase
-            .from('follow_ups')
-            .update({ 
-              status: newStatus,
-              updated_at: newTimestamp
-            })
-            .eq('id', activeId);
-          break;
-        case 'internal_task':
-        case 'personal_task':
-          updateResult = await supabase
-            .from('internal_tasks')
-            .update({ 
-              status: newStatus,
-              updated_at: newTimestamp
-            })
-            .eq('id', activeId);
-          break;
-        default:
-          throw new Error(`Unknown task type: ${activeTask.type}`);
-      }
+      // Update Supabase - All tasks are now in internal_tasks table
+      const updateResult = await supabase
+        .from('internal_tasks')
+        .update({ 
+          status: newStatus,
+          updated_at: newTimestamp
+        })
+        .eq('id', activeId);
 
       if (updateResult?.error) {
         throw updateResult.error;

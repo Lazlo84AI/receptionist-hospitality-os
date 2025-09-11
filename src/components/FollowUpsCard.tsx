@@ -2,7 +2,7 @@ import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { useFollowUps } from '@/hooks/useSupabaseData';
+import { useTasks } from '@/hooks/useSupabaseData';
 import { FollowUp } from '@/types/database';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
@@ -45,13 +45,26 @@ const transformFollowUpForCard = (followUp: FollowUp) => ({
 });
 
 export function FollowUpsCard() {
-  const { followUps: rawFollowUps, loading, error, refetch } = useFollowUps();
+  const { tasks, loading, error, refetch } = useTasks();
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  // Transform raw follow-ups to UI format
-  const followUps = rawFollowUps.map(transformFollowUpForCard);
+  // Filter and transform follow-ups and personal tasks from unified tasks
+  const followUpTasks = tasks.filter(task => task.type === 'follow_up' || task.type === 'personal_task');
+  const followUps = followUpTasks.map(task => ({
+    id: task.id,
+    title: task.title,
+    location: task.location || 'No location',
+    clientName: undefined,
+    status: task.status === 'pending' ? 'To Process' as const : 
+            task.status === 'in_progress' ? 'In Progress' as const : 
+            task.status === 'completed' ? 'Completed' as const : 'Cancelled' as const,
+    priority: task.priority === 'urgent' ? 'URGENCE' as const : 'NORMAL' as const,
+    assignedTo: task.assignedTo || 'Unassigned',
+    timeElapsed: formatTimeElapsed(task.created_at),
+    originalTask: task
+  }));
 
   // Navigation configuration
   const itemsPerPage = 2; // Afficher 2 cartes à la fois
@@ -62,10 +75,8 @@ export function FollowUpsCard() {
   // Get visible items for current page
   const visibleFollowUps = followUps.slice(currentIndex, currentIndex + itemsPerPage);
   
-  const handleTaskClick = (followUpItem: ReturnType<typeof transformFollowUpForCard>) => {
-    // Convert the follow-up item to TaskItem format for the modal
-    const taskItem = transformFollowUpToTask(followUpItem.originalFollowUp);
-    setSelectedTask(taskItem);
+  const handleTaskClick = (followUpItem: any) => {
+    setSelectedTask(followUpItem.originalTask);
     setIsModalOpen(true);
   };
 

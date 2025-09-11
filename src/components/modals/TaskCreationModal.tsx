@@ -13,6 +13,8 @@ import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { ReminderModal } from '@/components/modals/ReminderModal';
 import { AttachmentModal } from '@/components/modals/AttachmentModal';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const categories = [
   { id: 'incident', label: 'Ongoing Incident', icon: AlertTriangle },
@@ -33,9 +35,9 @@ const priorityLevels = [
 ];
 
 const services = [
-  { id: 'reception', label: 'Reception' },
-  { id: 'housekeeping', label: 'Housekeeping' },
-  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'reception', label: 'Reception', enumRole: 'receptionist' },
+  { id: 'housekeeping', label: 'Housekeeping', enumRole: 'Housekeeping Supervisor' },
+  { id: 'maintenance', label: 'Maintenance', enumRole: 'tech maintenance team' },
 ];
 
 interface TaskCreationModalProps {
@@ -46,6 +48,7 @@ interface TaskCreationModalProps {
 export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const { profiles: hotelMembers } = useProfiles();
   const { locations } = useLocations();
+  const { toast } = useToast();
   
   // Modal states
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
@@ -179,6 +182,96 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const handleClose = () => {
     onClose();
     resetForm();
+  };
+
+  // FONCTION DE TEST TEMPORAIRE
+  const handleTestCreateCard = async () => {
+    console.log('🧪 DÉBUT TEST CRÉATION TÂCHE');
+    
+    try {
+      // 1. RÉCUPÉRER USER ACTUEL
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw new Error(`Erreur user: ${userError.message}`);
+      console.log('👤 User actuel:', user?.id);
+
+      // 2. VÉRIFIER QUE LE USER EXISTE DANS PROFILES
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError || !userProfile) {
+        throw new Error(`Profil utilisateur non trouvé. Veuillez vous reconnecter.`);
+      }
+      console.log('✅ Profil utilisateur trouvé:', userProfile);
+
+      // 3. VÉRIFIER QUE NOUS AVONS DES MEMBRES
+      if (!hotelMembers || hotelMembers.length === 0) {
+        throw new Error('Aucun membre trouvé. Chargement en cours...');
+      }
+
+      // 4. DONNÉES DE TEST
+      const firstMember = hotelMembers[0];
+      const memberName = firstMember.full_name || `${firstMember.first_name} ${firstMember.last_name}`;
+      
+      const testData = {
+        title: 'Test Task - ' + new Date().toISOString().slice(0,16).replace('T', ' '),
+        category: 'incident',
+        priority: 'normal',
+        service: 'reception',
+        assignedMember: memberName,
+        location: '101',
+        description: 'Test automatique de création de tâche depuis le modal',
+        originType: 'team'
+      };
+      console.log('📝 Données de test:', testData);
+      console.log('👥 Premier membre:', firstMember);
+
+      // 5. PRÉPARER DONNÉES D'INSERTION
+      const insertData = {
+        title: testData.title,
+        description: testData.description,
+        priority: testData.priority,
+        origin_type: testData.originType,
+        assigned_to: testData.assignedMember,
+        assigned_member_ids: [firstMember.id],
+        created_by: user.id,
+        incident_type: testData.category,
+        location: testData.location,
+        status: 'pending',
+        checklists: JSON.stringify([]),
+        attachments: JSON.stringify([]),
+        reminders: JSON.stringify([])
+      };
+      console.log('📊 Données finales pour insertion:', insertData);
+
+      // 6. INSERTION EN BASE
+      const { data: result, error: insertError } = await supabase
+        .from('incidents')
+        .insert([insertData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Détails erreur insertion:', insertError);
+        throw new Error(`Erreur insertion: ${insertError.message}`);
+      }
+
+      console.log('🎉 SUCCÈS! Tâche créée:', result);
+      toast({
+        title: "Test réussi!",
+        description: `Tâche créée avec l'ID: ${result.id}`,
+      });
+      
+    } catch (error) {
+      console.error('❌ ERREUR TEST:', error);
+      toast({
+        title: "Erreur de test",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -554,6 +647,13 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
             onClick={handleClose}
           >
             Cancel
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleTestCreateCard}
+            className="bg-orange-500 hover:bg-orange-600 text-white"
+          >
+            TEST Create Card
           </Button>
           <Button 
             onClick={handleCreateCard}

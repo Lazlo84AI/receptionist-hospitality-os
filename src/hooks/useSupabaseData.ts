@@ -141,7 +141,7 @@ export const useTasks = () => {
       const internalTasks: TaskItem[] = (internalTasksResult.data || []).map((task: any) => ({
         id: task.id,
         title: task.title,
-        type: 'internal_task' as const,
+        type: task.task_type as const,
         priority: mapPriority(task.priority),
         status: task.status,
         description: task.description || undefined,

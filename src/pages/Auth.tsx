@@ -236,7 +236,7 @@ const Auth = () => {
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="a receptionist">a receptionist</SelectItem>
+                      <SelectItem value="receptionist">receptionist</SelectItem>
                       <SelectItem value="Housekeeping Supervisor">Housekeeping Supervisor</SelectItem>
                       <SelectItem value="Room Attendant">Room Attendant</SelectItem>
                       <SelectItem value="restaurant staff">restaurant staff</SelectItem>
