@@ -1,0 +1,168 @@
+[33m642b7b4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m sauvegarde initiale après 3 semaines de dev
+[33ma8630cb[m Fix: Restore create card/task button
+[33m541e5b2[m Fix: Ensure comments appear and persist
+[33m4ee1a46[m Code edited in Lovable Code Editor
+[33mbac4567[m Manual edit: src/lib/actions/addTaskComment.ts
+[33ma37ac88[m Manual edit: src/lib/actions/addTaskComment.ts
+[33m1c67bdb[m Fix: Overwrite addTaskComment with correct table
+[33m2143cb3[m Fix: Correct import for getTaskComments
+[33m3fb2408[m feat: Implement getTaskComments action
+[33m89113e2[m feat: Integrate addTaskComment action
+[33md0100ef[m Refactor: Update addTaskComment action
+[33ma8d215b[m Refactor: Unify comments section UI
+[33m9cad9bb[m Refactor dashboard comments UI
+[33mf077ddd[m Sync comment UI and logic
+[33m6142dd2[m feat: Integrate addTaskComment action
+[33medd5fee[m feat: Add addTaskComment action
+[33m5fbc08d[m Refactor reminder data handling
+[33m18f328a[m Update reminder data layer
+[33m6b7c027[m Refactor: Update data access methods
+[33me3ec4ed[m feat: Remove UI components and buttons
+[33me63c41d[m Refactor data fetching
+[33m76d6d44[m Refactor dashboard to use actions
+[33m95e7e56[m Refactor test component
+[33m10a98c4[m Update Supabase actions
+[33m6688923[m Add Supabase data fetching actions
+[33m7ee3ecf[m Fix location data in frontend
+[33m98d4eb8[m Fix floor assignments
+[33m14ad5dd[m Run SQL to update locations
+[33m20e9c74[m Run SQL migration
+[33m205a33e[m Run Supabase migration
+[33m60c695d[m Run Supabase migration
+[33m31a9af5[m Refactor Location Selection UI
+[33m93fe18f[m Reverted to commit a4f5bced67231819fb8c5eed651bcf52e3c1b962
+[33mb0e6668[m Refactor LocationSelector component
+[33ma4f5bce[m Refactor Origin Type options
+[33mf04418a[m Add location selection to cards
+[33m1f1f40d[m Add forgot password functionality
+[33m0ad8d74[m Run SQL script
+[33mfc186c3[m Fix Shift Management button logic
+[33m0dcd236[m Fix webhook payload structure
+[33mde2109c[m Refine webhook payload structure
+[33mc62992d[m Refactor task update payload
+[33mb869e23[m Update webhook events for task actions
+[33m5c3cd05[m Fix webhook events for task updates
+[33ma3ca18d[m Revert UI changes to task enhancement
+[33m624d7d2[m Fix reminder data in payload
+[33m9556409[m Add webhook event types
+[33meae0dc4[m Fix reminder data in payload
+[33m73f3a81[m Fix checklist items in payload
+[33mfb04205[m Fix: Checklist items not sent
+[33m7bce655[m Remove specific fields from payload
+[33m64704a5[m Reverted to commit 0d590af5dfee9cadd4bc2a25db8f5cad0aabd741
+[33m6d61b74[m Update payload structure
+[33m0d590af[m Update task creation payload
+[33m9938ec8[m Update payloads for missing data
+[33m01fbfd2[m Refactor payload creation
+[33mb7094bb[m Update payload with IDs
+[33m82aadc0[m Fix: Update payload to match schema
+[33m05df79c[m Update webhook payload
+[33m77009d3[m Update payload interfaces
+[33m156e4cf[m Update Supabase publish key
+[33mecac4cb[m Update Supabase publishable key
+[33m5306444[m Run SQL migration
+[33ma78b674[m Run SQL migration
+[33md65c74c[m Fix: Ensure current user ID is present
+[33m38d87ad[m Add user and necessary IDs to payload
+[33md5eaa76[m Fix member selection in service filter
+[33m5b392bc[m Fix UI for rooms and common areas
+[33mf291980[m Fix location display in card creation
+[33m6196d39[m Update room display logic
+[33med3bab2[m Fix room display in VoiceCommandButton
+[33m0d36f4c[m Refactor rooms UI
+[33m8bae8c2[m Update Create New Card component
+[33m401c822[m Refactor Supabase interactions
+[33mc99844f[m Add webhook integration
+[33mf27b6fa[m Convert "Détails de la tâche" to English
+[33m39155a4[m Convert "Ajouter une checklist" to English
+[33m7a8ac22[m Convert French to English
+[33mf734108[m Convert remaining French text
+[33m5b6f112[m Translate component to English
+[33m297911b[m Convert French to English
+[33mb7e3d94[m Convert remaining French content
+[33m60f10d8[m Translate French to English
+[33mbed414c[m Refactor to use dynamic data
+[33mc008b32[m Fix priority type and status issues
+[33m2f7c4ac[m Fix priority type issue
+[33m78591a5[m Refactor: Use real-time data
+[33m21bc487[m Run mock data SQL scripts
+[33m0b002a8[m Run mock data SQL scripts
+[33mf99d77b[m Run mock data SQL
+[33m4288721[m Add mock data to database
+[33m56fe993[m Run SQL schema changes
+[33me7a231c[m Run SQL script
+[33md579799[m Reverted to commit c874d291dc7e546936ea6f6fc1e60471a6a06e73
+[33meacad3f[m Update Supabase and webhook
+[33mc35dfa5[m Connect to Supabase and display data
+[33mc874d29[m Add n8n workflow for task creation
+[33mfa812af[m Connect to Supabase project
+[33m59b7b46[m Translate Shift Start Panel
+[33meb85cb5[m Translate My Shifts page
+[33m2bf1b68[m Translate Assistant UI to English
+[33mbd68748[m Translate "Manage Your Training" UI
+[33mbbf82eb[m Revert detailed card view changes
+[33ma4f4831[m Translate Shift Management and Knowledge Base
+[33m1a5dd12[m Translate interface to English
+[33m3709e10[m Translate interface to English
+[33m9f85385[m Translate interface to English
+[33mc4c0056[m Add dashboard title
+[33m71dcfc7[m Add dashboard title
+[33mbae7b80[m Fix: Update task detail view
+[33mcdbe9b7[m Fix task detail view
+[33m65d0983[m Fix task detail view
+[33m54cc7cc[m Fix double close buttons
+[33m47054db[m Remove "Dashboard" from header
+[33m1d935ed[m Fix: Adjust page titles and alignment
+[33me24b06f[m Fix sidebar menu functionality
+[33mf4cfd27[m Fix Assistant header and sidebar
+[33m05dbc22[m Fix MesShifts UI
+[33m627ff17[m Fix Assistant and Profile bugs
+[33mc27b0ca[m Add user profile and assistant features
+[33md8ee171[m Add training dashboard and quizzes
+[33m04bd539[m Add knowledge section
+[33mc5327c4[m Fix Shift Start Modal
+[33m8b32d12[m Fix Shift Start Modal UI
+[33md2ee239[m Add activity log to tasks
+[33m2ac92c2[m Fix Shift Start Modal UI
+[33m82f5e65[m Add shift start functionality
+[33mef4379f[m Fix scrolling in edit modal
+[33mde4a65e[m Fix edit card modal
+[33m37db710[m Implement editable card view
+[33mad890dd[m Fix shift close modal UI
+[33m0eafec7[m Fix: Vocal mode creation modal
+[33mb12d40c[m Add shift closing modal
+[33ma16e034[m Fix incorrect cards on shift management
+[33ma55de1e[m Add drag and drop functionality
+[33m28ad08e[m Add Shift Management UI
+[33m888dd13[m Fix: Missing vocal creation page
+[33m878c678[m Fix: Microphone button not clickable
+[33m3cf55b0[m Fix microphone button behavior
+[33ma58d578[m Refine button states and transitions
+[33ma52172c[m Fix microphone button functionality
+[33m8041de1[m Refine button states and logic
+[33m17cecc3[m Refine microphone button behavior
+[33m5927aeb[m Reverted to commit 7d8f250f9b52697b544a62d2d1afebe8e79076e1
+[33mba30aac[m Refine microphone button behavior
+[33m9a8c817[m Reverted to commit 7d8f250f9b52697b544a62d2d1afebe8e79076e1
+[33m719082a[m Refine microphone button behavior
+[33m7d8f250[m Add dark mode to vocal creation
+[33m5eeadba[m Add voice command mode
+[33mbc9b081[m Fix location module placement
+[33mca95544[m Fix: Apply location module changes
+[33mdc38f74[m Update location and add attachment
+[33me85070e[m Fix location module for client requests
+[33mc84ceda[m Update reminder functionality
+[33m9db28b2[m Fix checklist functionality
+[33m70cf5b8[m Fix: Filter members by service
+[33m0e50afb[m Fix: Make creation button clickable
+[33m99d9a49[m Fix: Make main button clickable
+[33m1aa2c34[m Fix: Address non-functional click
+[33m832ad97[m Fix: Resolve UI issue with creation button
+[33mbf7f7c5[m Add card creation modal
+[33m3848537[m Refactor voice command button
+[33m15ff999[m Fix: Resolve undefined reminder variables
+[33m235164c[m Fix: Apply ReminderModal to more cards
+[33mb93fefa[m Add shift and day selection to reminders
+[33m832e8e1[m Reverted to commit d26ab327e5a9d62273e2ef26c13851d48b193248
+[33mfeb4675[m Implement shift management system
+[33m7be3e0e[m Remove mock data, fetch from Supabas
