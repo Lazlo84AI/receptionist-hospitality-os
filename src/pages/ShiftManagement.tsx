@@ -256,7 +256,7 @@ const KanbanColumn = ({
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tasks, loading, error, refetch } = useTasks();
-  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('active'); // ACTIVÉ POUR TEST
+  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started'); // CHANGÉ POUR TESTER BEGIN SHIFT
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
@@ -292,7 +292,7 @@ const ShiftManagement = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggedTask(null);
-    setDraggedFromColumn(null); // Reset colonne d'origine
+    setDraggedFromColumn(null);
     
     if (!over) return;
 
@@ -303,23 +303,23 @@ const ShiftManagement = () => {
     if (!activeTask) return;
 
     let newStatus: string;
-    let insertPosition: number = -1; // -1 means end of list
+    let targetPosition: number = -1;
 
     // Determine the target status and position
     if (overId.startsWith('column-')) {
-      // Dropped on column header/empty area
+      // Dropped on column header/empty area - put at end
       newStatus = overId.replace('column-', '');
-      insertPosition = -1; // End of list
+      const columnTasks = tasks.filter(t => t.status === newStatus);
+      targetPosition = columnTasks.length;
     } else {
       // Dropped on/near another task
       const overTask = tasks.find(t => t.id === overId);
       if (overTask) {
         newStatus = overTask.status;
-        // Find position of the target task in its column
-        const columnTasks = tasks.filter(t => t.status === newStatus).sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-        insertPosition = columnTasks.findIndex(t => t.id === overId);
+        const columnTasks = tasks
+          .filter(t => t.status === newStatus)
+          .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
+        targetPosition = columnTasks.findIndex(t => t.id === overId);
       } else {
         return;
       }
@@ -329,49 +329,46 @@ const ShiftManagement = () => {
     if (activeTask.status === newStatus) {
       const activeColumnTasks = tasks.filter(t => t.status === activeTask.status);
       const currentPosition = activeColumnTasks.findIndex(t => t.id === activeId);
-      if (insertPosition === currentPosition || (insertPosition === -1 && currentPosition === activeColumnTasks.length - 1)) {
+      if (targetPosition === currentPosition) {
         return;
       }
     }
 
     try {
-      // Calculate the new position timestamp for ordering
-      const targetColumnTasks = tasks
+      // Get all tasks in the target column (excluding the dragged task if same column)
+      const columnTasks = tasks
         .filter(t => t.status === newStatus && t.id !== activeId)
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
       
-      let newTimestamp: string;
+      // Create array with the dragged task inserted at target position
+      const newTaskArray = [...columnTasks];
+      newTaskArray.splice(targetPosition, 0, activeTask);
       
-      if (insertPosition === -1 || insertPosition >= targetColumnTasks.length) {
-        // Insert at end
-        const lastTask = targetColumnTasks[targetColumnTasks.length - 1];
-        newTimestamp = lastTask ? 
-          new Date(new Date(lastTask.created_at).getTime() + 1000).toISOString() :
-          new Date().toISOString();
-      } else if (insertPosition === 0) {
-        // Insert at beginning
-        const firstTask = targetColumnTasks[0];
-        newTimestamp = new Date(new Date(firstTask.created_at).getTime() - 1000).toISOString();
-      } else {
-        // Insert between tasks
-        const beforeTask = targetColumnTasks[insertPosition - 1];
-        const afterTask = targetColumnTasks[insertPosition];
-        const beforeTime = new Date(beforeTask.created_at).getTime();
-        const afterTime = new Date(afterTask.created_at).getTime();
-        newTimestamp = new Date((beforeTime + afterTime) / 2).toISOString();
+      // Calculate new timestamps based on positions (espacés d'1 seconde)
+      const baseTime = Date.now();
+      const updates = newTaskArray.map((task, index) => ({
+        id: task.id,
+        newTimestamp: new Date(baseTime + (index * 1000)).toISOString()
+      }));
+      
+      // If status changed, update the dragged task's status first
+      if (activeTask.status !== newStatus) {
+        const statusUpdate = await supabase
+          .from('internal_tasks')
+          .update({ status: newStatus })
+          .eq('id', activeId);
+        
+        if (statusUpdate.error) throw statusUpdate.error;
       }
-
-      // Update Supabase - All tasks are now in internal_tasks table
-      const updateResult = await supabase
-        .from('internal_tasks')
-        .update({ 
-          status: newStatus,
-          updated_at: newTimestamp
-        })
-        .eq('id', activeId);
-
-      if (updateResult?.error) {
-        throw updateResult.error;
+      
+      // Update positions for all tasks in the column
+      for (const update of updates) {
+        const positionUpdate = await supabase
+          .from('internal_tasks')
+          .update({ updated_at: update.newTimestamp })
+          .eq('id', update.id);
+        
+        if (positionUpdate.error) throw positionUpdate.error;
       }
 
       // Refresh data
@@ -388,7 +385,7 @@ const ShiftManagement = () => {
       
       toast({
         title: "Success",
-        description: `Task moved to ${newStatus.replace('_', ' ')}${insertPosition !== -1 ? ' at position ' + (insertPosition + 1) : ''}`,
+        description: `Task moved to ${newStatus.replace('_', ' ')} at position ${targetPosition + 1}`,
         variant: "default",
       });
       

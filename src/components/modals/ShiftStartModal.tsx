@@ -161,14 +161,12 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
         <div className="flex flex-col max-h-[90vh]">
           {/* Header */}
           <div className="p-6 border-b bg-background">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">
-                Shift Start: Please review the to-do list
-              </h2>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+          <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+          Shift Start: Please review the to-do list
+          </h2>
+          {/* Plus de bouton X manuel - le Dialog en a déjà un */}
+          </div>
             
             {currentStep === 'tasks' && (
               <div className="mt-4 flex items-center gap-2">

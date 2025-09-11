@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ShiftFacingCard } from '@/components/cards';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -31,13 +32,16 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   
-  // États pour la note de fin de shift
+  // États pour la note de fin de shift - VERSION AMÉLIORÉE
   const [noteMode, setNoteMode] = useState<'voice' | 'text'>('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
   const [textNote, setTextNote] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [microphoneReady, setMicrophoneReady] = useState(false);
+  const [recordingLogs, setRecordingLogs] = useState<string[]>([]);
 
   const currentTask = tasks[currentTaskIndex];
   const totalTasks = tasks.length;
@@ -78,36 +82,90 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
     setEditingTask(null);
   };
 
-  const startRecording = async () => {
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${message}`;
+    setRecordingLogs(prev => [...prev, logEntry]);
+    console.log(logEntry);
+  };
+
+  const initializeMicrophone = async () => {
+    addLog('Demande d\'accès au microphone...');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      });
+      
+      addLog('✅ Accès microphone accordé');
+      setAudioStream(stream);
+      setMicrophoneReady(true);
+      
+      // Afficher les infos du microphone
+      const tracks = stream.getAudioTracks();
+      if (tracks.length > 0) {
+        const track = tracks[0];
+        addLog(`Microphone détecté: ${track.label || 'Dispositif audio'}`);
+      }
+      
+    } catch (error: any) {
+      addLog(`Erreur microphone: ${error.message}`);
+      if (error.name === 'NotAllowedError') {
+        alert('Permission microphone refusée. Veuillez autoriser l\'accès au microphone.');
+      } else if (error.name === 'NotFoundError') {
+        alert('Aucun microphone trouvé sur ce système.');
+      }
+    }
+  };
+
+  const startRecording = async () => {
+    if (!audioStream) {
+      await initializeMicrophone();
+      return;
+    }
+
+    try {
       const audioChunks: Blob[] = [];
+      const recorder = new MediaRecorder(audioStream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/wav'
+      });
 
       recorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+          addLog(`Chunk reçu: ${event.data.size} bytes`);
+        }
       };
 
       recorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        addLog(`Enregistrement terminé: ${audioBlob.size} bytes`);
         setRecordedAudio(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+        setMediaRecorder(null);
       };
 
-      recorder.start();
+      recorder.onerror = (event: any) => {
+        addLog(`Erreur MediaRecorder: ${event.error}`);
+      };
+
+      recorder.start(1000); // Chunks de 1 seconde
       setMediaRecorder(recorder);
       setIsRecording(true);
-    } catch (error) {
-      console.error('Erreur d\'accès au microphone:', error);
-      alert('Impossible d\'accéder au microphone. Vérifiez les permissions.');
+      addLog('Enregistrement démarré...');
+      
+    } catch (error: any) {
+      addLog(`Erreur lors du démarrage: ${error.message}`);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
-      setIsRecording(false);
-      setMediaRecorder(null);
+      addLog('Arrêt de l\'enregistrement...');
     }
   };
 
@@ -121,34 +179,72 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
   const submitShiftEnd = async () => {
     setIsSubmitting(true);
+    
+    console.log('=== DÉBUT TEST UPLOAD AUDIO ===');
+    
     try {
-      const shiftData = {
-        shift_id: `shift_${Date.now()}`, // Générer un ID unique
-        user_id: 'current_user', // Récupérer l'ID de l'utilisateur actuel
-        shift_end_time: new Date().toISOString(),
-        tasks_reviewed: tasks.map(task => task.id),
-        voicenote_file: recordedAudio ? 'recorded_audio.wav' : null,
-        voicenote_transcript: noteMode === 'text' ? textNote : null,
-        note_type: noteMode,
-        created_at: new Date().toISOString()
-      };
-
-      // Ici vous devriez envoyer les données à Supabase
-      // await supabase.from('shifts').insert(shiftData);
+      let voiceNoteUrl = null;
       
-      console.log('Données de fin de shift:', shiftData);
-      
-      // Si audio, on devrait aussi l'uploader vers Supabase Storage
       if (recordedAudio) {
-        console.log('Audio à uploader:', recordedAudio);
-        // await supabase.storage.from('shift-recordings').upload(`${shiftData.shift_id}.wav`, recordedAudio);
+        console.log('Audio détecté:', {
+          size: recordedAudio.size,
+          type: recordedAudio.type
+        });
+        
+        // Test ultra-simple d'upload
+        const fileName = `test_${Date.now()}.wav`;
+        console.log('Tentative upload fichier:', fileName);
+        
+        const { data, error } = await supabase.storage
+          .from('shift-recordings')
+          .upload(fileName, recordedAudio);
+        
+        console.log('Résultat upload:', { data, error });
+        
+        if (error) {
+          console.error('ERREUR UPLOAD:', error);
+          alert(`ERREUR UPLOAD: ${JSON.stringify(error)}`);
+        } else {
+          console.log('UPLOAD RÉUSSI!');
+          const { data: { publicUrl } } = supabase.storage
+            .from('shift-recordings')
+            .getPublicUrl(fileName);
+          voiceNoteUrl = publicUrl;
+          console.log('URL générée:', voiceNoteUrl);
+        }
+      } else {
+        console.log('Aucun audio enregistré');
       }
       
-      alert('Fin de shift enregistrée avec succès!');
+      // Sauvegarder le shift
+      const { data: userData } = await supabase.auth.getUser();
+      
+      const shiftData = {
+        user_id: userData.user?.id,
+        end_time: new Date().toISOString(),
+        status: 'completed',
+        voice_note_url: voiceNoteUrl,
+        handover_notes: voiceNoteUrl ? 'Audio enregistré' : 'Pas d\'audio'
+      };
+      
+      console.log('Données shift à insérer:', shiftData);
+      
+      const { data: result, error: shiftError } = await supabase
+        .from('shifts')
+        .insert(shiftData);
+      
+      if (shiftError) {
+        console.error('Erreur shift:', shiftError);
+        throw shiftError;
+      }
+      
+      console.log('=== FIN TEST - SUCCÈS ===');
+      alert(voiceNoteUrl ? 'SUCCÈS AVEC AUDIO!' : 'Succès sans audio');
       onClose();
+      
     } catch (error) {
-      console.error('Erreur lors de l\'enregistrement:', error);
-      alert('Erreur lors de l\'enregistrement de la fin de shift.');
+      console.error('=== ERREUR GÉNÉRALE ===', error);
+      alert(`Erreur: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -226,38 +322,80 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                   </Button>
                 </div>
 
-                {/* Mode vocal */}
+                {/* Mode vocal AMÉLIORÉ */}
                 {noteMode === 'voice' && (
-                  <div className="text-center space-y-6">
-                    <Button
-                      onClick={handleVoiceNote}
-                      size="lg"
-                      className={cn(
-                        "h-32 w-32 rounded-full shadow-lg text-lg font-medium transition-all",
-                        isRecording 
-                          ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" 
-                          : "bg-champagne-gold hover:bg-champagne-gold/90 text-palace-navy"
-                      )}
-                    >
-                      {isRecording ? (
-                        <MicOff className="h-12 w-12" />
-                      ) : (
-                        <Mic className="h-12 w-12" />
-                      )}
-                    </Button>
-                    <div className="space-y-2">
-                      <p className="text-muted-foreground">
-                        {isRecording 
-                          ? "🎙️ Enregistrement en cours... Cliquez pour arrêter" 
-                          : "Appuyez pour enregistrer votre message"
-                        }
-                      </p>
-                      {recordedAudio && (
-                        <p className="text-green-600 font-medium">
-                          ✓ Message vocal enregistré
+                  <div className="space-y-6">
+                    {/* Bouton d'initialisation du microphone */}
+                    {!microphoneReady && (
+                      <div className="text-center">
+                        <Button
+                          onClick={initializeMicrophone}
+                          size="lg"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 text-lg font-medium"
+                        >
+                          <Mic className="h-6 w-6 mr-2" />
+                          Activer le microphone
+                        </Button>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Cliquez pour demander l'accès au microphone
                         </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                    
+                    {/* Interface d'enregistrement */}
+                    {microphoneReady && (
+                      <div className="text-center space-y-6">
+                        <div className="flex justify-center gap-4">
+                          <Button
+                            onClick={handleVoiceNote}
+                            size="lg"
+                            className={cn(
+                              "h-20 w-20 rounded-full shadow-lg text-lg font-medium transition-all",
+                              isRecording 
+                                ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" 
+                                : "bg-green-500 hover:bg-green-600 text-white"
+                            )}
+                          >
+                            {isRecording ? (
+                              <MicOff className="h-8 w-8" />
+                            ) : (
+                              <Mic className="h-8 w-8" />
+                            )}
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium">
+                            {isRecording 
+                              ? "Enregistrement en cours... Cliquez pour arrêter" 
+                              : "Cliquez pour commencer l'enregistrement"
+                            }
+                          </p>
+                          
+                          {recordedAudio && (
+                            <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                              <p className="text-green-700 font-medium">
+                                ✓ Enregistrement terminé ({Math.round(recordedAudio.size / 1024)} KB)
+                              </p>
+                              <audio 
+                                controls 
+                                className="w-full mt-2"
+                                src={recordedAudio ? URL.createObjectURL(recordedAudio) : ''}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Journal des logs */}
+                        {recordingLogs.length > 0 && (
+                          <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm h-32 overflow-y-auto text-left">
+                            {recordingLogs.map((log, index) => (
+                              <div key={index}>{log}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

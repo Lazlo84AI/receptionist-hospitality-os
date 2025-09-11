@@ -10,6 +10,12 @@ export interface WebhookEvent {
 }
 
 export const sendWebhookEvent = async (event: WebhookEvent): Promise<{ success: boolean; error?: string }> => {
+  // Désactiver temporairement les webhooks en développement
+  if (window.location.hostname === 'localhost') {
+    console.log(`🔇 Webhook désactivé en dev pour: ${event.event_type}`);
+    return { success: true };
+  }
+  
   try {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
