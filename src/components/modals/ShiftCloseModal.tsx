@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ShiftFacingCard } from '@/components/cards';
 import { supabase } from '@/integrations/supabase/client';
-import { saveShiftHandover } from '@/lib/shiftContinuityManager';
+import { saveShiftHandover } from '@/lib/shiftContinuityManager-v2';
 import { 
   ChevronLeft, 
   ChevronRight, 

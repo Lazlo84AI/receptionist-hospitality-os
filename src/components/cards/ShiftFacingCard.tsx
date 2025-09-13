@@ -65,23 +65,23 @@ export const ShiftFacingCard = ({ task, onClick, className }: ShiftFacingCardPro
     }
   };
 
-  // Configuration du statut avec couleurs
+  // Configuration du statut avec couleurs selon charte graphique
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'pending':
         return { 
           label: 'To Process', 
-          color: 'bg-green-600 text-white border-green-600' 
+          color: 'to-process-badge'
         };
       case 'in_progress': 
         return { 
           label: 'In Progress', 
-          color: 'bg-gray-300 text-gray-700 border-gray-300' 
+          color: 'in-progress-badge'
         };
       case 'completed':
         return { 
           label: 'Completed', 
-          color: 'bg-white text-gray-600 border-gray-200' 
+          color: 'resolved-badge'
         };
       default:
         return { 
@@ -135,7 +135,7 @@ export const ShiftFacingCard = ({ task, onClick, className }: ShiftFacingCardPro
           
           {/* Badge de priorité (seulement si urgent) */}
           {task.priority === 'urgent' && (
-            <Badge className="bg-red-500 text-white border-red-500 animate-pulse text-xs px-2 py-1">
+            <Badge className="urgent-badge text-xs px-2 py-1">
               Urgent
             </Badge>
           )}

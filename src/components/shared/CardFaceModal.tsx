@@ -33,7 +33,7 @@ export function CardFaceModal({
       case 'To Process':
         return 'bg-hotel-gold-dark text-white border-hotel-gold-dark'; // Gold RAL Pantone 4006C
       case 'In Progress': 
-        return 'bg-gray-300 text-gray-700 border-gray-300'; // Gris clair
+        return 'in-progress-badge'; // Badge blanc selon charte graphique
       case 'Completed':
         return 'bg-white text-gray-600 border-gray-200'; // Blanc
       case 'Cancelled':

@@ -34,33 +34,63 @@ export const useTasks = () => {
         return;
       }
       
-      // Read directly from internal_tasks - simplified approach
-      const { data: internalTasksResult, error: internalTasksError } = await supabase
-        .from('internal_tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Read tasks and profiles separately, then join on client side
+      const [tasksResponse, profilesResponse] = await Promise.all([
+        supabase
+          .from('internal_tasks')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+      ]);
 
-      if (internalTasksError) {
-        throw internalTasksError;
+      if (tasksResponse.error) {
+        throw tasksResponse.error;
       }
+      
+      // Create profiles lookup map for fast joining
+      const profilesMap = new Map();
+      (profilesResponse.data || []).forEach(profile => {
+        profilesMap.set(profile.id, profile);
+      });
 
-      // Transform internal tasks to TaskItem format
-      const allTasks: TaskItem[] = (internalTasksResult || []).map((task: any) => ({
-        id: task.id,
-        title: task.title,
-        type: task.task_type as const,
-        priority: mapPriority(task.priority),
-        status: task.status,
-        description: task.description || undefined,
-        assignedTo: task.assigned_to || undefined,
-        location: task.location || undefined,
-        guestName: undefined, // Not available in unified table
-        roomNumber: undefined, // Not available in unified table
-        recipient: undefined, // Not available in unified table
-        dueDate: task.due_date || undefined,
-        created_at: new Date(task.created_at),
-        updated_at: new Date(task.updated_at)
-      })).sort((a, b) => {
+      // Transform internal tasks to TaskItem format with name lookup
+      const allTasks: TaskItem[] = (tasksResponse.data || []).map((task: any) => {
+        let assignedToDisplay = 'Unassigned';
+        
+        if (task.assigned_to) {
+          // Try to find profile by UUID (convert TEXT to UUID for lookup)
+          const profile = profilesMap.get(task.assigned_to);
+          if (profile) {
+            if (profile.first_name || profile.last_name) {
+              assignedToDisplay = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+            } else if (profile.email) {
+              assignedToDisplay = profile.email;
+            }
+          } else {
+            // Fallback to UUID if profile not found
+            assignedToDisplay = task.assigned_to;
+          }
+        }
+
+        return {
+          id: task.id,
+          title: task.title,
+          type: task.task_type as const,
+          priority: mapPriority(task.priority),
+          status: task.status,
+          description: task.description || undefined,
+          assignedTo: assignedToDisplay,
+          location: task.location || undefined,
+          guestName: undefined, // Not available in unified table
+          roomNumber: undefined, // Not available in unified table
+          recipient: undefined, // Not available in unified table
+          dueDate: task.due_date || undefined,
+          created_at: new Date(task.created_at),
+          updated_at: new Date(task.updated_at)
+        };
+      }).sort((a, b) => {
         // Sort by status first, then by updated_at for position within column
         if (a.status !== b.status) {
           const statusOrder = { 'pending': 0, 'in_progress': 1, 'completed': 2 };

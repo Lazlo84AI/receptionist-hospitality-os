@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit3, AlertTriangle, Users, Clock, Wrench } from 'lucide-react';
+import { Edit3, AlertTriangle, Heart, Clock, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,10 +17,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const categories = [
-  { id: 'incident', label: 'Ongoing Incident', icon: AlertTriangle },
-  { id: 'client_request', label: 'Client Request', icon: Users },
-  { id: 'follow_up', label: 'Follow-up', icon: Clock },
-  { id: 'internal_task', label: 'Internal Task', icon: Wrench },
+  { id: 'incident', label: 'Ongoing Incident', icon: AlertTriangle, cssClass: 'category-incident' },
+  { id: 'client_request', label: 'Client Request', icon: Heart, cssClass: 'category-client-request' },
+  { id: 'follow_up', label: 'Follow-up', icon: Clock, cssClass: 'category-follow-up' },
+  { id: 'internal_task', label: 'Internal Task', icon: Check, cssClass: 'category-internal-task' },
 ];
 
 const originTypes = [
@@ -234,21 +234,18 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
         description: testData.description,
         priority: testData.priority,
         origin_type: testData.originType,
-        assigned_to: testData.assignedMember,
-        assigned_member_ids: [firstMember.id],
+        service: testData.service,
+        assigned_to: [firstMember.id],
         created_by: user.id,
-        incident_type: testData.category,
+        category: testData.category,
         location: testData.location,
-        status: 'pending',
-        checklists: JSON.stringify([]),
-        attachments: JSON.stringify([]),
-        reminders: JSON.stringify([])
+        status: 'pending'
       };
       console.log('📊 Données finales pour insertion:', insertData);
 
       // 6. INSERTION EN BASE
       const { data: result, error: insertError } = await supabase
-        .from('incidents')
+        .from('task')
         .insert([insertData])
         .select()
         .single();
@@ -327,9 +324,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
                     <CardContent className="p-4 flex items-center gap-3">
                       <div className={cn(
                         "p-2 rounded-full",
-                        isSelected 
-                          ? "bg-hotel-yellow text-white" 
-                          : "bg-muted text-muted-foreground"
+                        category.cssClass
                       )}>
                         <IconComponent className="h-5 w-5" />
                       </div>
@@ -486,7 +481,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
           {formData.category === 'internal_task' && (
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">
-                Due Date *
+                Due Date
               </label>
               <Input 
                 type="date"

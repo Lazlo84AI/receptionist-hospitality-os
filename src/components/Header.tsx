@@ -77,7 +77,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
               {formatTime(currentTime)}
             </span>
           </div>
-          <p className="text-xs decoeur-caption text-hotel-yellow/70">
+          <p className="text-xs decoeur-caption text-hotel-sand">
             {formatDate(currentTime)}
           </p>
         </div>
@@ -88,7 +88,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <Button variant="ghost" className="flex items-center space-x-2 hotel-hover">
               <div className="hidden md:block text-right">
                 <p className="text-sm font-medium text-white">{user?.email}</p>
-                <p className="text-xs text-hotel-yellow/70">Authenticated User</p>
+                <p className="text-xs text-hotel-sand">Authenticated User</p>
               </div>
               <Avatar className="h-10 w-10 ring-2 ring-[#BBA57A]/50">
                 <AvatarImage src="/api/placeholder/40/40" />

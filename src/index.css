@@ -207,14 +207,73 @@ Nouvelle palette selon spécifications client
   }
   
   .end-shift-button {
-    background-color: hsl(var(--hotel-navy)) !important;
-    color: hsl(var(--hotel-yellow)) !important;
-    border: 1px solid hsl(var(--hotel-navy)) !important;
+    background-color: hsl(var(--hotel-sand)) !important;
+    color: hsl(var(--hotel-navy)) !important;
+    border: 1px solid hsl(var(--hotel-sand)) !important;
   }
   
   .end-shift-button:hover {
-    background-color: hsl(var(--hotel-navy) / 0.9) !important;
-    color: hsl(var(--hotel-yellow)) !important;
+    background-color: hsl(var(--hotel-sand) / 0.9) !important;
+    color: hsl(var(--hotel-navy)) !important;
+  }
+  
+  .end-shift-button:disabled {
+    background-color: hsl(var(--hotel-sand)) !important;
+    color: hsl(var(--hotel-navy)) !important;
+    opacity: 0.7;
+  }
+  
+  /* Badge "In Progress" en blanc selon charte graphique */
+  .in-progress-badge {
+    background-color: hsl(var(--hotel-white)) !important;
+    color: hsl(var(--hotel-navy)) !important;
+    border: 1px solid hsl(var(--hotel-navy) / 0.2) !important;
+  }
+  
+  /* Icônes catégories pour modal création */
+  .category-client-request {
+    background-color: #22c55e !important; /* Pastille verte */
+    color: white !important;
+  }
+  
+  .category-incident {
+    background-color: #ef4444 !important; /* Pastille rouge */
+    color: white !important;
+  }
+  
+  .category-follow-up {
+    background-color: #000000 !important; /* Pastille noire */
+    color: white !important;
+  }
+  
+  .category-internal-task {
+    background-color: hsl(var(--hotel-yellow)) !important; /* Pastille jaune */
+    color: white !important;
+  }
+  
+  /* Badges pour modals de détail selon charte graphique */
+  .to-process-badge {
+    background-color: hsl(var(--hotel-gold)) !important;
+    color: white !important;
+    border: 1px solid hsl(var(--hotel-gold)) !important;
+  }
+  
+  .resolved-badge {
+    background-color: hsl(var(--hotel-white)) !important;
+    color: hsl(var(--hotel-navy)) !important;
+    border: 1px solid hsl(var(--hotel-navy) / 0.2) !important;
+  }
+  
+  .urgent-badge {
+    background-color: hsl(var(--hotel-yellow)) !important;
+    color: hsl(var(--hotel-navy)) !important;
+    border: 1px solid hsl(var(--hotel-yellow)) !important;
+  }
+  
+  .type-badge {
+    background-color: hsl(var(--hotel-sand)) !important;
+    color: hsl(var(--hotel-navy)) !important;
+    border: 1px solid hsl(var(--hotel-sand)) !important;
   }
   
   .hotel-column {

@@ -149,26 +149,26 @@ const getTypeConfig = (type: string) => {
     case 'incident':
       return { 
         icon: AlertTriangle, 
-        color: 'bg-red-100 text-red-600', // Rouge pâle panneau signalétique
+        color: 'bg-red-100 text-red-600',
         label: 'Incident' 
       };
     case 'client_request':
       return { 
         icon: Heart, 
-        color: 'bg-green-100 text-green-600', // Vert pâle cœur
+        color: 'bg-green-100 text-green-600',
         label: 'Client Request' 
       };
     case 'follow_up':
       return { 
         icon: Clock, 
-        color: 'bg-gray-600 text-white', // Fond noir clair horloge
+        color: 'bg-gray-600 text-white',
         label: 'Follow-up' 
       };
     case 'internal_task':
     case 'personal_task':
       return { 
         icon: UserCircle, 
-        color: 'bg-yellow-100 text-yellow-600', // Jaune pâle profil
+        color: 'bg-yellow-100 text-yellow-600',
         label: 'Personal Task' 
       };
     default:
@@ -352,17 +352,21 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge 
                       variant={task.status === 'completed' ? 'default' : 'secondary'}
-                      className={task.status === 'pending' ? 'bg-green-500 text-white' : ''}
+                      className={cn(
+                        task.status === 'pending' && 'to-process-badge',
+                        task.status === 'in_progress' && 'in-progress-badge',
+                        task.status === 'completed' && 'resolved-badge'
+                      )}
                     >
                       {task.status === 'pending' && 'To Process'}
                       {task.status === 'in_progress' && 'In Progress'}
                       {task.status === 'completed' && 'Completed'}
                     </Badge>
-                    <Badge variant="outline" className="bg-muted text-muted-foreground">
+                    <Badge variant="outline" className="type-badge">
                       {typeConfig.label}
                     </Badge>
                     {task.priority === 'urgent' && (
-                      <Badge className="bg-red-500 text-white">
+                      <Badge className="urgent-badge">
                         URGENT
                       </Badge>
                     )}
