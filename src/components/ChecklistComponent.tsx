@@ -22,17 +22,26 @@ interface ChecklistComponentProps {
   title: string;
   onDelete: () => void;
   onItemsChange?: (items: ChecklistItem[]) => void;
+  initialItems?: ChecklistItem[]; // AJOUT: Items existants
 }
 
-export function ChecklistComponent({ title, onDelete, onItemsChange }: ChecklistComponentProps) {
+export function ChecklistComponent({ title, onDelete, onItemsChange, initialItems }: ChecklistComponentProps) {
   const { profiles } = useProfiles();
-  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [items, setItems] = useState<ChecklistItem[]>(initialItems || []);
   const [newItemText, setNewItemText] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<{ name: string; avatar: string } | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [showAssignPopover, setShowAssignPopover] = useState(false);
   const [showDatePopover, setShowDatePopover] = useState(false);
+
+  // Charger les items initiaux quand ils changent
+  useEffect(() => {
+    if (initialItems) {
+      console.log('🔄 ChecklistComponent - Chargement items initiaux:', initialItems);
+      setItems(initialItems);
+    }
+  }, [initialItems]);
 
   const completedCount = items.filter(item => item.completed).length;
   const progressPercentage = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
@@ -213,9 +222,9 @@ export function ChecklistComponent({ title, onDelete, onItemsChange }: Checklist
                 <PopoverContent className="w-56 p-2" align="start">
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-foreground mb-2">Assign to</div>
-                    {members.map((member) => (
+                    {members.map((member, index) => (
                       <div
-                        key={member.avatar}
+                        key={`${member.name}-${index}`}
                         className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
                         onClick={() => {
                           setSelectedAssignee(member);

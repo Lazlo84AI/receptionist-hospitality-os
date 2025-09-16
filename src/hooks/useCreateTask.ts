@@ -57,23 +57,7 @@ export function useCreateTask() {
     setError(null);
 
     try {
-      // 1. Convertir location name en location_id
-      let locationId = null;
-      if (formData.location) {
-        const { data: locationData, error: locationError } = await supabase
-          .from('locations')
-          .select('id')
-          .eq('name', formData.location)
-          .single();
-
-        if (locationError) {
-          console.warn('Location not found:', formData.location);
-        } else {
-          locationId = locationData.id;
-        }
-      }
-
-      // 2. Convertir assigned member name en UUID array
+      // 1. Convertir assigned member name en UUID array
       let assignedMemberIds = null;
       if (formData.assignedMember) {
         const { data: profileData, error: profileError } = await supabase
@@ -89,100 +73,58 @@ export function useCreateTask() {
         }
       }
 
-      // 3. Préparer les données communes
-      const commonData = {
-        priority: formData.priority,
+      // 2. Préparer les données pour la table unifiée TASK
+      const taskData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category, // ENUM task_category
+        priority: formData.priority, // ENUM priority_level  
+        service: formData.service,   // ENUM task_service
+        origin_type: formData.originType || 'team', // ENUM task_origin
+        assigned_to: assignedMemberIds, // Array uuid[] - CORRECTION PRINCIPALE
+        location: formData.location,
         status: 'pending',
-        location: formData.location, // Garder aussi le texte
-        location_id: locationId,
-        assigned_to: formData.assignedMember, // Garder aussi le texte
-        assigned_member_ids: assignedMemberIds,
-        origin_type: formData.originType,
         created_by: user?.id,
-        checklists: checklists.length > 0 ? checklists : null,
-        // Les attachments et reminders seront ajoutés via les tables séparées
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_by: user?.id,
+        // Ajouter les checklists si présentes
+        checklist_items: checklists.length > 0 ? checklists : null,
+        // Gérer les champs spécifiques selon le type
+        ...(formData.category === 'client_request' && {
+          guest_name: formData.guestName,
+          room_number: formData.roomNumber || formData.location
+        }),
+        ...(formData.category === 'follow_up' && {
+          recipient: formData.recipient || formData.assignedMember,
+          due_date: formData.dueDate?.toISOString().split('T')[0] || null
+        }),
+        ...(formData.category === 'internal_task' && {
+          due_date: formData.dueDate?.toISOString().split('T')[0] || null
+        })
       };
 
-      let result;
+      console.log('📊 Données préparées pour table TASK:', taskData);
 
-      // 4. Insérer selon la catégorie
-      switch (formData.category) {
-        case 'incident':
-          result = await supabase
-            .from('incidents')
-            .insert({
-              ...commonData,
-              title: formData.title,
-              description: formData.description,
-              incident_type: formData.originType || 'general'
-            })
-            .select()
-            .single();
-          break;
+      // 3. Insertion dans la table unifiée TASK (au lieu des tables séparées)
+      const { data: result, error: insertError } = await supabase
+        .from('task')
+        .insert([taskData])
+        .select()
+        .single();
 
-        case 'client_request':
-          result = await supabase
-            .from('client_requests')
-            .insert({
-              ...commonData,
-              guest_name: formData.guestName || '',
-              room_number: formData.roomNumber || formData.location || '',
-              request_type: formData.title,
-              request_details: formData.description,
-              preparation_status: 'pending'
-            })
-            .select()
-            .single();
-          break;
-
-        case 'follow_up':
-          result = await supabase
-            .from('follow_ups')
-            .insert({
-              ...commonData,
-              title: formData.title,
-              recipient: formData.recipient || formData.assignedMember || '',
-              follow_up_type: formData.originType || 'general',
-              notes: formData.description,
-              due_date: formData.dueDate?.toISOString().split('T')[0] || null
-            })
-            .select()
-            .single();
-          break;
-
-        case 'internal_task':
-          result = await supabase
-            .from('internal_tasks')
-            .insert({
-              ...commonData,
-              title: formData.title,
-              description: formData.description,
-              task_type: formData.originType || 'general',
-              department: formData.service,
-              due_date: formData.dueDate?.toISOString().split('T')[0] || null
-            })
-            .select()
-            .single();
-          break;
-
-        default:
-          throw new Error(`Unknown category: ${formData.category}`);
+      if (insertError) {
+        console.error('❌ Erreur insertion task:', insertError);
+        throw insertError;
       }
 
-      if (result.error) {
-        throw result.error;
-      }
+      console.log('✅ Tâche créée dans table TASK:', result);
 
-      const taskId = result.data.id;
-      const taskType = formData.category;
+      const taskId = result.id;
 
-      // 5. Ajouter les reminders dans la table séparée si nécessaire
+      // 4. Ajouter les reminders dans la table séparée si nécessaire
       if (reminders.length > 0) {
         const reminderInserts = reminders.map(reminder => ({
           task_id: taskId,
-          task_type: taskType,
+          task_type: formData.category,
           subject: reminder.subject,
           schedule_type: reminder.scheduleType,
           date: reminder.date?.toISOString().split('T')[0] || null,
@@ -193,14 +135,22 @@ export function useCreateTask() {
           created_by: user?.id
         }));
 
-        await supabase.from('reminders').insert(reminderInserts);
+        const { error: reminderError } = await supabase
+          .from('reminders')
+          .insert(reminderInserts);
+
+        if (reminderError) {
+          console.warn('⚠️ Erreur ajout reminders:', reminderError);
+        } else {
+          console.log('✅ Reminders ajoutés:', reminderInserts.length);
+        }
       }
 
-      // 6. Ajouter les attachments dans la table séparée si nécessaire
+      // 5. Ajouter les attachments dans la table séparée si nécessaire
       if (attachments.length > 0) {
         const attachmentInserts = attachments.map(attachment => ({
           task_id: taskId,
-          task_type: taskType,
+          task_type: formData.category,
           filename: attachment.name,
           file_url: attachment.url || '',
           file_size: attachment.size,
@@ -208,13 +158,22 @@ export function useCreateTask() {
           uploaded_by: user?.id
         }));
 
-        await supabase.from('attachments').insert(attachmentInserts);
+        const { error: attachmentError } = await supabase
+          .from('attachments')
+          .insert(attachmentInserts);
+
+        if (attachmentError) {
+          console.warn('⚠️ Erreur ajout attachments:', attachmentError);
+        } else {
+          console.log('✅ Attachments ajoutés:', attachmentInserts.length);
+        }
       }
 
       setIsLoading(false);
-      return { success: true, data: result.data };
+      return { success: true, data: result };
 
     } catch (err: any) {
+      console.error('❌ ERREUR useCreateTask:', err);
       setError(err.message || 'An error occurred while creating the task');
       setIsLoading(false);
       return { success: false, error: err.message };

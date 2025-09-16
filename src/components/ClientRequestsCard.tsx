@@ -10,8 +10,8 @@ import { formatTimeElapsed } from '@/utils/timeUtils';
 // Transform database TaskItem (client request) to UI format
 const transformClientRequest = (request: TaskItem) => ({
   id: request.id,
-  clientName: request.guestName || 'Unknown Guest',
-  room: request.roomNumber || 'Unknown Room',
+  clientName: request.title,
+  room: request.location || 'Unknown Room',
   request: request.title,
   occasion: request.description || '',
   status: request.status === 'pending' ? 'To Process' : 

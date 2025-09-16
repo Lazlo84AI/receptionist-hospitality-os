@@ -50,7 +50,38 @@ interface EnhancedTaskDetailModalProps {
   forceDetailView?: boolean; // Nouveau prop pour forcer le mode detail
 }
 
-// Hook pour récupérer les activity logs d'une tâche
+// Hook pour récupérer les reminders d'une tâche
+const useTaskReminders = (taskId?: string) => {
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchReminders = async () => {
+    if (!taskId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('task_id', taskId)
+        .eq('is_active', true)
+        .order('remind_at', { ascending: true });
+
+      if (error) throw error;
+      setReminders(data || []);
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+      setReminders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReminders();
+  }, [taskId]);
+
+  return { reminders, loading, refetch: fetchReminders };
+};
 const useActivityLogs = (taskId?: string) => {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -189,6 +220,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
 }) => {
   const { comments, refetch: refetchComments } = useTaskCommentsFixed(task?.id);
   const { activities } = useActivityLogs(task?.id);
+  const { reminders, refetch: refetchReminders } = useTaskReminders(task?.id); // AJOUT: Hook reminders
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -197,8 +229,8 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const [isEscalationOpen, setIsEscalationOpen] = useState(false);
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [checklists, setChecklists] = useState<{ id: string; title: string; tasks: { id: string; text: string; completed: boolean }[] }[]>([]);
-  const [reminders, setReminders] = useState<{ id: string; title: string; date: string; description: string }[]>([]);
   const [attachments, setAttachments] = useState<{ id: string; name: string; type: string; size: string }[]>([]);
+  // SUPPRIME: const [reminders, setReminders] car maintenant via hook
   
   // Hook pour récupérer les données utilisateur pour les commentaires
   const [commentUsers, setCommentUsers] = useState<Record<string, any>>({});
@@ -207,6 +239,22 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const { locations } = useLocations();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Charger les checklists existantes depuis les données de la tâche
+  useEffect(() => {
+    if (task?.checklistItems && Array.isArray(task.checklistItems)) {
+      console.log('📋 Chargement des checklists existantes:', task.checklistItems);
+      const existingChecklists = task.checklistItems.map((checklist: any) => ({
+        id: checklist.id || Date.now().toString(),
+        title: checklist.title || 'Checklist',
+        tasks: checklist.items || [] // Les items de la checklist
+      }));
+      setChecklists(existingChecklists);
+    } else {
+      console.log('📋 Aucune checklist trouvée pour cette tâche');
+      setChecklists([]);
+    }
+  }, [task?.checklistItems]);
 
   // Récupérer les informations des utilisateurs pour les commentaires
   useEffect(() => {
@@ -477,6 +525,13 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                         <ChecklistComponent 
                           title={checklist.title}
                           onDelete={() => setChecklists(checklists.filter(c => c.id !== checklist.id))}
+                          initialItems={checklist.tasks?.map((task: any) => ({
+                            id: task.id,
+                            text: task.text,
+                            completed: task.completed || false,
+                            assignedTo: task.assignedTo,
+                            dueDate: task.dueDate
+                          })) || []}
                         />
                       </CardContent>
                     </Card>
@@ -497,10 +552,15 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                   {reminders.map((reminder) => (
                     <div key={reminder.id} className="bg-muted/30 rounded-lg p-4">
                       <p className="text-foreground mb-2 font-medium">{reminder.title}</p>
-                      <p className="text-sm text-muted-foreground mb-1">{reminder.description}</p>
+                      <p className="text-sm text-muted-foreground mb-1">{reminder.message || reminder.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        Scheduled for {new Date(reminder.date).toLocaleString('en-US')}
+                        Scheduled for {new Date(reminder.remind_at || reminder.reminder_time).toLocaleString('en-US')}
                       </p>
+                      {reminder.frequency !== 'once' && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Frequency: {reminder.frequency}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -628,7 +688,10 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
         onClose={() => setIsReminderOpen(false)}
         taskTitle={task.title}
         task={task}
-        onUpdate={() => onUpdateTask && onUpdateTask(task)}
+        onUpdate={() => {
+          if (onUpdateTask) onUpdateTask(task);
+          refetchReminders(); // AJOUT: Rafraîchir les reminders
+        }}
       />
       
       <ChecklistModal 

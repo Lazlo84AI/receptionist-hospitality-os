@@ -213,6 +213,7 @@ export interface TaskItem {
   guestName?: string;
   roomNumber?: string;
   recipient?: string;
+  checklistItems?: any[]; // AJOUT: Support des checklists
   created_at: string;
   updated_at: string;
 }

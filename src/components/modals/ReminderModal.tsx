@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client'; // AJOUT: Import Supabase
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -83,59 +84,189 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
   const { toast } = useToast();
 
   const handleSave = async () => {
-    const reminderData = {
-      id: editingReminder?.id || Date.now().toString(),
-      title: subject || taskTitle || '',
-      remind_at: startDate && startTime ? `${startDate.toISOString().split('T')[0]}T${startTime}:00.000Z` : new Date().toISOString(),
-      frequency: `every ${repeatEvery} ${repeatUnit}`,
-    };
-    
-    if (task) {
-      try {
-        // Send webhook event for task update with reminder
-        const webhookResult = await sendTaskUpdatedEvent(
-          task.id,
-          task,
-          task,
-          profiles,
-          locations,
-          {
-            reminders: [reminderData]
-          }
-        );
-
-        if (webhookResult.success) {
-          toast({
-            title: editingReminder ? "Reminder Updated" : "Reminder Added",
-            description: "Reminder has been updated and notification sent successfully",
-          });
-          // Call onUpdate to trigger data refresh
-          if (onUpdate) {
-            onUpdate();
-          }
-        } else {
-          toast({
-            title: "Webhook Error",
-            description: webhookResult.error || "Failed to send reminder notification",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error sending webhook:', error);
+    try {
+      // Validation des champs obligatoires
+      if (!subject.trim()) {
         toast({
-          title: "Reminder Error",
-          description: "Failed to send reminder notification",
+          title: "Erreur",
+          description: "Le sujet du reminder est obligatoire",
           variant: "destructive",
         });
+        return;
       }
+
+      if (scheduleType === 'datetime' && !startDate) {
+        toast({
+          title: "Erreur", 
+          description: "La date de début est obligatoire",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 1. DEBUG - Voir le contenu de la tâche
+      console.log('🔍 Debug task object:', task);
+      console.log('🔍 task.assigned_to:', task?.assigned_to);
+      console.log('🔍 task.created_by:', task?.created_by);
+      
+      // 2. SOLUTION DE FALLBACK - Utiliser l'utilisateur connecté via profiles
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Utilisateur non connecté');
+      }
+      
+      // Chercher l'utilisateur dans profiles (pas staff_directory)
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)  // profiles.id = auth.user.id
+        .single();
+        
+      const created_by = userProfile?.id || task?.assigned_to || task?.created_by;
+      if (!created_by) {
+        console.error('❌ Aucun utilisateur trouvé. Task:', task, 'User profile:', userProfile);
+        throw new Error('Aucun utilisateur assigné trouvé pour cette tâche');
+      }
+
+      console.log('👤 Utilisateur pour le reminder:', created_by, 'depuis task assigned_to/created_by');
+
+      // 3. Calculer remind_at depuis startDate + startTime
+      let remindAt = null;
+      if (scheduleType === 'datetime' && startDate) {
+        if (startTime) {
+          remindAt = new Date(`${startDate.toISOString().split('T')[0]}T${startTime}:00.000Z`).toISOString();
+        } else {
+          // Si pas de time, prendre 09:00 par défaut
+          remindAt = new Date(`${startDate.toISOString().split('T')[0]}T09:00:00.000Z`).toISOString();
+        }
+      }
+
+      // 4. Déterminer la frequency intelligente
+      let frequency = 'once'; // Par défaut
+      if (enableCustomRecurrence) {
+        if (repeatEvery === 1) {
+          // Récurrence simple : every 1 day/week/month
+          if (repeatUnit === 'day') frequency = 'daily';
+          else if (repeatUnit === 'week') frequency = 'weekly';
+          else if (repeatUnit === 'month') frequency = 'monthly';
+        } else {
+          // Récurrence complexe : every 2+ ou jours spécifiques
+          frequency = 'custom';
+        }
+        
+        // Si des jours spécifiques sont sélectionnés, c'est custom
+        if (selectedDaysOfWeek.length > 0) {
+          frequency = 'custom';
+        }
+      }
+
+      // 5. Préparer les données pour la base
+      const reminderData = {
+        task_id: task?.id,
+        title: subject,
+        message: subject,
+        
+        // Champ principal obligatoire
+        reminder_time: remindAt || new Date().toISOString(),
+        
+        // Frequency avec logique intelligente
+        frequency: frequency,
+        
+        // Planification détaillée
+        schedule_type: scheduleType,
+        start_date: scheduleType === 'datetime' && startDate ? startDate.toISOString() : null,
+        end_date: scheduleType === 'datetime' && endDate ? endDate.toISOString() : null,
+        start_time: scheduleType === 'datetime' && startTime ? `${startTime}:00+00` : null,
+        end_time: scheduleType === 'datetime' && endTime ? `${endTime}:00+00` : null,
+        
+        // Récurrence complète
+        recurrence_interval: enableCustomRecurrence ? repeatEvery : null,
+        recurrence_unit: enableCustomRecurrence ? repeatUnit : null,
+        recurrence_days: selectedDaysOfWeek.length > 0 ? selectedDaysOfWeek : null,
+        recurrence_end_type: enableCustomRecurrence ? endType : 'never',
+        recurrence_end_date: endType === 'date' && endDateRecurrence ? endDateRecurrence.toISOString() : null,
+        recurrence_occurrences: endType === 'occurrences' ? occurrences : null,
+        
+        // Calculer remind_at (pour compatibilité)
+        remind_at: remindAt,
+        
+        // Métadonnées avec bon created_by
+        is_active: true,
+        status: 'pending',
+        created_by: created_by, // ID depuis task.assigned_to ou task.created_by
+      };
+
+      console.log('🔔 Sauvegarde reminder en base:', reminderData);
+      console.log('📊 Frequency calculée:', frequency, 'depuis récurrence:', { enableCustomRecurrence, repeatEvery, repeatUnit, selectedDaysOfWeek });
+
+      // 6. Transaction : créer reminder + update task
+      const { data: result, error: insertError } = await supabase
+        .from('reminders')
+        .insert([reminderData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Erreur insertion reminder:', insertError);
+        throw new Error(`Erreur lors de la sauvegarde: ${insertError.message}`);
+      }
+
+      console.log('✅ Reminder sauvegardé avec ID:', result.id);
+
+      // 7. Mettre à jour task.reminder_id avec l'ID du reminder créé
+      if (task?.id) {
+        const { error: taskUpdateError } = await supabase
+          .from('task')
+          .update({ reminder_id: result.id })
+          .eq('id', task.id);
+
+        if (taskUpdateError) {
+          console.warn('⚠️ Erreur mise à jour task.reminder_id:', taskUpdateError);
+          // Ne pas bloquer, le reminder est sauvé
+        } else {
+          console.log('✅ Task.reminder_id mis à jour:', result.id);
+        }
+      }
+
+      toast({
+        title: editingReminder ? "Reminder modifié" : "Reminder créé",
+        description: `Le reminder "${subject}" a été sauvegardé (${frequency})`,
+      });
+
+      // Webhook optionnel (garder pour compatibilité)
+      if (task) {
+        try {
+          await sendTaskUpdatedEvent(
+            task.id,
+            task,
+            { ...task, reminder_id: result.id },
+            profiles,
+            locations,
+            { reminders: [result] }
+          );
+        } catch (webhookError) {
+          console.warn('⚠️ Webhook failed but reminder was saved:', webhookError);
+        }
+      }
+
+      // Appeler les callbacks
+      if (onSave) {
+        onSave(result);
+      }
+      if (onUpdate) {
+        onUpdate();
+      }
+      
+      onClose();
+      
+    } catch (error) {
+      console.error('❌ Erreur handleSave:', error);
+      toast({
+        title: "Erreur de sauvegarde",
+        description: error.message || 'Erreur inconnue',
+        variant: "destructive",
+      });
     }
-    
-    // Call the onSave callback if provided
-    if (onSave) {
-      onSave(reminderData);
-    }
-    
-    onClose();
   };
 
   const handleClear = () => {

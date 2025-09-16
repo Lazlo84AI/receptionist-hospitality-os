@@ -34,12 +34,15 @@ export const useTasks = () => {
         return;
       }
       
-      // Read tasks and profiles separately, then join on client side
-      const [tasksResponse, profilesResponse] = await Promise.all([
+      // Read tasks, staff_directory AND profiles separately, then join on client side
+      const [tasksResponse, staffResponse, profilesResponse] = await Promise.all([
         supabase
-          .from('internal_tasks')
+          .from('task')
           .select('*')
           .order('created_at', { ascending: false }),
+        supabase
+          .from('staff_directory')
+          .select('id, first_name, last_name, full_name, email'),
         supabase
           .from('profiles')
           .select('id, first_name, last_name, email')
@@ -49,44 +52,95 @@ export const useTasks = () => {
         throw tasksResponse.error;
       }
       
-      // Create profiles lookup map for fast joining
+      // Create lookup maps for both staff and profiles
+      const staffMap = new Map();
+      (staffResponse.data || []).forEach(staff => {
+        staffMap.set(staff.id, staff);
+      });
+      
       const profilesMap = new Map();
       (profilesResponse.data || []).forEach(profile => {
         profilesMap.set(profile.id, profile);
       });
 
-      // Transform internal tasks to TaskItem format with name lookup
+      console.log('📊 Staff directory chargé:', staffResponse.data?.length, 'membres');
+      console.log('👤 Profiles chargés:', profilesResponse.data?.length, 'utilisateurs');
+
+      // Helper functions to get display name from different table structures
+      const getDisplayNameFromStaff = (staffData: any) => {
+        if (staffData.full_name) return staffData.full_name;
+        if (staffData.first_name || staffData.last_name) {
+          return `${staffData.first_name || ''} ${staffData.last_name || ''}`.trim();
+        }
+        if (staffData.email) return staffData.email;
+        return null;
+      };
+
+      const getDisplayNameFromProfiles = (profileData: any) => {
+        // Table profiles n'a pas de full_name, seulement first_name + last_name
+        if (profileData.first_name || profileData.last_name) {
+          return `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
+        }
+        if (profileData.email) return profileData.email;
+        return null;
+      };
+
+      // Transform internal tasks to TaskItem format with dual name lookup
       const allTasks: TaskItem[] = (tasksResponse.data || []).map((task: any) => {
-        let assignedToDisplay = 'Unassigned';
-        
-        if (task.assigned_to) {
-          // Try to find profile by UUID (convert TEXT to UUID for lookup)
-          const profile = profilesMap.get(task.assigned_to);
-          if (profile) {
-            if (profile.first_name || profile.last_name) {
-              assignedToDisplay = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-            } else if (profile.email) {
-              assignedToDisplay = profile.email;
-            }
+        // 1. CRÉATEUR (created_by) - chercher dans profiles
+        let creatorDisplay = 'Inconnu';
+        if (task.created_by) {
+          const creatorProfile = profilesMap.get(task.created_by);
+          if (creatorProfile) {
+            creatorDisplay = getDisplayNameFromProfiles(creatorProfile) || task.created_by;
+            console.log('✅ Créateur mappé:', task.created_by, '→', creatorDisplay);
           } else {
-            // Fallback to UUID if profile not found
-            assignedToDisplay = task.assigned_to;
+            console.warn('❌ Créateur non trouvé dans profiles:', task.created_by);
+            creatorDisplay = task.created_by;
           }
         }
+
+        // 2. ASSIGNÉ (assigned_to) - chercher dans staff_directory
+        let assignedDisplay = 'Non assigné';
+        let assignedCount = 0;
+        
+        if (task.assigned_to && Array.isArray(task.assigned_to) && task.assigned_to.length > 0) {
+          assignedCount = task.assigned_to.length;
+          const firstAssignedId = task.assigned_to[0];
+          const assignedStaff = staffMap.get(firstAssignedId);
+          
+          if (assignedStaff) {
+            assignedDisplay = getDisplayNameFromStaff(assignedStaff) || firstAssignedId;
+            console.log('✅ Assigné mappé:', firstAssignedId, '→', assignedDisplay);
+          } else {
+            console.warn('❌ Assigné non trouvé dans staff_directory:', firstAssignedId);
+            assignedDisplay = firstAssignedId;
+          }
+          
+          // Ajouter indication s'il y a plusieurs assignés
+          if (assignedCount > 1) {
+            assignedDisplay += ` +${assignedCount - 1}`;
+          }
+        }
+
+        // 3. AFFICHAGE COMBINÉ: "Créateur → Assigné"
+        const combinedDisplay = `${creatorDisplay} → ${assignedDisplay}`;
+        console.log('🎯 Affichage final:', combinedDisplay);
 
         return {
           id: task.id,
           title: task.title,
-          type: task.task_type as const,
+          type: task.category as const, // Using category field to match dashboard filters
           priority: mapPriority(task.priority),
           status: task.status,
           description: task.description || undefined,
-          assignedTo: assignedToDisplay,
+          assignedTo: combinedDisplay,
           location: task.location || undefined,
           guestName: undefined, // Not available in unified table
           roomNumber: undefined, // Not available in unified table
           recipient: undefined, // Not available in unified table
           dueDate: task.due_date || undefined,
+          checklistItems: task.checklist_items || undefined, // AJOUT: Mapper les checklists
           created_at: new Date(task.created_at),
           updated_at: new Date(task.updated_at)
         };
@@ -112,10 +166,10 @@ export const useTasks = () => {
   useEffect(() => {
     fetchTasks();
 
-    // Set up real-time subscription to internal_tasks only
+    // Set up real-time subscription to unified task table
     const subscription = supabase
-      .channel('internal-tasks-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_tasks' }, fetchTasks)
+      .channel('task-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task' }, fetchTasks)
       .subscribe();
 
     return () => {
@@ -168,7 +222,7 @@ export const useFollowUps = () => {
   return { followUps, loading, error, refetch: fetchFollowUps };
 };
 
-// Hook for fetching profiles - Now using getUserProfiles action
+// Hook for fetching profiles - Now using staff_directory
 export const useProfiles = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,14 +232,17 @@ export const useProfiles = () => {
     const fetchProfiles = async () => {
       try {
         setLoading(true);
-        // Import and use the action
-        const { default: getUserProfiles } = await import('@/lib/actions/getUserProfiles');
-        const data = await getUserProfiles({ limit: 100 });
+        const { data, error } = await supabase
+          .from('staff_directory')
+          .select('*')
+          .order('first_name', { ascending: true });
+
+        if (error) throw error;
         setProfiles(data || []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching profiles:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch profiles');
+        console.error('Error fetching staff directory:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch staff directory');
       } finally {
         setLoading(false);
       }

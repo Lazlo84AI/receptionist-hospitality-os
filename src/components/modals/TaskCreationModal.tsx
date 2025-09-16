@@ -184,69 +184,85 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
     resetForm();
   };
 
-  // FONCTION DE TEST TEMPORAIRE
+  // FONCTION DE TEST TEMPORAIRE - MAINTENANT AVEC DONNÉES DU FORMULAIRE
   const handleTestCreateCard = async () => {
-    console.log('🧪 DÉBUT TEST CRÉATION TÂCHE');
+    console.log('🧪 DÉBUT TEST CRÉATION TÂCHE - AVEC DONNÉES DU FORMULAIRE');
+    console.log('📝 Données du formulaire:', formData);
     
     try {
+      // Validation des champs obligatoires
+      if (!formData.title.trim()) {
+        throw new Error('Titre obligatoire');
+      }
+      if (!formData.category) {
+        throw new Error('Catégorie obligatoire');
+      }
+
       // 1. RÉCUPÉRER USER ACTUEL
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw new Error(`Erreur user: ${userError.message}`);
-      console.log('👤 User actuel:', user?.id);
+      if (userError || !user) throw new Error('User not found');
+      console.log('👤 User actuel:', user.id);
 
-      // 2. VÉRIFIER QUE LE USER EXISTE DANS PROFILES
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('id', user.id)
-        .single();
+      // 2. RÉCUPÉRER LE MEMBRE ASSIGNÉ OU UN PAR DÉFAUT
+      let assignedMemberId = null;
+      if (formData.assignedMember) {
+        // Chercher le membre par nom dans staff_directory
+        const { data: memberData, error: memberError } = await supabase
+          .from('staff_directory')
+          .select('id')
+          .or(`full_name.eq.${formData.assignedMember},first_name.eq.${formData.assignedMember.split(' ')[0]}`)
+          .single();
         
-      if (profileError || !userProfile) {
-        throw new Error(`Profil utilisateur non trouvé. Veuillez vous reconnecter.`);
+        if (memberError) {
+          console.warn('Membre assigné non trouvé:', formData.assignedMember);
+          // Utiliser le premier membre disponible comme fallback
+          const firstMember = hotelMembers?.[0];
+          assignedMemberId = firstMember?.id || null;
+        } else {
+          assignedMemberId = memberData.id;
+        }
+      } else {
+        // Pas de membre assigné, utiliser le premier disponible
+        const firstMember = hotelMembers?.[0];
+        assignedMemberId = firstMember?.id || null;
       }
-      console.log('✅ Profil utilisateur trouvé:', userProfile);
-
-      // 3. VÉRIFIER QUE NOUS AVONS DES MEMBRES
-      if (!hotelMembers || hotelMembers.length === 0) {
-        throw new Error('Aucun membre trouvé. Chargement en cours...');
-      }
-
-      // 4. DONNÉES DE TEST
-      const firstMember = hotelMembers[0];
-      const memberName = firstMember.full_name || `${firstMember.first_name} ${firstMember.last_name}`;
       
-      const testData = {
-        title: 'Test Task - ' + new Date().toISOString().slice(0,16).replace('T', ' '),
-        category: 'incident',
-        priority: 'normal',
-        service: 'reception',
-        assignedMember: memberName,
-        location: '101',
-        description: 'Test automatique de création de tâche depuis le modal',
-        originType: 'team'
-      };
-      console.log('📝 Données de test:', testData);
-      console.log('👥 Premier membre:', firstMember);
+      console.log('👥 Membre assigné ID:', assignedMemberId);
 
-      // 5. PRÉPARER DONNÉES D'INSERTION
-      const insertData = {
-        title: testData.title,
-        description: testData.description,
-        priority: testData.priority,
-        origin_type: testData.originType,
-        service: testData.service,
-        assigned_to: [firstMember.id],
+      // 3. DONNÉES DU FORMULAIRE ADAPTÉES AU FORMAT TABLE TASK UNIFIÉE
+      const taskData = {
+        title: formData.title,                    // ✅ VRAIES DONNÉES
+        description: formData.description || null, // ✅ VRAIES DONNÉES
+        category: formData.category,               // ✅ VRAIES DONNÉES
+        priority: formData.priority || 'normal',   // ✅ VRAIES DONNÉES
+        service: formData.service || 'reception', // ✅ VRAIES DONNÉES
+        origin_type: formData.originType || 'team', // ✅ VRAIES DONNÉES
+        assigned_to: assignedMemberId ? [assignedMemberId] : null, // ✅ VRAIES DONNÉES
+        location: formData.location || null,      // ✅ VRAIES DONNÉES
+        status: 'pending',
         created_by: user.id,
-        category: testData.category,
-        location: testData.location,
-        status: 'pending'
+        updated_by: user.id,
+        // Champs spécifiques selon la catégorie
+        ...(formData.category === 'client_request' && {
+          guest_name: formData.guestName || null,
+          room_number: formData.roomNumber || formData.location || null
+        }),
+        ...(formData.category === 'follow_up' && {
+          recipient: formData.recipient || formData.assignedMember || null,
+          due_date: formData.dueDate?.toISOString().split('T')[0] || null
+        }),
+        ...(formData.category === 'internal_task' && {
+          due_date: formData.dueDate?.toISOString().split('T')[0] || null
+        }),
+        // Ajouter les checklists si présentes
+        checklist_items: checklists.length > 0 ? checklists : null
       };
-      console.log('📊 Données finales pour insertion:', insertData);
+      console.log('📊 Données finales pour insertion (VRAIES):', taskData);
 
-      // 6. INSERTION EN BASE
+      // 4. INSERTION DIRECTE DANS TABLE TASK
       const { data: result, error: insertError } = await supabase
         .from('task')
-        .insert([insertData])
+        .insert([taskData])
         .select()
         .single();
 
@@ -258,8 +274,11 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
       console.log('🎉 SUCCÈS! Tâche créée:', result);
       toast({
         title: "Test réussi!",
-        description: `Tâche créée avec l'ID: ${result.id}`,
+        description: `Tâche créée: ${result.title}`,
       });
+      
+      onClose();
+      resetForm();
       
     } catch (error) {
       console.error('❌ ERREUR TEST:', error);
