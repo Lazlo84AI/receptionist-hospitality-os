@@ -24,7 +24,8 @@ import {
   Edit,
   Heart,
   UserCircle,
-  Eye
+  Eye,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReminderModal } from './ReminderModal';
@@ -622,7 +623,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                         </a>
                       )}
                     </div>
-                  ))}}}
+                  ))}
                 </div>
               </div>
             )}
