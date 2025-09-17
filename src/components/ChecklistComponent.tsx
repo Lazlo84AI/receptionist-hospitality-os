@@ -152,7 +152,10 @@ export function ChecklistComponent({ title, onDelete, onItemsChange, initialItem
             {item.dueDate && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                {item.dueDate.toLocaleDateString()}
+                {typeof item.dueDate === 'string' 
+                  ? new Date(item.dueDate).toLocaleDateString()
+                  : item.dueDate.toLocaleDateString()
+                }
               </div>
             )}
             

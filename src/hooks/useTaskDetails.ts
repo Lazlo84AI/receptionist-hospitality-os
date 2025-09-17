@@ -29,6 +29,21 @@ export interface TaskReminder {
   };
 }
 
+export interface TaskAttachment {
+  id: string;
+  filename: string;
+  file_url: string | null;
+  file_size: number | null;
+  mime_type: string | null;
+  attachment_type: 'image' | 'document' | 'audio' | 'video' | 'other';
+  uploaded_by: string;
+  created_at: string;
+  uploader_profile?: {
+    first_name: string | null;
+    last_name: string | null;
+  };
+}
+
 export interface TaskActivity {
   id: string;
   user_id: string | null;
@@ -166,6 +181,70 @@ export const useTaskReminders = (taskId: string | undefined, taskType: string | 
   return { reminders, loading, error, refetch: fetchReminders };
 };
 
+// Hook pour récupérer les attachments d'une tâche
+export const useTaskAttachments = (taskId: string | undefined) => {
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAttachments = async () => {
+    if (!taskId) {
+      setAttachments([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('attachments')
+        .select(`
+          id,
+          filename,
+          file_url,
+          file_size,
+          mime_type,
+          attachment_type,
+          uploaded_by,
+          created_at,
+          profiles_ordered!attachments_uploaded_by_fkey (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedAttachments: TaskAttachment[] = (data || []).map(attachment => ({
+        id: attachment.id,
+        filename: attachment.filename,
+        file_url: attachment.file_url,
+        file_size: attachment.file_size,
+        mime_type: attachment.mime_type,
+        attachment_type: attachment.attachment_type as 'image' | 'document' | 'audio' | 'video' | 'other',
+        uploaded_by: attachment.uploaded_by,
+        created_at: attachment.created_at,
+        uploader_profile: attachment.profiles_ordered as any
+      }));
+
+      setAttachments(transformedAttachments);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching task attachments:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch attachments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttachments();
+  }, [taskId]);
+
+  return { attachments, loading, error, refetch: fetchAttachments };
+};
+
 // Hook pour récupérer l'activité log d'une tâche
 export const useTaskActivity = (taskId: string | undefined, taskType: string | undefined) => {
   const [activities, setActivities] = useState<TaskActivity[]>([]);
@@ -230,20 +309,23 @@ export const useTaskActivity = (taskId: string | undefined, taskType: string | u
 export const useTaskDetails = (taskId: string | undefined, taskType: string | undefined) => {
   const comments = useTaskComments(taskId, taskType);
   const reminders = useTaskReminders(taskId, taskType);
+  const attachments = useTaskAttachments(taskId); // ✅ Ajout des attachments
   const activities = useTaskActivity(taskId, taskType);
 
-  const loading = comments.loading || reminders.loading || activities.loading;
-  const error = comments.error || reminders.error || activities.error;
+  const loading = comments.loading || reminders.loading || attachments.loading || activities.loading;
+  const error = comments.error || reminders.error || attachments.error || activities.error;
 
   const refetch = () => {
     comments.refetch();
     reminders.refetch();
+    attachments.refetch(); // ✅ Ajout du refetch
     activities.refetch();
   };
 
   return {
     comments: comments.comments,
     reminders: reminders.reminders,
+    attachments: attachments.attachments, // ✅ Ajout dans le retour
     activities: activities.activities,
     loading,
     error,

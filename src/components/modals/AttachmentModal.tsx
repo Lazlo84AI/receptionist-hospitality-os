@@ -13,6 +13,7 @@ interface AttachmentModalProps {
   onClose: () => void;
   task?: any;
   onUpdate?: () => void;
+  onSave?: (attachmentData: UploadedFile[]) => void; // ✅ Nouveau prop
 }
 
 interface UploadedFile {
@@ -28,7 +29,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
   isOpen, 
   onClose,
   task,
-  onUpdate
+  onUpdate,
+  onSave
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
@@ -293,7 +295,15 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
               Cancel
             </Button>
             <Button 
-              onClick={handleSubmit}
+              onClick={() => {
+                if (onSave && attachments.length > 0) {
+                  console.log('📎 Envoi des attachments au parent:', attachments);
+                  onSave(attachments);
+                }
+                setAttachments([]);
+                setLinkUrl('');
+                onClose();
+              }}
               disabled={attachments.length === 0}
             >
               Add {attachments.length > 0 && `(${attachments.length})`}

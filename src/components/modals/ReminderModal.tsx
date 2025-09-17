@@ -62,7 +62,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
       setEndDateRecurrence(editingReminder.endDate);
     } else {
       // Reset form for new reminder
-      setSubject('');
+      setSubject(taskTitle || ''); // CORRECTION: Utiliser taskTitle par défaut
       setScheduleType('datetime');
       setStartDate(undefined);
       setEndDate(undefined);
@@ -77,7 +77,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
       setOccurrences(13);
       setEnableCustomRecurrence(false);
     }
-  }, [editingReminder]);
+  }, [editingReminder, taskTitle]); // AJOUT: dépendance taskTitle
 
   const { profiles } = useProfiles();
   const { locations } = useLocations();
@@ -85,8 +85,12 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
   const handleSave = async () => {
     try {
-      // Validation des champs obligatoires
-      if (!subject.trim()) {
+      // Validation des champs obligatoires avec logs détaillés
+      const effectiveSubject = subject || taskTitle;
+      console.log('🔍 Validation subject:', { subject, taskTitle, effectiveSubject, length: effectiveSubject?.length });
+      
+      if (!effectiveSubject || !effectiveSubject.trim()) {
+        console.error('❌ Subject vide:', { subject, taskTitle, effectiveSubject });
         toast({
           title: "Erreur",
           description: "Le sujet du reminder est obligatoire",
@@ -106,8 +110,64 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
       // 1. DEBUG - Voir le contenu de la tâche
       console.log('🔍 Debug task object:', task);
+      console.log('🔍 task.id:', task?.id);
       console.log('🔍 task.assigned_to:', task?.assigned_to);
       console.log('🔍 task.created_by:', task?.created_by);
+      
+      // Vérification critique du task_id
+      const isNewTask = !task?.id;
+      
+      if (isNewTask) {
+        console.log('🆕 Détection: Nouvelle tâche (pas encore d’ID) - Stockage temporaire');
+        
+        // Calculer la frequency pour le stockage temporaire
+        let tempFrequency = 'once';
+        if (enableCustomRecurrence) {
+          if (repeatEvery === 1) {
+            if (repeatUnit === 'day') tempFrequency = 'daily';
+            else if (repeatUnit === 'week') tempFrequency = 'weekly';
+            else if (repeatUnit === 'month') tempFrequency = 'monthly';
+          } else {
+            tempFrequency = 'custom';
+          }
+          if (selectedDaysOfWeek.length > 0) {
+            tempFrequency = 'custom';
+          }
+        }
+        
+        // Pour les nouvelles tâches, stocker le reminder temporairement
+        const tempReminderData = {
+          title: effectiveSubject,
+          message: effectiveSubject,
+          schedule_type: scheduleType,
+          start_date: scheduleType === 'datetime' && startDate ? startDate.toISOString() : null,
+          start_time: scheduleType === 'datetime' && startTime ? startTime : null,
+          frequency: tempFrequency,
+          recurrence_interval: enableCustomRecurrence ? repeatEvery : null,
+          recurrence_unit: enableCustomRecurrence ? repeatUnit : null,
+          recurrence_days: selectedDaysOfWeek.length > 0 ? selectedDaysOfWeek : null,
+          recurrence_end_type: enableCustomRecurrence ? endType : 'never',
+          recurrence_end_date: endType === 'date' && endDateRecurrence ? endDateRecurrence.toISOString() : null,
+          recurrence_occurrences: endType === 'occurrences' ? occurrences : null,
+          // Flag pour indiquer que c'est temporaire
+          isTemporary: true
+        };
+        
+        console.log('💾 Reminder temporaire créé:', tempReminderData);
+        
+        // Appeler onSave avec les données temporaires
+        if (onSave) {
+          onSave(tempReminderData);
+        }
+        
+        toast({
+          title: "Reminder configuré",
+          description: "Le reminder sera créé lors de la sauvegarde de la tâche",
+        });
+        
+        onClose();
+        return; // SORTIR ICI - ne pas continuer avec la sauvegarde normale
+      }
       
       // 2. SOLUTION DE FALLBACK - Utiliser l'utilisateur connecté via profiles
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -134,10 +194,16 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
       let remindAt = null;
       if (scheduleType === 'datetime' && startDate) {
         if (startTime) {
-          remindAt = new Date(`${startDate.toISOString().split('T')[0]}T${startTime}:00.000Z`).toISOString();
+          // Construction correcte en timezone locale (Lisbonne)
+          const localDateTime = new Date(startDate);
+          const [hours, minutes] = startTime.split(':');
+          localDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          remindAt = localDateTime.toISOString();
         } else {
-          // Si pas de time, prendre 09:00 par défaut
-          remindAt = new Date(`${startDate.toISOString().split('T')[0]}T09:00:00.000Z`).toISOString();
+          // Si pas de time, prendre 09:00 par défaut en timezone locale
+          const localDateTime = new Date(startDate);
+          localDateTime.setHours(9, 0, 0, 0);
+          remindAt = localDateTime.toISOString();
         }
       }
 
@@ -163,8 +229,8 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
       // 5. Préparer les données pour la base
       const reminderData = {
         task_id: task?.id,
-        title: subject,
-        message: subject,
+        title: effectiveSubject,
+        message: effectiveSubject,
         
         // Champ principal obligatoire
         reminder_time: remindAt || new Date().toISOString(),

@@ -103,13 +103,13 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const handleAddReminder = (reminderData: any) => {
     const newReminder = {
       id: Date.now().toString(),
-      subject: reminderData.subject,
-      scheduleType: reminderData.scheduleType,
-      date: reminderData.date,
-      time: reminderData.time,
+      subject: reminderData.title || reminderData.subject,        // Mapper title → subject
+      scheduleType: reminderData.schedule_type || reminderData.scheduleType,  // Mapper schedule_type → scheduleType
+      date: reminderData.start_date ? new Date(reminderData.start_date) : reminderData.date,  // Convertir start_date → date
+      time: reminderData.start_time || reminderData.time,         // Mapper start_time → time
       shifts: reminderData.shifts,
       frequency: reminderData.frequency,
-      endDate: reminderData.endDate,
+      endDate: reminderData.recurrence_end_date ? new Date(reminderData.recurrence_end_date) : reminderData.endDate,
     };
     setReminders(prev => [...prev, newReminder]);
   };
@@ -117,13 +117,13 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
   const handleUpdateReminder = (reminderId: string, reminderData: any) => {
     const updatedReminder = {
       id: reminderId,
-      subject: reminderData.subject,
-      scheduleType: reminderData.scheduleType,
-      date: reminderData.date,
-      time: reminderData.time,
+      subject: reminderData.title || reminderData.subject,        // Mapper title → subject
+      scheduleType: reminderData.schedule_type || reminderData.scheduleType,  // Mapper schedule_type → scheduleType
+      date: reminderData.start_date ? new Date(reminderData.start_date) : reminderData.date,  // Convertir start_date → date
+      time: reminderData.start_time || reminderData.time,         // Mapper start_time → time
       shifts: reminderData.shifts,
       frequency: reminderData.frequency,
-      endDate: reminderData.endDate,
+      endDate: reminderData.recurrence_end_date ? new Date(reminderData.recurrence_end_date) : reminderData.endDate,
     };
     
     setReminders(prev => 
@@ -272,6 +272,76 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
       }
 
       console.log('🎉 SUCCÈS! Tâche créée:', result);
+
+      // 5. AJOUTER LES REMINDERS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
+      if (reminders.length > 0) {
+        const reminderInserts = reminders.map(reminder => {
+          console.log('🔍 DEBUG Reminder:', reminder);
+          
+          let reminderTime;
+          if (reminder.scheduleType === 'datetime' && reminder.date && reminder.time) {
+            // Construction correcte en timezone locale (Lisbonne)
+            const localDateTime = new Date(reminder.date);
+            const [hours, minutes] = reminder.time.split(':');
+            localDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            reminderTime = localDateTime.toISOString();
+          } else {
+            // Valeur par défaut: maintenant + 1 heure
+            reminderTime = new Date(Date.now() + 3600000).toISOString();
+          }
+          
+          console.log('⏰ Reminder time calculé:', reminderTime);
+          
+          return {
+            task_id: result.id,
+            title: reminder.subject,
+            message: reminder.subject,
+            schedule_type: reminder.scheduleType || 'datetime',
+            reminder_time: reminderTime,
+            frequency: reminder.frequency || 'once',
+            is_active: true,
+            created_by: user.id
+          };
+        });
+
+        const { error: reminderError } = await supabase
+          .from('reminders')
+          .insert(reminderInserts);
+
+        if (reminderError) {
+          console.warn('⚠️ Erreur ajout reminders:', reminderError);
+        } else {
+          console.log('✅ Reminders ajoutés:', reminderInserts.length);
+        }
+      }
+
+      // 6. AJOUTER LES ATTACHMENTS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
+      if (attachments.length > 0) {
+        console.log('📎 DEBUG Attachments à insérer:', attachments);
+        
+        const attachmentInserts = attachments.map(attachment => ({
+          task_id: result.id,
+          filename: attachment.name,
+          file_url: attachment.type === 'link' ? attachment.url : null,
+          file_size: attachment.type === 'file' ? attachment.size : null,
+          mime_type: attachment.type === 'file' ? attachment.fileType : null,
+          attachment_type: attachment.type === 'link' ? 'other' : 'document', // ✅ Corrigé : 'other' pour liens, 'document' pour fichiers
+          uploaded_by: user.id
+        }));
+        
+        console.log('📎 Données finales attachments:', attachmentInserts);
+
+        const { error: attachmentError } = await supabase
+          .from('attachments')
+          .insert(attachmentInserts);
+
+        if (attachmentError) {
+          console.warn('⚠️ Erreur ajout attachments:', attachmentError);
+        } else {
+          console.log('✅ Attachments ajoutés:', attachmentInserts.length);
+        }
+      }
+
       toast({
         title: "Test réussi!",
         description: `Tâche créée: ${result.title}`,
@@ -706,6 +776,7 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
       <AttachmentModal
         isOpen={isAttachmentModalOpen}
         onClose={() => setIsAttachmentModalOpen(false)}
+        onSave={(attachmentData) => setAttachments(attachmentData)}
         onUpdate={() => {}}
       />
     </Dialog>

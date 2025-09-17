@@ -124,7 +124,6 @@ export function useCreateTask() {
       if (reminders.length > 0) {
         const reminderInserts = reminders.map(reminder => ({
           task_id: taskId,
-          task_type: formData.category,
           subject: reminder.subject,
           schedule_type: reminder.scheduleType,
           date: reminder.date?.toISOString().split('T')[0] || null,

@@ -23,7 +23,8 @@ import {
   Edit3,
   Edit,
   Heart,
-  UserCircle
+  UserCircle,
+  Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReminderModal } from './ReminderModal';
@@ -31,6 +32,7 @@ import { ChecklistModal } from './ChecklistModal';
 import { MembersModal } from './MembersModal';
 import { EscalationModal } from './EscalationModal';
 import { AttachmentModal } from './AttachmentModal';
+import AttachmentPreviewModal from './AttachmentPreviewModal'; // ✅ Import du modal preview
 import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { TaskItem } from '@/types/database';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
@@ -38,6 +40,7 @@ import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useTaskComments } from "@/hooks/useTaskComments";
+import { useTaskAttachments } from "@/hooks/useTaskDetails"; // ✅ Import du hook attachments
 import { addTaskComment } from '@/lib/actions/addTaskComment';
 import { supabase } from '@/integrations/supabase/client';
 import { createCommentActivity } from '@/lib/actions/activityLogHelper';
@@ -221,6 +224,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const { comments, refetch: refetchComments } = useTaskCommentsFixed(task?.id);
   const { activities } = useActivityLogs(task?.id);
   const { reminders, refetch: refetchReminders } = useTaskReminders(task?.id); // AJOUT: Hook reminders
+  const { attachments: taskAttachments, loading: attachmentsLoading, refetch: refetchAttachments } = useTaskAttachments(task?.id); // ✅ Hook attachments
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -228,8 +232,9 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isEscalationOpen, setIsEscalationOpen] = useState(false);
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false); // ✅ État modal preview
+  const [selectedAttachment, setSelectedAttachment] = useState<any>(null); // ✅ Attachment sélectionné
   const [checklists, setChecklists] = useState<{ id: string; title: string; tasks: { id: string; text: string; completed: boolean }[] }[]>([]);
-  const [attachments, setAttachments] = useState<{ id: string; name: string; type: string; size: string }[]>([]);
   // SUPPRIME: const [reminders, setReminders] car maintenant via hook
   
   // Hook pour récupérer les données utilisateur pour les commentaires
@@ -356,6 +361,12 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
     }
 
     setChecklists([...checklists, newChecklist]);
+  };
+
+  // ✅ Fonction pour ouvrir le modal preview
+  const openPreview = (attachment: any) => {
+    setSelectedAttachment(attachment);
+    setIsPreviewOpen(true);
   };
 
   return (
@@ -568,19 +579,50 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
             )}
 
             {/* Attachments */}
-            {attachments.length > 0 && (
+            {taskAttachments && taskAttachments.length > 0 && (
               <div className="border-t pt-6">
-                <h4 className="font-medium text-foreground mb-4">Attachments</h4>
+                <div className="flex items-center gap-2 mb-4">
+                  <Paperclip className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Attachments ({taskAttachments.length})</h4>
+                </div>
                 <div className="space-y-2">
-                  {attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                  {taskAttachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/40 transition-colors">
                       <Paperclip className="h-4 w-4 text-muted-foreground" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{attachment.name}</p>
-                        <p className="text-xs text-muted-foreground">{attachment.size}</p>
+                        <p className="text-sm font-medium">{attachment.filename}</p>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                          <span>{attachment.attachment_type}</span>
+                          {attachment.file_size && <span>• {(attachment.file_size / 1024).toFixed(1)} KB</span>}
+                          <span>• {new Date(attachment.created_at).toLocaleDateString()}</span>
+                        </div>
                       </div>
+                      
+                      {/* ✅ Bouton oeil pour preview */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openPreview(attachment)}
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title="Aperçu"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Bouton ouvrir lien externe */}
+                      {attachment.file_url && (
+                        <a 
+                          href={attachment.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-xs transition-colors"
+                          title="Ouvrir dans un nouvel onglet"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
                     </div>
-                  ))}
+                  ))}}}
                 </div>
               </div>
             )}
@@ -718,7 +760,20 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
         isOpen={isAttachmentOpen}
         onClose={() => setIsAttachmentOpen(false)}
         task={task}
-        onUpdate={() => onUpdateTask && onUpdateTask(task)}
+        onUpdate={() => {
+          if (onUpdateTask) onUpdateTask(task);
+          refetchAttachments(); // ✅ Rafraîchir les attachments
+        }}
+      />
+      
+      {/* ✅ Modal Preview */}
+      <AttachmentPreviewModal 
+        isOpen={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          setSelectedAttachment(null);
+        }}
+        attachment={selectedAttachment}
       />
     </>
   );

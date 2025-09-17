@@ -1,9 +1,9 @@
+/* Import des typographies Decœur */
+@import './styles/decoeur-typography.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import des typographies Decœur */
-@import './styles/decoeur-typography.css';
 
 /* 
 HospitalityOS - Charte Graphique Hôtel
