@@ -354,7 +354,7 @@ const ShiftManagement = () => {
       // If status changed, update the dragged task's status first
       if (activeTask.status !== newStatus) {
         const statusUpdate = await supabase
-          .from('internal_tasks')
+          .from('task')
           .update({ status: newStatus })
           .eq('id', activeId);
         
@@ -364,7 +364,7 @@ const ShiftManagement = () => {
       // Update positions for all tasks in the column
       for (const update of updates) {
         const positionUpdate = await supabase
-          .from('internal_tasks')
+          .from('task')
           .update({ updated_at: update.newTimestamp })
           .eq('id', update.id);
         

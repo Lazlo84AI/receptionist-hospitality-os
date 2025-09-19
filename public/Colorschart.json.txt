@@ -1,0 +1,41 @@
+{
+  "Blanc": {
+    "RAL": "9016",
+    "CMYK": "C0 M0 Y0 K0",
+    "RGB": "255 255 255",
+    "HEX": "#FFFFFF"
+  },
+  "Sand": {
+    "RAL": "",
+    "Pantone": "7500C",
+    "CMYK": "C7 M10 Y31 N0",
+    "RGB": "224 211 180",
+    "HEX": "#E0D3B4"
+  },
+  "Gold": {
+    "RAL": "",
+    "Pantone": "8000C",
+    "CMYK": "C17 M26 Y63 N13",
+    "RGB": "187 168 138",
+    "HEX": "#BBA88A"
+  },
+  "Yellow": {
+    "RAL": "",
+    "Pantone": "6004C",
+    "CMYK": "C3 M24 Y87 N5",
+    "RGB": "222 174 83",
+    "HEX": "#DEA E53"
+  },
+  "WARM": {
+    "RAL": "",
+    "Pantone": "5325C",
+    "CMYK": "C100 M93 Y10 N78",
+    "RGB": "30 26 85",
+    "HEX": "#1E1A37"
+  },
+  "Gold_Metallics": {
+    "RAL": "1036",
+    "Pantone": "10354C",
+    "Note": "Solid Coated"
+  }
+}

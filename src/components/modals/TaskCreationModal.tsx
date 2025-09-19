@@ -43,9 +43,10 @@ const services = [
 interface TaskCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onTaskCreated?: () => void; // ← Nouveau callback pour refresh
 }
 
-export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
+export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreationModalProps) {
   const { profiles: hotelMembers } = useProfiles();
   const { locations } = useLocations();
   const { toast } = useToast();
@@ -349,6 +350,11 @@ export function TaskCreationModal({ isOpen, onClose }: TaskCreationModalProps) {
       
       onClose();
       resetForm();
+      
+      // ✅ REFRESH DES DONNÉES
+      if (onTaskCreated) {
+        onTaskCreated(); // Callback pour rafraîchir les données
+      }
       
     } catch (error) {
       console.error('❌ ERREUR TEST:', error);

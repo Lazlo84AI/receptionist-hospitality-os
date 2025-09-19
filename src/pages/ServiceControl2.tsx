@@ -291,29 +291,27 @@ const ServiceControl2 = () => {
     if (activeTask.status === newStatus) return;
 
     try {
-      let updateResult;
-      const newTimestamp = new Date().toISOString();
-      
-      switch (activeTask.type) {
-        case 'incident':
-          updateResult = await supabase.from('incidents').update({ status: newStatus, updated_at: newTimestamp }).eq('id', activeId);
-          break;
-        case 'client_request':
-          updateResult = await supabase.from('client_requests').update({ preparation_status: newStatus, updated_at: newTimestamp }).eq('id', activeId);
-          break;
-        case 'follow_up':
-          updateResult = await supabase.from('follow_ups').update({ status: newStatus, updated_at: newTimestamp }).eq('id', activeId);
-          break;
-        case 'internal_task':
-        case 'personal_task':
-          updateResult = await supabase.from('internal_tasks').update({ status: newStatus, updated_at: newTimestamp }).eq('id', activeId);
-          break;
-        default:
-          throw new Error(`Unknown task type: ${activeTask.type}`);
-      }
+      // ARCHITECTURE UNIFIÉE : Toutes les tâches sont maintenant dans la table 'task'
+      const updateResult = await supabase
+        .from('task')
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', activeId);
 
-      if (updateResult?.error) throw updateResult.error;
+      if (updateResult.error) throw updateResult.error;
       await refetch();
+      
+      // Send webhook in background
+      sendTaskMovedEvent(activeId, activeTask.status, newStatus, activeTask).then(result => {
+        if (!result.success) {
+          console.warn('Webhook failed but task was updated successfully:', result.error);
+        }
+      }).catch(error => {
+        console.warn('Webhook error (task was still updated):', error);
+      });
+      
       toast({ title: "Success", description: `Task moved to ${newStatus.replace('_', ' ')}`, variant: "default" });
       
     } catch (error) {

@@ -15,9 +15,9 @@ export async function addTaskComment({ task_id, content }: Payload) {
   const userId = auth.user.id;
 
   try {
-    // ✅ écrire dans la table task_comments
+    // ✅ écrire dans la table comments (pas task_comments)
     const { data: commentData, error: commentError } = await client
-      .from("task_comments")
+      .from("comments")
       .insert([{ task_id, user_id: userId, content }])
       .select("id, task_id, user_id, content, created_at")
       .single();

@@ -44,7 +44,6 @@ import { useTaskComments } from "@/hooks/useTaskComments";
 import { useTaskAttachments } from "@/hooks/useTaskDetails"; // ✅ Import du hook attachments
 import { addTaskComment } from '@/lib/actions/addTaskComment';
 import { supabase } from '@/integrations/supabase/client';
-import { createCommentActivity } from '@/lib/actions/activityLogHelper';
 
 interface EnhancedTaskDetailModalProps {
   isOpen: boolean;
@@ -86,38 +85,7 @@ const useTaskReminders = (taskId?: string) => {
 
   return { reminders, loading, refetch: fetchReminders };
 };
-const useActivityLogs = (taskId?: string) => {
-  const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!taskId) return;
-
-    const fetchActivities = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('activity_log')
-          .select('*')
-          .eq('task_id', taskId)
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (error) throw error;
-        setActivities(data || []);
-      } catch (error) {
-        console.error('Error fetching activities:', error);
-        setActivities([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchActivities();
-  }, [taskId]);
-
-  return { activities, loading };
-};
 
 // Hook pour récupérer les commentaires depuis la table comments
 const useTaskCommentsFixed = (taskId?: string) => {
@@ -132,7 +100,7 @@ const useTaskCommentsFixed = (taskId?: string) => {
         .from('comments')
         .select('*')
         .eq('task_id', taskId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false }); // ← Du plus récent au plus ancien
 
       if (error) throw error;
       setComments(data || []);
@@ -151,22 +119,16 @@ const useTaskCommentsFixed = (taskId?: string) => {
   return { comments, loading, refetch };
 };
 
-// Fonction pour calculer le temps écoulé
+// Fonction pour afficher la date et l'heure complètes
 const getTimeElapsed = (dateString: string): string => {
-  const now = new Date();
   const date = new Date(dateString);
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffHours / 24);
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
-  } else if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  } else {
-    return `${diffDays}d ago`;
-  }
+  return date.toLocaleString('fr-FR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 
 // Fonction pour obtenir les initiales d'un nom
@@ -223,7 +185,6 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   forceDetailView = false
 }) => {
   const { comments, refetch: refetchComments } = useTaskCommentsFixed(task?.id);
-  const { activities } = useActivityLogs(task?.id);
   const { reminders, refetch: refetchReminders } = useTaskReminders(task?.id); // AJOUT: Hook reminders
   const { attachments: taskAttachments, loading: attachmentsLoading, refetch: refetchAttachments } = useTaskAttachments(task?.id); // ✅ Hook attachments
   const [text, setText] = useState("");
@@ -268,24 +229,57 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
       if (!comments.length) return;
 
       const userIds = [...new Set(comments.map(c => c.user_id))];
-      const { data: users, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, full_name')
+      console.log('🔍 Fetching users for IDs:', userIds);
+      
+      // 1. CHERCHER D'ABORD dans staff_directory (priorité)
+      const { data: staffUsers, error: staffError } = await supabase
+        .from('staff_directory')
+        .select('id, first_name, last_name, full_name, email, department')
         .in('id', userIds);
 
-      if (error) {
-        console.error('Error fetching comment users:', error);
-        return;
-      }
+      console.log('💼 Staff directory fetched:', staffUsers);
+      
+      // 2. Ensuite dans profiles si pas trouvé
+      const { data: profileUsers, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, full_name, email')
+        .in('id', userIds);
 
-      const usersMap = users.reduce((acc: any, user: any) => {
-        acc[user.id] = {
-          name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User',
-          initials: getInitials(user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim())
-        };
+      console.log('👥 Profiles fetched:', profileUsers);
+
+      const usersMap = userIds.reduce((acc: any, userId: string) => {
+        // Chercher d'abord dans staff_directory
+        let user = staffUsers?.find(u => u.id === userId);
+        
+        // Si pas trouvé, chercher dans profiles
+        if (!user) {
+          user = profileUsers?.find(u => u.id === userId);
+        }
+        
+        if (user) {
+          const displayName = user.full_name || 
+                            `${user.first_name || ''} ${user.last_name || ''}`.trim() || 
+                            user.email ||
+                            'Staff Member';
+          
+          acc[userId] = {
+            name: displayName,
+            initials: getInitials(displayName)
+          };
+          console.log(`✅ User ${userId} found: ${displayName}`);
+        } else {
+          // Cas d'erreur - ne devrait pas arriver
+          console.error(`❌ User ${userId} not found in staff_directory NOR profiles!`);
+          acc[userId] = {
+            name: 'Unknown Staff',
+            initials: 'US'
+          };
+        }
+        
         return acc;
       }, {});
 
+      console.log('📝 Final users map:', usersMap);
       setCommentUsers(usersMap);
     };
 
@@ -300,16 +294,36 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   async function onAddComment() {
     const value = text.trim();
     if (!value || !task?.id) return;
+    
+    console.log('📝 Adding comment:', value);
     setSaving(true);
+    
     try {
       await addTaskComment({ task_id: task.id, content: value });
-      // Créer une entrée d'activité pour le commentaire
-      await createCommentActivity(task.id, task.type, value.substring(0, 50));
+      
+      // ✅ Vider le champ de texte AVANT de refetch
       setText("");
+      
+      // ✅ Rafraîchir les commentaires
       await refetchComments();
+      
+      console.log('✅ Comment added successfully');
+      
+      toast({
+        title: "Comment Added",
+        description: "Your comment has been added successfully",
+        variant: "default",
+      });
+      
     } catch (e) {
-      console.error(e);
+      console.error('❌ Error adding comment:', e);
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      });
     } finally {
+      // ✅ TOUJOURS réactiver le bouton
       setSaving(false);
     }
   }
@@ -681,6 +695,20 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                         </div>
                         <p className="text-foreground">{comment.content}</p>
                       </div>
+                      <div className="flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-primary transition-colors p-1"
+                          onClick={() => {
+                            // TODO: Implémenter l'édition de commentaire
+                            console.log('Edit comment:', comment.id);
+                          }}
+                          title="Modifier ce commentaire"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -692,35 +720,43 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
               <h4 className="font-medium text-foreground mb-4">Recent Activity</h4>
               
               <div className="space-y-3 text-sm">
-                {activities.length === 0 && (
-                  <p className="text-muted-foreground italic">No recent activity</p>
+                {[].length === 0 && (
+                  <p className="text-muted-foreground italic">Activity tracking temporarily disabled</p>
                 )}
-                {activities.map((activity) => {
-                  const userName = activity.metadata?.user_name || 'Unknown User';
-                  const timeElapsed = getTimeElapsed(activity.created_at);
-                  
-                  // Couleurs selon le type d'action
-                  const getActivityColor = (action: string) => {
-                    switch (action) {
-                      case 'commented': return 'bg-blue-500';
-                      case 'reminder_added': return 'bg-purple-500';
-                      case 'checklist_added': return 'bg-green-500';
-                      case 'attachment_added': return 'bg-orange-500';
-                      case 'escalated': return 'bg-red-500';
-                      case 'member_assigned': return 'bg-blue-500';
-                      default: return 'bg-gray-500';
-                    }
-                  };
-
-                  return (
-                    <div key={activity.id} className="flex items-center gap-2 text-muted-foreground">
-                      <div className={cn("w-2 h-2 rounded-full", getActivityColor(activity.action))}></div>
-                      <span>{activity.description} – {timeElapsed}</span>
-                    </div>
-                  );
-                })}
               </div>
             </div>
+          </div>
+          
+          {/* Footer avec bouton Validate */}
+          <div className="p-6 border-t bg-background flex justify-end mt-6">
+            <Button
+              onClick={async () => {
+                try {
+                  // Envoyer webhook pour confirmer tous les changements
+                  if (onUpdateTask) {
+                    onUpdateTask(task);
+                  }
+                  
+                  toast({
+                    title: "Changes Validated",
+                    description: "All task enhancements have been confirmed successfully",
+                    variant: "default",
+                  });
+                  
+                  onClose();
+                } catch (error) {
+                  console.error('Error validating changes:', error);
+                  toast({
+                    title: "Validation Error",
+                    description: "Failed to validate changes. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="bg-[#BBA88A] hover:bg-[#DEAE53] text-[#1E1A37] px-6 py-2 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-200 font-medium"
+            >
+              Validate
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

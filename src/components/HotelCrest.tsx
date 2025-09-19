@@ -8,8 +8,8 @@ export function HotelCrest({ className = "w-8 h-10" }: HotelCrestProps) {
   return (
     <div className={className}>
       <img 
-        src="/BLASON_DECOEUR_EPAIS_Gold (1).svg"
-        alt="Decceur Hôtels Blason"
+        src="/decoeur-crest.svg"
+        alt="Decoeur Hotels' crest"
         className="w-full h-full object-contain"
       />
     </div>

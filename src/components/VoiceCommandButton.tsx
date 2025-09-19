@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskCreationModal } from '@/components/modals/TaskCreationModal';
+import { useTasks } from '@/hooks/useSupabaseData'; // ← Import du hook
 import { cn } from '@/lib/utils';
 
 export function VoiceCommandButton() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { refetch } = useTasks(); // ← Hook pour refresh
 
   const handleMainButtonClick = () => {
     console.log('Opening task creation modal');
@@ -35,6 +37,7 @@ export function VoiceCommandButton() {
       <TaskCreationModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        onTaskCreated={refetch} // ← Callback de refresh
       />
     </>
   );

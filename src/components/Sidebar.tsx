@@ -64,7 +64,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
             <div className="flex items-center space-x-2">
               <img 
-                src="/BLASON_DECOEUR_EPAIS_Gold (1).svg"
+                src="/decoeur-crest.svg"
                 alt="Decœur Hotels Blason"
                 className="w-8 h-8 object-contain"
               />
@@ -127,7 +127,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Blason Decœur */}
           <div className="mt-6 flex justify-center">
             <img 
-              src="/BLASON_DECOEUR_EPAIS_Gold (1).svg"
+              src="/decoeur-crest.svg"
               alt="Decœur Hotels Blason"
               className="w-16 h-16 object-contain opacity-90 hover:opacity-100 transition-opacity duration-300"
             />
