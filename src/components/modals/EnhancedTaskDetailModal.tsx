@@ -449,10 +449,32 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {task.assignedTo && (
+                {(task.assignedTo || task.assignedMembers) && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Assigned to</p>
-                    <p className="text-foreground">{task.assignedTo}</p>
+                    <p className="text-foreground">
+                      {(() => {
+                        const assignedPeople = [];
+                        
+                        // Ajouter le créateur/assigné principal
+                        if (task.assignedTo) {
+                          assignedPeople.push(task.assignedTo);
+                        }
+                        
+                        // Ajouter les membres assignés supplémentaires
+                        if (task.assignedMembers && Array.isArray(task.assignedMembers)) {
+                          const memberNames = task.assignedMembers.map(member => 
+                            member.name || member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Unknown'
+                          );
+                          assignedPeople.push(...memberNames);
+                        }
+                        
+                        // Supprimer les doublons et joindre avec des virgules
+                        const uniquePeople = [...new Set(assignedPeople)];
+                        return uniquePeople.join(', ');
+                      })()
+                      }
+                    </p>
                   </div>
                 )}
                 

@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
@@ -20,7 +20,7 @@ interface MembersModalProps {
 
 export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMember, setSelectedMember] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   
   const { profiles } = useProfiles();
   const { locations } = useLocations();
@@ -39,17 +39,28 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
     member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAssign = async () => {
-    if (task && selectedMember) {
-      try {
-        const selectedMemberData = hotelMembers.find(m => m.id === selectedMember);
-        const memberData = {
-          id: selectedMember,
-          user_id: selectedMember,
-          role: 'assignee',
-        };
+  const handleMemberToggle = (memberId: string) => {
+    setSelectedMembers(prev => 
+      prev.includes(memberId) 
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
 
-        // Send webhook event for task update with member assignment
+  const handleAssign = async () => {
+    if (task && selectedMembers.length > 0) {
+      try {
+        const membersData = selectedMembers.map(memberId => {
+          const memberInfo = hotelMembers.find(m => m.id === memberId);
+          return {
+            id: memberId,
+            user_id: memberId,
+            role: 'assignee',
+            name: memberInfo?.name || 'Unknown'
+          };
+        });
+
+        // Send webhook event for task update with multiple member assignments
         const webhookResult = await sendTaskUpdatedEvent(
           task.id,
           task,
@@ -57,14 +68,15 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           profiles,
           locations,
           {
-            members: [memberData]
+            members: membersData
           }
         );
 
         if (webhookResult.success) {
+          const memberNames = membersData.map(m => m.name).join(', ');
           toast({
-            title: "Member Assigned",
-            description: `${selectedMemberData?.name} has been assigned and notification sent successfully`,
+            title: "Members Assigned",
+            description: `${memberNames} have been assigned and notifications sent successfully`,
           });
           // Call onUpdate to trigger data refresh
           if (onUpdate) {
@@ -73,7 +85,7 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
         } else {
           toast({
             title: "Webhook Error",
-            description: webhookResult.error || "Failed to send member assignment notification",
+            description: webhookResult.error || "Failed to send member assignment notifications",
             variant: "destructive",
           });
         }
@@ -81,7 +93,7 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
         console.error('Error sending webhook:', error);
         toast({
           title: "Assignment Error",
-          description: "Failed to send member assignment notification",
+          description: "Failed to send member assignment notifications",
           variant: "destructive",
         });
       }
@@ -94,7 +106,7 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
       <DialogContent className="max-w-md">
         <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
-            Attribution de membres
+            Assigned People
           </h2>
         </DialogHeader>
 
@@ -110,24 +122,26 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           </div>
 
           <div className="max-h-60 overflow-y-auto">
-            <RadioGroup value={selectedMember} onValueChange={setSelectedMember}>
-              <div className="space-y-2">
-                {filteredMembers.map((member) => (
-                  <div key={member.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted">
-                    <RadioGroupItem value={member.id} id={member.id} />
-                     <Avatar className="h-8 w-8">
-                       <AvatarFallback className="bg-palace-navy text-white text-xs">
-                         {member.initials}
-                       </AvatarFallback>
-                    </Avatar>
-                    <Label htmlFor={member.id} className="flex-1 cursor-pointer">
-                      <div className="font-medium text-foreground">{member.name}</div>
-                      <div className="text-sm text-soft-pewter">{member.role}</div>
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
+            <div className="space-y-2">
+              {filteredMembers.map((member) => (
+                <div key={member.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted">
+                  <Checkbox 
+                    id={member.id}
+                    checked={selectedMembers.includes(member.id)}
+                    onCheckedChange={() => handleMemberToggle(member.id)}
+                  />
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-palace-navy text-white text-xs">
+                      {member.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Label htmlFor={member.id} className="flex-1 cursor-pointer">
+                    <div className="font-medium text-foreground">{member.name}</div>
+                    <div className="text-sm text-soft-pewter">{member.role}</div>
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
 
           {filteredMembers.length === 0 && (
@@ -139,9 +153,9 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           <div className="flex justify-end pt-4">
             <Button 
               onClick={handleAssign}
-              disabled={!selectedMember}
+              disabled={selectedMembers.length === 0}
             >
-              Assigner
+              Assign {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ''}
             </Button>
           </div>
         </div>
