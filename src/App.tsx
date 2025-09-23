@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import ShiftManagement from "./pages/ShiftManagement";
 import Connaissances from "./pages/Connaissances";
 import Assistant from "./pages/Assistant";
@@ -28,6 +29,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/shift" element={<ProtectedRoute><ShiftManagement /></ProtectedRoute>} />
             <Route path="/connaissances" element={<ProtectedRoute><Connaissances /></ProtectedRoute>} />

@@ -294,50 +294,6 @@ const ShiftManagement = () => {
     setDraggedTask(null);
     setDraggedFromColumn(null);
     
-    // 🔍 === DIAGNOSTIC LOGS - NOUVEAU CODE ===
-    console.log('🎯 === DIAGNOSTIC DRAG & DROP START ===');
-    
-    try {
-      // 1. Récupérer l'utilisateur authentifié
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('🔐 Auth User ID:', user?.id);
-      console.log('🔐 Auth User Email:', user?.email);
-      
-      if (userError) {
-        console.error('❌ Erreur récupération utilisateur:', userError);
-      }
-      
-      // 2. Chercher cet utilisateur dans staff_directory
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff_directory')
-        .select('id, first_name, last_name, email')
-        .eq('email', user?.email)
-        .single();
-        
-      console.log('👥 Staff Directory Match:', staffData);
-      if (staffError) {
-        console.error('❌ Pas trouvé dans staff_directory:', staffError);
-      }
-      
-      // 3. Chercher dans profiles aussi
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email')
-        .eq('email', user?.email)
-        .single();
-        
-      console.log('👤 Profiles Match:', profileData);
-      if (profileError) {
-        console.error('❌ Pas trouvé dans profiles:', profileError);
-      }
-      
-    } catch (diagError) {
-      console.error('💥 Erreur diagnostic:', diagError);
-    }
-    
-    console.log('🎯 === FIN DIAGNOSTIC - DÉBUT DRAG & DROP NORMAL ===');
-    // === FIN DIAGNOSTIC LOGS ===
-    
     if (!over) return;
 
     const activeId = active.id as string;
@@ -395,43 +351,32 @@ const ShiftManagement = () => {
         newTimestamp: new Date(baseTime + (index * 1000)).toISOString()
       }));
       
-      // 🔍 AJOUT DE LOGS POUR LA MISE À JOUR DB
-      console.log('🎯 Tentative mise à jour status:', newStatus, 'pour task:', activeId);
-      
       // If status changed, update the dragged task's status first
       if (activeTask.status !== newStatus) {
-        // 🔧 SOLUTION A: Ajouter updated_by explicitement
+        // Get current user for audit trail
         const { data: { user } } = await supabase.auth.getUser();
         
         const statusUpdate = await supabase
           .from('task')
           .update({ 
             status: newStatus,
-            updated_by: user?.id  // ← AJOUT: ID utilisateur explicite pour le trigger
+            updated_by: user?.id  // Explicit user ID for audit trail
           })
           .eq('id', activeId);
         
-        console.log('🎯 Résultat statusUpdate:', statusUpdate);
-        
         if (statusUpdate.error) {
-          console.error('🚨 ERREUR STATUS UPDATE:', statusUpdate.error);
           throw statusUpdate.error;
         }
       }
       
       // Update positions for all tasks in the column
       for (const update of updates) {
-        console.log('🎯 Tentative update position pour:', update.id);
-        
         const positionUpdate = await supabase
           .from('task')
           .update({ updated_at: update.newTimestamp })
           .eq('id', update.id);
         
-        console.log('🎯 Résultat positionUpdate:', positionUpdate);
-        
         if (positionUpdate.error) {
-          console.error('🚨 ERREUR POSITION UPDATE:', positionUpdate.error);
           throw positionUpdate.error;
         }
       }
@@ -455,7 +400,7 @@ const ShiftManagement = () => {
       });
       
     } catch (error) {
-      console.error('🚨 ERREUR GENERALE:', error);
+      console.error('Error updating task:', error);
       refetch();
       toast({
         title: "Error", 
