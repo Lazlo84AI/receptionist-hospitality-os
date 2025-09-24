@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText } from 'lucide-react';
+import { FilePlus2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskCreationModal } from '@/components/modals/TaskCreationModal';
 import { useTasks } from '@/hooks/useSupabaseData'; // ← Import du hook
@@ -21,16 +21,16 @@ export function VoiceCommandButton() {
         <Button
           onClick={handleMainButtonClick}
           className={cn(
-            "h-16 w-16 rounded-full transition-all duration-500",
+            "h-24 w-24 rounded-full transition-all duration-500",
             "bg-hotel-navy hover:bg-hotel-navy/90 border-2 border-hotel-yellow/50 hover:border-hotel-yellow",
             "shadow-lg"
           )}
         >
-          <FileText className="h-6 w-6 text-hotel-yellow" />
+          <FilePlus2 className="text-hotel-gold-dark" style={{ width: '24px', height: '24px' }} />
         </Button>
         
         {/* Animation de pulsation */}
-        <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-2 border-champagne-gold/20 animate-ping pointer-events-none" />
+        <div className="absolute -bottom-12 -right-12 h-48 w-48 rounded-full border-2 border-hotel-yellow/20 animate-ping pointer-events-none" />
       </div>
 
       {/* Task Creation Modal */}

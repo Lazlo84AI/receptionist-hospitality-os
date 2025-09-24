@@ -21,20 +21,34 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if we have the required token parameters
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    
-    if (!accessToken || !refreshToken) {
-      setError('Invalid reset link. Please request a new password reset.');
-      return;
-    }
+    const handlePasswordReset = async () => {
+      const accessToken = searchParams.get('access_token');
+      const refreshToken = searchParams.get('refresh_token');
+      
+      if (!accessToken) {
+        setError('Invalid reset link. Please request a new password reset.');
+        return;
+      }
 
-    // Set the session from URL parameters
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
+      try {
+        // Set the session directly with the tokens from URL
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || ''
+        });
+        
+        if (error) {
+          console.error('Set session error:', error);
+        } else {
+          console.log('Session set successfully');
+          setError(''); // Clear any existing error
+        }
+      } catch (err) {
+        console.error('Session setup error:', err);
+      }
+    };
+
+    handlePasswordReset();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,11 +68,19 @@ const ResetPassword = () => {
     setError('');
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      console.log('Attempting to update password...');
+
+      // Simply update the password - session should be already set from useEffect
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (error) throw error;
+      if (updateError) {
+        console.error('Update password error:', updateError);
+        throw updateError;
+      }
+
+      console.log('Password updated successfully');
 
       toast({
         title: "Password updated successfully",
@@ -70,6 +92,7 @@ const ResetPassword = () => {
       navigate('/auth');
       
     } catch (error: any) {
+      console.error('Reset password error:', error);
       setError(error.message || 'An error occurred while updating your password');
     } finally {
       setLoading(false);
@@ -77,15 +100,15 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-hotel-sand/30 to-hotel-sand/60 p-4">
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
               <Lock className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
-            <p className="text-muted-foreground">Enter your new password below</p>
+            <CardTitle className="text-2xl font-bold">Reset Password Process</CardTitle>
+            <p className="text-muted-foreground">Enter your new password below to erase the previous one</p>
           </CardHeader>
           
           <CardContent>
@@ -97,14 +120,14 @@ const ResetPassword = () => {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
+                <Label htmlFor="password">Enter New Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter new password"
+                    placeholder="Enter New Password Here"
                     required
                     disabled={loading}
                   />
@@ -129,7 +152,7 @@ const ResetPassword = () => {
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
+                    placeholder="Confirm New Password Here"
                     required
                     disabled={loading}
                   />

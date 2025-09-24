@@ -96,7 +96,16 @@ const Auth = () => {
     setResetError('');
     setResetMessage('');
     
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail);
+    // Detect current environment and set appropriate redirect URL
+    const currentOrigin = window.location.origin; // http://localhost:8080 or https://vercel.app
+    const redirectUrl = `${currentOrigin}/reset-password`;
+    
+    console.log('🔄 Reset password request from:', currentOrigin);
+    console.log('📧 Email will redirect to:', redirectUrl);
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: redirectUrl
+    });
     
     if (error) {
       setResetError(error.message);
@@ -237,10 +246,11 @@ const Auth = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="receptionist">receptionist</SelectItem>
+                      <SelectItem value="Director">Director</SelectItem>
                       <SelectItem value="Housekeeping Supervisor">Housekeeping Supervisor</SelectItem>
                       <SelectItem value="Room Attendant">Room Attendant</SelectItem>
-                      <SelectItem value="restaurant staff">restaurant staff</SelectItem>
-                      <SelectItem value="tech maintenance team">tech maintenance team</SelectItem>
+                      <SelectItem value="Restaurant staff">Restaurant staff</SelectItem>
+                      <SelectItem value="Tech maintenance team">Tech maintenance team</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -251,9 +261,8 @@ const Auth = () => {
                       <SelectValue placeholder="Select your hierarchy level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Normal">Normal</SelectItem>
+                      <SelectItem value="Collaborator">Collaborator</SelectItem>
                       <SelectItem value="Manager">Manager</SelectItem>
-                      <SelectItem value="Director">Director</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

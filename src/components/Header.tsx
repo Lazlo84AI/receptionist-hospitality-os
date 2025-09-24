@@ -55,11 +55,12 @@ export function Header({ onMenuToggle }: HeaderProps) {
       {/* Left: Menu Toggle */}
       <Button
         variant="ghost"
-        size="sm"
+        size="lg"
         onClick={onMenuToggle}
-        className="text-white hotel-hover"
+        className="hotel-hover flex items-center"
       >
-        <Menu className="h-6 w-6" />
+        <Menu className="h-10 w-10 text-white" />
+        <span className="ml-2 text-hotel-gold-dark jost-semibold hidden sm:block">MENU</span>
       </Button>
 
       {/* Center: Hotel Crest */}
