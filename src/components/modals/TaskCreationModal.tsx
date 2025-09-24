@@ -166,29 +166,14 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
     setAttachments([]);
   };
 
-  const handleCreateCard = async () => {
-    try {
-      // TODO: Implement task creation logic
-      console.log('Creating task:', formData);
-      console.log('Checklists:', checklists);
-      console.log('Reminders:', reminders);
-      console.log('Attachments:', attachments);
-      onClose();
-      resetForm();
-    } catch (error) {
-      console.error('Error creating task:', error);
-    }
-  };
+
 
   const handleClose = () => {
     onClose();
     resetForm();
   };
 
-  // FONCTION DE TEST TEMPORAIRE - MAINTENANT AVEC DONNÉES DU FORMULAIRE
-  const handleTestCreateCard = async () => {
-    console.log('🧪 DÉBUT TEST CRÉATION TÂCHE - AVEC DONNÉES DU FORMULAIRE');
-    console.log('📝 Données du formulaire:', formData);
+  const handleCreateCard = async () => {
     
     try {
       // Validation des champs obligatoires
@@ -202,7 +187,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       // 1. RÉCUPÉRER USER ACTUEL
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not found');
-      console.log('👤 User actuel:', user.id);
+
 
       // 2. RÉCUPÉRER LE MEMBRE ASSIGNÉ OU UN PAR DÉFAUT
       let assignedMemberId = null;
@@ -227,8 +212,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         const firstMember = hotelMembers?.[0];
         assignedMemberId = firstMember?.id || null;
       }
-      
-      console.log('👥 Membre assigné ID:', assignedMemberId);
+
 
       // 3. DONNÉES DU FORMULAIRE ADAPTÉES AU FORMAT TABLE TASK UNIFIÉE
       const taskData = {
@@ -255,7 +239,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         // Ajouter les checklists si présentes
         checklist_items: checklists.length > 0 ? checklists : null
       };
-      console.log('📊 Données finales pour insertion (VRAIES):', taskData);
+
 
       // 4. INSERTION DIRECTE DANS TABLE TASK
       const { data: result, error: insertError } = await supabase
@@ -269,12 +253,10 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         throw new Error(`Erreur insertion: ${insertError.message}`);
       }
 
-      console.log('🎉 SUCCÈS! Tâche créée:', result);
 
       // 5. AJOUTER LES REMINDERS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
       if (reminders.length > 0) {
         const reminderInserts = reminders.map(reminder => {
-          console.log('🔍 DEBUG Reminder:', reminder);
           
           let reminderTime;
           if (reminder.scheduleType === 'datetime' && reminder.date && reminder.time) {
@@ -287,8 +269,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
             // Valeur par défaut: maintenant + 1 heure
             reminderTime = new Date(Date.now() + 3600000).toISOString();
           }
-          
-          console.log('⏰ Reminder time calculé:', reminderTime);
+
           
           return {
             task_id: result.id,
@@ -308,15 +289,12 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
 
         if (reminderError) {
           console.warn('⚠️ Erreur ajout reminders:', reminderError);
-        } else {
-          console.log('✅ Reminders ajoutés:', reminderInserts.length);
         }
       }
 
       // 6. AJOUTER LES ATTACHMENTS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
       if (attachments.length > 0) {
-        console.log('📎 DEBUG Attachments à insérer:', attachments);
-        
+
         const attachmentInserts = attachments.map(attachment => ({
           task_id: result.id,
           filename: attachment.name,
@@ -326,8 +304,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
           attachment_type: attachment.type === 'link' ? 'other' : 'document', // ✅ Corrigé : 'other' pour liens, 'document' pour fichiers
           uploaded_by: user.id
         }));
-        
-        console.log('📎 Données finales attachments:', attachmentInserts);
+
 
         const { error: attachmentError } = await supabase
           .from('attachments')
@@ -335,8 +312,6 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
 
         if (attachmentError) {
           console.warn('⚠️ Erreur ajout attachments:', attachmentError);
-        } else {
-          console.log('✅ Attachments ajoutés:', attachmentInserts.length);
         }
       }
 
@@ -354,9 +329,8 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       }
       
     } catch (error) {
-      console.error('❌ ERREUR TEST:', error);
       toast({
-        title: "Erreur de test",
+        title: "Erreur de création",
         description: error.message,
         variant: "destructive",
       });
@@ -721,18 +695,12 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
           </Button>
           <Button 
             variant="outline" 
-            onClick={handleTestCreateCard}
-            className="bg-orange-500 hover:bg-orange-600 text-white"
-          >
-            TEST Create Card
-          </Button>
-          <Button 
             onClick={handleCreateCard}
-            disabled={!formData.title.trim() || !formData.category}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-orange-500 hover:bg-orange-600 text-white"
           >
             Create Card
           </Button>
+
         </div>
       </DialogContent>
 
