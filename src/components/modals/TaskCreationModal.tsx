@@ -696,7 +696,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
           <Button 
             variant="outline" 
             onClick={handleCreateCard}
-            className="bg-orange-500 hover:bg-orange-600 text-white"
+            className="px-8 py-3 min-w-[180px] text-[#BBA57A] bg-[#1E1A37] border-[#BBA57A] hover:bg-[#DEAE35] hover:text-[#1E1A37] hover:border-[#DEAE35] transition-all duration-300 font-medium"
           >
             Create Card
           </Button>

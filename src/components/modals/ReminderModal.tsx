@@ -28,12 +28,16 @@ interface ReminderModalProps {
 
 export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onSave, task, onUpdate }: ReminderModalProps) {
   const [subject, setSubject] = useState('');
-  const [scheduleType, setScheduleType] = useState<'datetime' | 'shifts'>('datetime');
+  const [scheduleType, setScheduleType] = useState<'datetime' | 'shifts' | 'relative'>('datetime');
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [selectedShifts, setSelectedShifts] = useState<string[]>([]);
+  
+  // Relative time states
+  const [relativeValue, setRelativeValue] = useState(15);
+  const [relativeUnit, setRelativeUnit] = useState<'minutes' | 'hours'>('minutes');
   
   // Custom recurrence
   const [repeatEvery, setRepeatEvery] = useState(1);
@@ -69,6 +73,8 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
       setStartTime('');
       setEndTime('');
       setSelectedShifts([]);
+      setRelativeValue(15);
+      setRelativeUnit('minutes');
       setRepeatEvery(1);
       setRepeatUnit('week');
       setSelectedDaysOfWeek([]);
@@ -108,6 +114,15 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
         return;
       }
 
+      if (scheduleType === 'relative' && (!relativeValue || relativeValue <= 0)) {
+        toast({
+          title: "Erreur",
+          description: "La valeur pour le reminder doit être supérieure à 0",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // 1. DEBUG - Voir le contenu de la tâche
       console.log('🔍 Debug task object:', task);
       console.log('🔍 task.id:', task?.id);
@@ -142,6 +157,8 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
           schedule_type: scheduleType,
           start_date: scheduleType === 'datetime' && startDate ? startDate.toISOString() : null,
           start_time: scheduleType === 'datetime' && startTime ? startTime : null,
+          relative_value: scheduleType === 'relative' ? relativeValue : null,
+          relative_unit: scheduleType === 'relative' ? relativeUnit : null,
           frequency: tempFrequency,
           recurrence_interval: enableCustomRecurrence ? repeatEvery : null,
           recurrence_unit: enableCustomRecurrence ? repeatUnit : null,
@@ -190,7 +207,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
       console.log('👤 Utilisateur pour le reminder:', created_by, 'depuis task assigned_to/created_by');
 
-      // 3. Calculer remind_at depuis startDate + startTime
+      // 3. Calculer remind_at depuis startDate + startTime OU depuis relativeValue
       let remindAt = null;
       if (scheduleType === 'datetime' && startDate) {
         if (startTime) {
@@ -205,6 +222,11 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
           localDateTime.setHours(9, 0, 0, 0);
           remindAt = localDateTime.toISOString();
         }
+      } else if (scheduleType === 'relative') {
+        // Calcul pour "in X minutes/hours"
+        const multiplier = relativeUnit === 'hours' ? 3600000 : 60000; // ms per hour or minute
+        const offsetMs = relativeValue * multiplier;
+        remindAt = new Date(Date.now() + offsetMs).toISOString();
       }
 
       // 4. Déterminer la frequency intelligente
@@ -343,6 +365,8 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
     setStartTime('');
     setEndTime('');
     setSelectedShifts([]);
+    setRelativeValue(15);
+    setRelativeUnit('minutes');
     setRepeatEvery(1);
     setRepeatUnit('week');
     setSelectedDaysOfWeek([]);
@@ -385,49 +409,56 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
-            {editingReminder ? 'Edit Reminder' : 'Set a Reminder'}
+            {editingReminder ? 'Edit reminder' : 'Set a reminder / due date'}
           </h2>
         </DialogHeader>
 
-        <div className="space-y-4 pt-4">
-          <div>
-            <Label htmlFor="subject">Reminder Subject</Label>
+        <div className="space-y-6 pt-6">
+          {/* Reminder Subject Section */}
+          <div className="space-y-3">
+            <Label htmlFor="subject" className="text-sm font-medium">reminder subject</Label>
             <Input
               id="subject"
               value={subject || taskTitle || ''}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder={taskTitle || "Enter reminder subject"}
+              placeholder="Enter reminder subject here"
               className="mt-1"
             />
           </div>
 
-          {/* Choice between dates/times and shifts */}
-          <div>
-            <Label>Schedule Type</Label>
+          {/* Schedule Type Section */}
+          <div className="bg-[#BBA57A]/10 border border-[#BBA57A]/30 rounded-lg p-4 space-y-4">
+            <Label className="text-sm font-semibold text-[#BBA57A]">Schedule Type</Label>
             <RadioGroup 
               value={scheduleType} 
-              onValueChange={(value: 'datetime' | 'shifts') => setScheduleType(value)}
-              className="flex gap-4 mt-2"
+              onValueChange={(value: 'datetime' | 'shifts' | 'relative') => setScheduleType(value)}
+              className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="datetime" id="datetime" />
-                <Label htmlFor="datetime">Dates and Times</Label>
+                <Label htmlFor="datetime">dates and times</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="shifts" id="shifts" />
-                <Label htmlFor="shifts">Shifts</Label>
+                <Label htmlFor="shifts">shifts</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="relative" id="relative" />
+                <Label htmlFor="relative">in X min / hours</Label>
               </div>
             </RadioGroup>
           </div>
+
+          {/* Schedule Options Section */}
 
           {scheduleType === 'datetime' && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Start Date</Label>
+                  <Label>start date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -454,7 +485,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
                 </div>
 
                 <div>
-                  <Label>End Date</Label>
+                  <Label>end date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -483,7 +514,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="startTime">Start Time</Label>
+                  <Label htmlFor="startTime">start time</Label>
                   <div className="relative mt-1">
                     <Clock className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
                     <Input
@@ -497,7 +528,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
                 </div>
 
                 <div>
-                  <Label htmlFor="endTime">End Time</Label>
+                  <Label htmlFor="endTime">end time</Label>
                   <div className="relative mt-1">
                     <Clock className="absolute left-3 top-3 h-4 w-4 text-soft-pewter" />
                     <Input
@@ -515,7 +546,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
           {scheduleType === 'shifts' && (
             <div>
-              <Label>Shifts</Label>
+              <Label>shifts</Label>
               <div className="mt-2 space-y-2">
                 {shifts.map((shift) => (
                   <div key={shift.id} className="flex items-center space-x-2">
@@ -533,16 +564,94 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
             </div>
           )}
 
+          {scheduleType === 'relative' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Label className="text-sm">remind me in</Label>
+                <Input
+                  type="number"
+                  value={relativeValue}
+                  onChange={(e) => setRelativeValue(parseInt(e.target.value) || 1)}
+                  className="w-20 h-9"
+                  min="1"
+                />
+                <Select value={relativeUnit} onValueChange={(value: 'minutes' | 'hours') => setRelativeUnit(value)}>
+                  <SelectTrigger className="w-24 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minutes">minutes</SelectItem>
+                    <SelectItem value="hours">hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">quick options:</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setRelativeValue(5); setRelativeUnit('minutes'); }}
+                    className="text-xs"
+                  >
+                    5 min
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setRelativeValue(15); setRelativeUnit('minutes'); }}
+                    className="text-xs"
+                  >
+                    15 min
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setRelativeValue(30); setRelativeUnit('minutes'); }}
+                    className="text-xs"
+                  >
+                    30 min
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setRelativeValue(1); setRelativeUnit('hours'); }}
+                    className="text-xs"
+                  >
+                    1 hour
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setRelativeValue(2); setRelativeUnit('hours'); }}
+                    className="text-xs"
+                  >
+                    2 hours
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setRelativeValue(4); setRelativeUnit('hours'); }}
+                    className="text-xs"
+                  >
+                    4 hours
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Custom recurrence */}
-          <div className="space-y-4">
+          <div className="bg-[#BBA57A]/10 border border-[#BBA57A]/30 rounded-lg p-4 space-y-4">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="enableRecurrence"
                 checked={enableCustomRecurrence}
                 onCheckedChange={(checked) => setEnableCustomRecurrence(checked as boolean)}
               />
-              <Label htmlFor="enableRecurrence" className="font-medium">
-                Enable Custom Recurrence
+              <Label htmlFor="enableRecurrence" className="font-semibold text-[#BBA57A]">
+                Enable custom recurrence
               </Label>
             </div>
 
@@ -551,7 +660,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
             
             {/* Repeat every... */}
             <div className="flex items-center gap-2">
-              <Label className="text-sm">Repeat every</Label>
+              <Label className="text-sm">repeat every</Label>
               <Input
                 type="number"
                 value={repeatEvery}
@@ -573,7 +682,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
             {/* Repeat on */}
             <div>
-              <Label className="text-sm mb-2 block">Repeat on</Label>
+              <Label className="text-sm mb-2 block">repeat on</Label>
               <div className="flex gap-1">
                 {daysOfWeek.map((day) => (
                   <Button
@@ -591,16 +700,16 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
             {/* Ends */}
             <div>
-              <Label className="text-sm mb-2 block">Ends</Label>
+              <Label className="text-sm mb-2 block">ends</Label>
               <RadioGroup value={endType} onValueChange={(value: 'never' | 'date' | 'occurrences') => setEndType(value)} className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="never" id="never" />
-                  <Label htmlFor="never" className="text-sm">Never</Label>
+                  <Label htmlFor="never" className="text-sm">never</Label>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="date" id="endDate" />
-                  <Label htmlFor="endDate" className="text-sm">On</Label>
+                  <Label htmlFor="endDate" className="text-sm">on</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -629,7 +738,7 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
                 
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="occurrences" id="occurrences" />
-                  <Label htmlFor="occurrences" className="text-sm">After</Label>
+                  <Label htmlFor="occurrences" className="text-sm">after</Label>
                   <Input
                     type="number"
                     value={occurrences}
@@ -648,10 +757,10 @@ export function ReminderModal({ isOpen, onClose, taskTitle, editingReminder, onS
 
           <div className="flex justify-between pt-4">
             <Button variant="outline" onClick={onClose} className="text-primary">
-              Cancel
+              cancel
             </Button>
             <Button onClick={handleSave} className="bg-primary text-primary-foreground">
-              {editingReminder ? 'Update' : 'Done'}
+              {editingReminder ? 'update' : 'done'}
             </Button>
           </div>
         </div>
