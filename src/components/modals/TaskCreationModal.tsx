@@ -249,12 +249,9 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
           room_number: formData.roomNumber || formData.location || null
         }),
         ...(formData.category === 'follow_up' && {
-          recipient: formData.recipient || formData.assignedMember || null,
-          due_date: formData.dueDate?.toISOString().split('T')[0] || null
+          recipient: formData.recipient || formData.assignedMember || null
         }),
-        ...(formData.category === 'internal_task' && {
-          due_date: formData.dueDate?.toISOString().split('T')[0] || null
-        }),
+
         // Ajouter les checklists si présentes
         checklist_items: checklists.length > 0 ? checklists : null
       };
@@ -572,23 +569,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
             locations={locations}
           />
 
-          {/* Due Date for Internal Tasks */}
-          {formData.category === 'internal_task' && (
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground">
-                Due Date
-              </label>
-              <Input 
-                type="date"
-                value={formData.dueDate ? formData.dueDate.toISOString().slice(0, 10) : ''}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  dueDate: e.target.value ? new Date(e.target.value) : null 
-                }))}
-                className="transition-all duration-200 hover:border-hotel-yellow focus:border-hotel-yellow focus:ring-2 focus:ring-hotel-yellow/20"
-              />
-            </div>
-          )}
+
 
           {/* Custom Description */}
           <div className="space-y-3">
@@ -628,7 +609,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
               onClick={() => setIsReminderModalOpen(true)}
             >
               <span className="text-sm">⏰</span>
-              Set up reminder
+              Set up reminder / due date
             </Button>
             <Button
               variant="outline"
