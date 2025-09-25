@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useTasks, useProfiles } from '@/hooks/useSupabaseData';
+import { useTasks, useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { sendTaskMovedEvent } from '@/lib/webhookService';
@@ -47,7 +47,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { TaskItem } from '@/types/database';
+import { TaskItem, Location } from '@/types/database';
 
 const getTypeConfig = (type: string) => {
   switch (type) {
@@ -169,10 +169,122 @@ const KanbanColumn = ({ title, tasks, status, onStatusChange, onCardClick, dragg
   );
 };
 
+// Fonction de filtrage complète pour toutes les tâches
+const getFilteredTasks = (tasks: TaskItem[], locations: Location[], profiles: any[], filters: {
+  floor: string;
+  category: string;
+  person: string;
+  theme: string;
+}) => {
+  let filteredTasks = [...tasks];
+
+  // Filtre par étage (basé sur location -> locations.floor)
+  if (filters.floor !== 'all') {
+    const targetFloor = parseInt(filters.floor);
+    // Créer un map des locations par nom avec leur étage
+    const locationFloorMap = new Map();
+    locations.forEach(loc => {
+      locationFloorMap.set(loc.name, loc.floor);
+    });
+    
+    filteredTasks = filteredTasks.filter(task => {
+      if (!task.location) return false;
+      const taskFloor = locationFloorMap.get(task.location);
+      return taskFloor === targetFloor;
+    });
+  }
+
+  // Filtre par catégorie (basé sur type)
+  if (filters.category !== 'all') {
+    filteredTasks = filteredTasks.filter(task => {
+      switch (filters.category) {
+        case 'ongoing_incidents':
+          return task.type === 'incident';
+        case 'client_requests':
+          return task.type === 'client_request';
+        case 'follow_ups':
+          return task.type === 'follow_up';
+        case 'personal_tasks':
+          return task.type === 'internal_task';
+        case 'chambres_arrivee':
+          // À implémenter selon votre logique métier
+          return task.type === 'client_request' && task.status === 'pending';
+        case 'chambres_recouche':
+          // À implémenter selon votre logique métier
+          return task.type === 'client_request' && task.status === 'in_progress';
+        default:
+          return true;
+      }
+    });
+  }
+
+  // Filtre par personne - chercher dans assignedTo transformé
+  if (filters.person !== 'all') {
+    // Trouver le nom de la personne sélectionnée
+    const selectedProfile = profiles.find(p => p.id === filters.person);
+    if (selectedProfile) {
+      const personName = selectedProfile.full_name || 
+        `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() ||
+        selectedProfile.email;
+      
+      filteredTasks = filteredTasks.filter(task => {
+        // assignedTo contient "Créateur → Assignés", on cherche le nom dans la partie après →
+        if (!task.assignedTo) return false;
+        const assignedPart = task.assignedTo.split(' → ')[1] || task.assignedTo;
+        return assignedPart.includes(personName);
+      });
+    }
+  }
+
+  // Filtre par thématique
+  if (filters.theme !== 'all') {
+    switch (filters.theme) {
+      case 'priority':
+        // Ne montrer QUE les urgences
+        filteredTasks = filteredTasks.filter(task => task.priority === 'urgent');
+        break;
+      case 'most_delayed':
+        // Exclure les tâches completed (resolues) car elles ne peuvent pas être en retard
+        filteredTasks = filteredTasks.filter(task => task.status !== 'completed');
+        // Trier par: 1. Urgences d'abord, 2. Plus anciennes d'abord
+        filteredTasks = filteredTasks.sort((a, b) => {
+          // D'abord par priorité (urgent = 1, normal = 0)
+          const aPriorityScore = a.priority === 'urgent' ? 1 : 0;
+          const bPriorityScore = b.priority === 'urgent' ? 1 : 0;
+          
+          if (aPriorityScore !== bPriorityScore) {
+            return bPriorityScore - aPriorityScore; // Urgent d'abord
+          }
+          
+          // Ensuite par ancienneté (plus ancien d'abord)
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+        break;
+      case 'previous_shift':
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        filteredTasks = filteredTasks.filter(task => {
+          return new Date(task.created_at) < yesterday;
+        });
+        break;
+      case 'new_shift':
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        filteredTasks = filteredTasks.filter(task => {
+          return new Date(task.created_at) >= today;
+        });
+        break;
+    }
+  }
+
+  return filteredTasks;
+};
+
 const ServiceControl2 = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tasks, loading, error, refetch } = useTasks();
   const { profiles } = useProfiles();
+  const { locations } = useLocations();
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
@@ -242,6 +354,14 @@ const ServiceControl2 = () => {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  // Application des filtres sur les tâches
+  const filteredTasks = getFilteredTasks(tasks, locations, profiles, {
+    floor: selectedFloor,
+    category: selectedCategory,
+    person: selectedPerson,
+    theme: selectedTheme
+  });
+
   const handleCardClick = (task: TaskItem) => {
     setSelectedTask(task);
     setIsTaskDetailOpen(true);
@@ -261,7 +381,7 @@ const ServiceControl2 = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const task = tasks.find(t => t.id === active.id);
+    const task = filteredTasks.find(t => t.id === active.id);
     if (task) {
       setDraggedTask(task);
       setDraggedFromColumn(task.status);
@@ -276,14 +396,14 @@ const ServiceControl2 = () => {
 
     const activeId = active.id as string;
     const overId = over.id as string;
-    const activeTask = tasks.find(t => t.id === activeId);
+    const activeTask = filteredTasks.find(t => t.id === activeId);
     if (!activeTask) return;
 
     let newStatus: string;
     if (overId.startsWith('column-')) {
       newStatus = overId.replace('column-', '');
     } else {
-      const overTask = tasks.find(t => t.id === overId);
+      const overTask = filteredTasks.find(t => t.id === overId);
       if (overTask) newStatus = overTask.status;
       else return;
     }
@@ -323,7 +443,7 @@ const ServiceControl2 = () => {
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      const task = tasks.find(t => t.id === taskId);
+      const task = filteredTasks.find(t => t.id === taskId);
       if (!task) return;
       
       const { sendTaskStatusChangedEvent } = await import('@/lib/webhookService');
@@ -353,7 +473,7 @@ const ServiceControl2 = () => {
     const result = await sendShiftStartedEvent({
       timestamp: new Date().toISOString(),
       status: 'active',
-      tasks_count: tasks.length,
+      tasks_count: filteredTasks.length,
     });
 
     if (result.success) {
@@ -507,13 +627,13 @@ const ServiceControl2 = () => {
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-            <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={filteredTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
               <div className="grid grid-cols-3 gap-6">
                 {visibleColumns.map(column => (
                   <KanbanColumn
                     key={column.status}
                     title={column.title}
-                    tasks={tasks}
+                    tasks={filteredTasks}
                     status={column.status}
                     onStatusChange={handleStatusChange}
                     onCardClick={handleCardClick}
@@ -531,8 +651,8 @@ const ServiceControl2 = () => {
       </main>
       
       <EnhancedTaskDetailModal task={selectedTask} isOpen={isTaskDetailOpen} onClose={() => { setIsTaskDetailOpen(false); setSelectedTask(null); }} onUpdateTask={() => refetch()} />
-      <BeginShiftWorkflow isOpen={isShiftStartOpen} onClose={() => setIsShiftStartOpen(false)} tasks={tasks} onShiftStarted={handleShiftStarted} profiles={profiles} />
-      <ShiftCloseModal isOpen={isShiftCloseOpen} onClose={async () => { setIsShiftCloseOpen(false); setShiftStatus('closed'); toast({ title: "Service Shift Ended", description: "Your service shift has been ended successfully", variant: "default" }); }} tasks={tasks} onCardClick={handleCardClick} />
+      <BeginShiftWorkflow isOpen={isShiftStartOpen} onClose={() => setIsShiftStartOpen(false)} tasks={filteredTasks} onShiftStarted={handleShiftStarted} profiles={profiles} />
+      <ShiftCloseModal isOpen={isShiftCloseOpen} onClose={async () => { setIsShiftCloseOpen(false); setShiftStatus('closed'); toast({ title: "Service Shift Ended", description: "Your service shift has been ended successfully", variant: "default" }); }} tasks={filteredTasks} onCardClick={handleCardClick} />
       {!isShiftCloseOpen && !isShiftStartOpen && <VoiceCommandButton />}
     </div>
   );

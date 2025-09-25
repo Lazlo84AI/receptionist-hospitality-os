@@ -8,7 +8,8 @@ import {
   Users,
   Settings,
   LogOut,
-  X
+  X,
+  GraduationCap
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -23,6 +24,7 @@ const menuItems = [
   { icon: Users, label: 'Team Dispatch', href: '/team-dispatch' },
   { icon: Settings, label: 'Service Control', href: '/service-control2' },
   { icon: BookOpen, label: 'Knowledge Base', href: '/connaissances' },
+  { icon: GraduationCap, label: 'Training Management', href: '/training' },
   { icon: Search, label: 'Assistant', href: '/assistant' },
   { icon: LogOut, label: 'Sign Out', href: '/logout', danger: true },
 ];

@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ShiftManagement from "./pages/ShiftManagement";
 import Connaissances from "./pages/Connaissances";
+import TrainingManagement from "./pages/TrainingManagement";
 import Assistant from "./pages/Assistant";
 import MesShifts from "./pages/MesShifts";
 import TeamDispatch from "./pages/TeamDispatch";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/shift" element={<ProtectedRoute><ShiftManagement /></ProtectedRoute>} />
             <Route path="/connaissances" element={<ProtectedRoute><Connaissances /></ProtectedRoute>} />
+            <Route path="/training" element={<ProtectedRoute><TrainingManagement /></ProtectedRoute>} />
             <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
             <Route path="/mes-shifts" element={<ProtectedRoute><MesShifts /></ProtectedRoute>} />
             <Route path="/team-dispatch" element={<ProtectedRoute><TeamDispatch /></ProtectedRoute>} />
