@@ -52,45 +52,19 @@ export const useTasks = () => {
         throw tasksResponse.error;
       }
       
-      // Create lookup maps by EMAIL for cross-table matching
-      const staffMapByEmail = new Map();
+      // Create lookup maps for both staff and profiles
+      const staffMap = new Map();
       (staffResponse.data || []).forEach(staff => {
-        if (staff.email) {
-          staffMapByEmail.set(staff.email, staff);
-        }
-        staffMap.set(staff.id, staff); // Keep UUID map for direct matches
+        staffMap.set(staff.id, staff);
       });
       
-      const profilesMapByEmail = new Map();
+      const profilesMap = new Map();
       (profilesResponse.data || []).forEach(profile => {
-        if (profile.email) {
-          profilesMapByEmail.set(profile.email, profile);
-        }
-        profilesMap.set(profile.id, profile); // Keep UUID map for direct matches
+        profilesMap.set(profile.id, profile);
       });
 
-      // Helper function to find user across tables (UUID first, then email fallback)
-      const findUserAcrossTables = (userId: string) => {
-        // 1. Try direct UUID match in staff_directory
-        let staffUser = staffMap.get(userId);
-        if (staffUser) {
-          return { user: staffUser, source: 'staff_uuid', name: getDisplayNameFromStaff(staffUser) };
-        }
-        
-        // 2. Try direct UUID match in profiles  
-        let profileUser = profilesMap.get(userId);
-        if (profileUser && profileUser.email) {
-          // 3. If found in profiles, try to find corresponding staff by email
-          const correspondingStaff = staffMapByEmail.get(profileUser.email);
-          if (correspondingStaff) {
-            return { user: correspondingStaff, source: 'staff_email', name: getDisplayNameFromStaff(correspondingStaff) };
-          }
-          // Fallback to profile data
-          return { user: profileUser, source: 'profile', name: getDisplayNameFromProfiles(profileUser) };
-        }
-        
-        return null;
-      };
+      console.log('📊 Staff directory chargé:', staffResponse.data?.length, 'membres');
+      console.log('👤 Profiles chargés:', profilesResponse.data?.length, 'utilisateurs');
 
       // Helper functions to get display name from different table structures
       const getDisplayNameFromStaff = (staffData: any) => {
@@ -113,16 +87,22 @@ export const useTasks = () => {
 
       // Transform internal tasks to TaskItem format with dual name lookup
       const allTasks: TaskItem[] = (tasksResponse.data || []).map((task: any) => {
-        // 1. CRÉATEUR (created_by) - recherche cross-table avec fallback email
+        // 1. CRÉATEUR (created_by) - chercher dans staff_directory puis profiles
         let creatorDisplay = 'Inconnu';
         if (task.created_by) {
-          const foundCreator = findUserAcrossTables(task.created_by);
-          if (foundCreator) {
-            creatorDisplay = foundCreator.name || task.created_by;
-            console.log('✅ Créateur mappé (' + foundCreator.source + '):', task.created_by, '→', creatorDisplay);
+          const creatorStaff = staffMap.get(task.created_by);
+          if (creatorStaff) {
+            creatorDisplay = getDisplayNameFromStaff(creatorStaff) || task.created_by;
+            console.log('✅ Créateur mappé (staff):', task.created_by, '→', creatorDisplay);
           } else {
-            console.warn('❌ Créateur non trouvé:', task.created_by);
-            creatorDisplay = task.created_by;
+            const creatorProfile = profilesMap.get(task.created_by);
+            if (creatorProfile) {
+              creatorDisplay = getDisplayNameFromProfiles(creatorProfile) || task.created_by;
+              console.log('✅ Créateur mappé (profiles):', task.created_by, '→', creatorDisplay);
+            } else {
+              console.warn('❌ Créateur non trouvé:', task.created_by);
+              creatorDisplay = task.created_by;
+            }
           }
         }
 
@@ -132,15 +112,24 @@ export const useTasks = () => {
         if (task.assigned_to && Array.isArray(task.assigned_to) && task.assigned_to.length > 0) {
           const assignedNames = [];
           
-          // Mapper TOUS les UUIDs assignés vers les noms avec recherche cross-table
+          // Mapper TOUS les UUIDs assignés vers les noms
           for (const assignedId of task.assigned_to) {
-            const foundAssigned = findUserAcrossTables(assignedId);
-            if (foundAssigned) {
-              assignedNames.push(foundAssigned.name);
-              console.log('✅ Assigné mappé (' + foundAssigned.source + '):', assignedId, '→', foundAssigned.name);
+            const assignedStaff = staffMap.get(assignedId);
+            
+            if (assignedStaff) {
+              const staffName = getDisplayNameFromStaff(assignedStaff) || assignedId;
+              assignedNames.push(staffName);
+              console.log('✅ Assigné mappé (staff):', assignedId, '→', staffName);
             } else {
-              console.warn('❌ Assigné non trouvé:', assignedId);
-              assignedNames.push(assignedId); // UUID en dernier recours
+              const assignedProfile = profilesMap.get(assignedId);
+              if (assignedProfile) {
+                const profileName = getDisplayNameFromProfiles(assignedProfile) || assignedId;
+                assignedNames.push(profileName);
+                console.log('✅ Assigné mappé (profiles):', assignedId, '→', profileName);
+              } else {
+                console.warn('❌ Assigné non trouvé:', assignedId);
+                assignedNames.push(assignedId);
+              }
             }
           }
           
