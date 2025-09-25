@@ -230,11 +230,9 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         // Champs spécifiques selon la catégorie
         ...(formData.category === 'client_request' && {
           guest_name: formData.guestName || null,
-          room_number: formData.roomNumber || formData.location || null
+          // room_number supprimé - utilise location déjà défini plus haut
         }),
-        ...(formData.category === 'follow_up' && {
-          recipient: formData.recipient || formData.assignedMember || null
-        }),
+        // recipient supprimé - utilise assigned_to déjà défini plus haut
 
         // Ajouter les checklists si présentes
         checklist_items: checklists.length > 0 ? checklists : null
