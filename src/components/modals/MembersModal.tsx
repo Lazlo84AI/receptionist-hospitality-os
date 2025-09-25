@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MembersModalProps {
   isOpen: boolean;
@@ -39,17 +40,83 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
     member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Initialiser avec les membres déjà assignés
+  useEffect(() => {
+    if (task?.assigned_to && Array.isArray(task.assigned_to)) {
+      setSelectedMembers(task.assigned_to);
+    } else {
+      setSelectedMembers([]);
+    }
+  }, [task]);
+
+  // Reset search when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm('');
+    }
+  }, [isOpen]);
+
   const handleMemberToggle = (memberId: string) => {
-    setSelectedMembers(prev => 
-      prev.includes(memberId) 
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
+    console.log('🔍 Toggle member:', memberId, 'Current selected:', selectedMembers);
+    setSelectedMembers(prev => {
+      if (prev.includes(memberId)) {
+        // Retirer le membre
+        const newSelection = prev.filter(id => id !== memberId);
+        console.log('❌ Removing member:', memberId, 'New selection:', newSelection);
+        return newSelection;
+      } else {
+        // Ajouter le membre (vérifier la limite de 10)
+        if (prev.length >= 10) {
+          console.log('⚠️ Limit reached, cannot add more members');
+          toast({
+            title: "Limite atteinte",
+            description: "Maximum 10 personnes peuvent être assignées à une tâche",
+            variant: "destructive",
+          });
+          return prev;
+        }
+        const newSelection = [...prev, memberId];
+        console.log('✅ Adding member:', memberId, 'New selection:', newSelection);
+        return newSelection;
+      }
+    });
   };
 
   const handleAssign = async () => {
+    console.log('🚀 DÉBUT handleAssign');
+    console.log('📋 task:', task);
+    console.log('👥 selectedMembers:', selectedMembers);
+    
     if (task && selectedMembers.length > 0) {
       try {
+        console.log('💾 Tentative sauvegarde en base...');
+        console.log('🎯 task.id:', task.id);
+        console.log('📝 Data à sauver:', { 
+          assigned_to: selectedMembers, 
+          updated_at: new Date().toISOString() 
+        });
+
+        // 1. Sauvegarder directement dans task.assigned_to (format uuid[])
+        const { data: updateResult, error: updateError } = await supabase
+          .from('task')
+          .update({ 
+            assigned_to: selectedMembers, // Array d'UUID comme requis
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', task.id)
+          .select(); // Ajouter select() pour voir le résultat
+
+        console.log('📊 Résultat update Supabase:', updateResult);
+        console.log('❌ Erreur update Supabase:', updateError);
+
+        if (updateError) {
+          console.error('💥 Erreur détaillée:', updateError);
+          throw new Error(`Erreur sauvegarde: ${updateError.message}`);
+        }
+
+        console.log('✅ Sauvegarde réussie!');
+
+        // 2. Préparer les données pour webhook (optionnel)
         const membersData = selectedMembers.map(memberId => {
           const memberInfo = hotelMembers.find(m => m.id === memberId);
           return {
@@ -60,44 +127,51 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           };
         });
 
-        // Send webhook event for task update with multiple member assignments
-        const webhookResult = await sendTaskUpdatedEvent(
-          task.id,
-          task,
-          task,
-          profiles,
-          locations,
-          {
-            members: membersData
-          }
-        );
+        console.log('📤 Webhook data:', membersData);
 
-        if (webhookResult.success) {
-          const memberNames = membersData.map(m => m.name).join(', ');
-          toast({
-            title: "Members Assigned",
-            description: `${memberNames} have been assigned and notifications sent successfully`,
-          });
-          // Call onUpdate to trigger data refresh
-          if (onUpdate) {
-            onUpdate();
-          }
-        } else {
-          toast({
-            title: "Webhook Error",
-            description: webhookResult.error || "Failed to send member assignment notifications",
-            variant: "destructive",
-          });
+        // 3. Envoyer webhook (optionnel mais utile pour notifications)
+        try {
+          await sendTaskUpdatedEvent(
+            task.id,
+            task,
+            { ...task, assigned_to: selectedMembers },
+            profiles,
+            locations,
+            { members: membersData }
+          );
+          console.log('📬 Webhook envoyé avec succès');
+        } catch (webhookError) {
+          console.warn('⚠️ Webhook failed but assignment was saved:', webhookError);
+        }
+
+        const memberNames = membersData.map(m => m.name).join(', ');
+        toast({
+          title: "Membres assignés",
+          description: `${memberNames} ont été assignés avec succès`,
+        });
+        
+        console.log('🔄 Calling onUpdate...');
+        // 4. Rafraîchir les données
+        if (onUpdate) {
+          onUpdate();
         }
       } catch (error) {
-        console.error('Error sending webhook:', error);
+        console.error('❌ ERREUR COMPLÈTE:', error);
         toast({
-          title: "Assignment Error",
-          description: "Failed to send member assignment notifications",
+          title: "Erreur d'assignation",
+          description: error.message || "Impossible d'assigner les membres",
           variant: "destructive",
         });
       }
+    } else {
+      console.log('⚠️ Conditions non remplies:', {
+        hasTask: !!task,
+        selectedMembersCount: selectedMembers.length,
+        selectedMembers
+      });
     }
+    
+    console.log('🏁 Fermeture modal');
     onClose();
   };
 
@@ -106,7 +180,11 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
       <DialogContent className="max-w-md">
         <DialogHeader className="pb-4 border-b">
           <h2 className="text-lg font-bold text-foreground">
-            Assigned People
+            Assigned People {selectedMembers.length > 0 && (
+              <span className="ml-2 px-2 py-1 bg-[#BBA57A] text-[#1E1A37] rounded-full text-sm font-medium">
+                {selectedMembers.length} selected
+              </span>
+            )}
           </h2>
         </DialogHeader>
 
@@ -124,18 +202,23 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           <div className="max-h-60 overflow-y-auto">
             <div className="space-y-2">
               {filteredMembers.map((member) => (
-                <div key={member.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted">
+                <div key={member.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#BBA57A]/10 border border-transparent hover:border-[#BBA57A]/30 transition-all duration-200">
                   <Checkbox 
                     id={member.id}
                     checked={selectedMembers.includes(member.id)}
                     onCheckedChange={() => handleMemberToggle(member.id)}
+                    className="cursor-pointer"
                   />
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-palace-navy text-white text-xs">
+                  <Avatar className="h-10 w-10 cursor-pointer transition-all duration-200" onClick={() => handleMemberToggle(member.id)}>
+                    <AvatarFallback className={`text-sm font-medium transition-all duration-200 ${
+                      selectedMembers.includes(member.id)
+                        ? 'bg-[#BBA57A] text-[#1E1A37] ring-2 ring-[#BBA57A]'
+                        : 'bg-[#1E1A37] text-white hover:bg-[#BBA57A] hover:text-[#1E1A37]'
+                    }`}>
                       {member.initials}
                     </AvatarFallback>
                   </Avatar>
-                  <Label htmlFor={member.id} className="flex-1 cursor-pointer">
+                  <Label htmlFor={member.id} className="flex-1 cursor-pointer" onClick={() => handleMemberToggle(member.id)}>
                     <div className="font-medium text-foreground">{member.name}</div>
                     <div className="text-sm text-soft-pewter">{member.role}</div>
                   </Label>

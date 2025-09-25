@@ -52,19 +52,45 @@ export const useTasks = () => {
         throw tasksResponse.error;
       }
       
-      // Create lookup maps for both staff and profiles
-      const staffMap = new Map();
+      // Create lookup maps by EMAIL for cross-table matching
+      const staffMapByEmail = new Map();
       (staffResponse.data || []).forEach(staff => {
-        staffMap.set(staff.id, staff);
+        if (staff.email) {
+          staffMapByEmail.set(staff.email, staff);
+        }
+        staffMap.set(staff.id, staff); // Keep UUID map for direct matches
       });
       
-      const profilesMap = new Map();
+      const profilesMapByEmail = new Map();
       (profilesResponse.data || []).forEach(profile => {
-        profilesMap.set(profile.id, profile);
+        if (profile.email) {
+          profilesMapByEmail.set(profile.email, profile);
+        }
+        profilesMap.set(profile.id, profile); // Keep UUID map for direct matches
       });
 
-      console.log('📊 Staff directory chargé:', staffResponse.data?.length, 'membres');
-      console.log('👤 Profiles chargés:', profilesResponse.data?.length, 'utilisateurs');
+      // Helper function to find user across tables (UUID first, then email fallback)
+      const findUserAcrossTables = (userId: string) => {
+        // 1. Try direct UUID match in staff_directory
+        let staffUser = staffMap.get(userId);
+        if (staffUser) {
+          return { user: staffUser, source: 'staff_uuid', name: getDisplayNameFromStaff(staffUser) };
+        }
+        
+        // 2. Try direct UUID match in profiles  
+        let profileUser = profilesMap.get(userId);
+        if (profileUser && profileUser.email) {
+          // 3. If found in profiles, try to find corresponding staff by email
+          const correspondingStaff = staffMapByEmail.get(profileUser.email);
+          if (correspondingStaff) {
+            return { user: correspondingStaff, source: 'staff_email', name: getDisplayNameFromStaff(correspondingStaff) };
+          }
+          // Fallback to profile data
+          return { user: profileUser, source: 'profile', name: getDisplayNameFromProfiles(profileUser) };
+        }
+        
+        return null;
+      };
 
       // Helper functions to get display name from different table structures
       const getDisplayNameFromStaff = (staffData: any) => {
@@ -77,7 +103,7 @@ export const useTasks = () => {
       };
 
       const getDisplayNameFromProfiles = (profileData: any) => {
-        // Table profiles n'a pas de full_name, seulement first_name + last_name
+        // Table profiles : first_name + last_name
         if (profileData.first_name || profileData.last_name) {
           return `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
         }
@@ -87,45 +113,44 @@ export const useTasks = () => {
 
       // Transform internal tasks to TaskItem format with dual name lookup
       const allTasks: TaskItem[] = (tasksResponse.data || []).map((task: any) => {
-        // 1. CRÉATEUR (created_by) - chercher dans profiles
+        // 1. CRÉATEUR (created_by) - recherche cross-table avec fallback email
         let creatorDisplay = 'Inconnu';
         if (task.created_by) {
-          const creatorProfile = profilesMap.get(task.created_by);
-          if (creatorProfile) {
-            creatorDisplay = getDisplayNameFromProfiles(creatorProfile) || task.created_by;
-            console.log('✅ Créateur mappé:', task.created_by, '→', creatorDisplay);
+          const foundCreator = findUserAcrossTables(task.created_by);
+          if (foundCreator) {
+            creatorDisplay = foundCreator.name || task.created_by;
+            console.log('✅ Créateur mappé (' + foundCreator.source + '):', task.created_by, '→', creatorDisplay);
           } else {
-            console.warn('❌ Créateur non trouvé dans profiles:', task.created_by);
+            console.warn('❌ Créateur non trouvé:', task.created_by);
             creatorDisplay = task.created_by;
           }
         }
 
-        // 2. ASSIGNÉ (assigned_to) - chercher dans staff_directory
+        // 2. ASSIGNÉ (assigned_to) - afficher TOUS les noms
         let assignedDisplay = 'Non assigné';
-        let assignedCount = 0;
         
         if (task.assigned_to && Array.isArray(task.assigned_to) && task.assigned_to.length > 0) {
-          assignedCount = task.assigned_to.length;
-          const firstAssignedId = task.assigned_to[0];
-          const assignedStaff = staffMap.get(firstAssignedId);
+          const assignedNames = [];
           
-          if (assignedStaff) {
-            assignedDisplay = getDisplayNameFromStaff(assignedStaff) || firstAssignedId;
-            console.log('✅ Assigné mappé:', firstAssignedId, '→', assignedDisplay);
-          } else {
-            console.warn('❌ Assigné non trouvé dans staff_directory:', firstAssignedId);
-            assignedDisplay = firstAssignedId;
+          // Mapper TOUS les UUIDs assignés vers les noms avec recherche cross-table
+          for (const assignedId of task.assigned_to) {
+            const foundAssigned = findUserAcrossTables(assignedId);
+            if (foundAssigned) {
+              assignedNames.push(foundAssigned.name);
+              console.log('✅ Assigné mappé (' + foundAssigned.source + '):', assignedId, '→', foundAssigned.name);
+            } else {
+              console.warn('❌ Assigné non trouvé:', assignedId);
+              assignedNames.push(assignedId); // UUID en dernier recours
+            }
           }
           
-          // Ajouter indication s'il y a plusieurs assignés
-          if (assignedCount > 1) {
-            assignedDisplay += ` +${assignedCount - 1}`;
-          }
+          // Joindre tous les noms avec des virgules
+          assignedDisplay = assignedNames.join(', ');
         }
 
-        // 3. AFFICHAGE COMBINÉ: "Créateur → Assigné"
+        // 3. AFFICHAGE COMBINÉ: "Créateur → Tous les assignés"
         const combinedDisplay = `${creatorDisplay} → ${assignedDisplay}`;
-        console.log('🎯 Affichage final:', combinedDisplay);
+        console.log('🎯 Affichage final:', task.id, '→', combinedDisplay);
 
         return {
           id: task.id,
