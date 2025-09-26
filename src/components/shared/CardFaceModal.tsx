@@ -14,6 +14,7 @@ interface CardFaceModalProps {
   assignedTo: string;
   timeElapsed: string;
   onClick: () => void;
+  onEyeClick?: () => void; // NOUVEAU: Handler pour l'icône œil
 }
 
 export function CardFaceModal({
@@ -25,7 +26,8 @@ export function CardFaceModal({
   priority,
   assignedTo,
   timeElapsed,
-  onClick
+  onClick,
+  onEyeClick
 }: CardFaceModalProps) {
   
   const getStatusBadgeClass = (status: string) => {
@@ -54,7 +56,15 @@ export function CardFaceModal({
             <h3 className="font-semibold text-hotel-navy leading-tight">
               {title}
             </h3>
-            <Button variant="ghost" size="sm" className="shrink-0 text-hotel-navy/60 hover:text-hotel-navy">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="shrink-0 text-hotel-navy/60 hover:text-hotel-navy"
+              onClick={(e) => {
+                e.stopPropagation(); // Empêcher le clic sur la carte
+                onEyeClick?.(); // Appeler le handler de l'œil
+              }}
+            >
               <Eye className="h-4 w-4" />
             </Button>
           </div>

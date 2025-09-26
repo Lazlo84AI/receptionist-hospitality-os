@@ -34,6 +34,7 @@ import { MembersModal } from './MembersModal';
 import { EscalationModal } from './EscalationModal';
 import { AttachmentModal } from './AttachmentModal';
 import AttachmentPreviewModal from './AttachmentPreviewModal'; // ✅ Import du modal preview
+import { TaskFullEditView } from '@/components/modules/TaskFullEditView'; // NOUVEAU: Import TaskFullEditView
 import { ChecklistComponent } from '@/components/ChecklistComponent';
 import { TaskItem } from '@/types/database';
 import { sendTaskUpdatedEvent } from '@/lib/webhookService';
@@ -196,6 +197,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false); // ✅ État modal preview
   const [selectedAttachment, setSelectedAttachment] = useState<any>(null); // ✅ Attachment sélectionné
+  const [isTaskFullEditOpen, setIsTaskFullEditOpen] = useState(false); // NOUVEAU: État TaskFullEditView
   const [checklists, setChecklists] = useState<{ id: string; title: string; tasks: { id: string; text: string; completed: boolean }[] }[]>([]);
   // SUPPRIME: const [reminders, setReminders] car maintenant via hook
   
@@ -414,8 +416,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
                       size="sm"
                       className="text-soft-pewter hover:text-palace-navy ml-4 p-2"
                       onClick={() => {
-                        // TODO: Ouvrir TaskFullEditView
-                        console.log('Open TaskFullEditView for task:', task?.id);
+                        setIsTaskFullEditOpen(true); // Ouvrir TaskFullEditView
                       }}
                     >
                       <Edit className="h-6 w-6" />
@@ -811,6 +812,19 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
           setSelectedAttachment(null);
         }}
         attachment={selectedAttachment}
+      />
+      
+      {/* NOUVEAU: TaskFullEditView Modal */}
+      <TaskFullEditView 
+        isOpen={isTaskFullEditOpen}
+        onClose={() => setIsTaskFullEditOpen(false)}
+        task={task}
+        onSave={(updatedTask) => {
+          if (onUpdateTask) {
+            onUpdateTask(updatedTask);
+          }
+          setIsTaskFullEditOpen(false);
+        }}
       />
     </>
   );

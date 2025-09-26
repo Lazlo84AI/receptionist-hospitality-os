@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
+import { TaskFullEditView } from '@/components/modules/TaskFullEditView'; // NOUVEAU: Import TaskFullEditView
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
 import ShiftStartModal from '@/components/modals/ShiftStartModal';
@@ -256,9 +257,11 @@ const KanbanColumn = ({
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tasks, loading, error, refetch } = useTasks();
-  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started'); // CHANGÉ POUR TESTER BEGIN SHIFT
+  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('active'); // CHANGÉ POUR TESTER END SHIFT
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const [isTaskFullEditOpen, setIsTaskFullEditOpen] = useState(false); // NOUVEAU: État pour TaskFullEditView
+  const [taskToEdit, setTaskToEdit] = useState<TaskItem | null>(null); // NOUVEAU: Tâche à éditer
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
   const [isShiftStartOpen, setIsShiftStartOpen] = useState(false);
   const [shiftActive, setShiftActive] = useState(false);
