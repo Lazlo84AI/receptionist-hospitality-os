@@ -29,10 +29,10 @@ export function ClientRequestsCard() {
   const { tasks, loading, error, refetch } = useTasks();
   const { profiles } = useProfiles();
   
-  // Filter client requests from all tasks
+  // Filter client requests from all tasks (exclude completed)
   const clientRequests = tasks
-    .filter(task => task.type === 'client_request')
-    .map(transformClientRequest); // Show all client requests - no hardcoded limit
+    .filter(task => task.type === 'client_request' && task.status !== 'completed')
+    .map(transformClientRequest); // Show all active client requests - no hardcoded limit
 
   // State pour la modale - EXACTEMENT COMME INCIDENTS CARD
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);

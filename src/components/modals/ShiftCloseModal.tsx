@@ -91,7 +91,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
   };
 
   const initializeMicrophone = async () => {
-    addLog('Demande d\'accès au microphone...');
+    addLog('Requesting microphone access...');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -101,23 +101,23 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         }
       });
       
-      addLog('✅ Accès microphone accordé');
+      addLog('✅ Microphone access granted');
       setAudioStream(stream);
       setMicrophoneReady(true);
       
-      // Afficher les infos du microphone
+      // Show microphone info
       const tracks = stream.getAudioTracks();
       if (tracks.length > 0) {
         const track = tracks[0];
-        addLog(`Microphone détecté: ${track.label || 'Dispositif audio'}`);
+        addLog(`Microphone detected: ${track.label || 'Audio device'}`);
       }
       
     } catch (error: any) {
-      addLog(`Erreur microphone: ${error.message}`);
+      addLog(`Microphone error: ${error.message}`);
       if (error.name === 'NotAllowedError') {
-        alert('Permission microphone refusée. Veuillez autoriser l\'accès au microphone.');
+        alert('Microphone permission denied. Please allow microphone access.');
       } else if (error.name === 'NotFoundError') {
-        alert('Aucun microphone trouvé sur ce système.');
+        alert('No microphone found on this system.');
       }
     }
   };
@@ -137,36 +137,36 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunks.push(event.data);
-          addLog(`Chunk reçu: ${event.data.size} bytes`);
+          addLog(`Chunk received: ${event.data.size} bytes`);
         }
       };
 
       recorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        addLog(`Enregistrement terminé: ${audioBlob.size} bytes`);
+        addLog(`Recording completed: ${audioBlob.size} bytes`);
         setRecordedAudio(audioBlob);
         setIsRecording(false);
         setMediaRecorder(null);
       };
 
       recorder.onerror = (event: any) => {
-        addLog(`Erreur MediaRecorder: ${event.error}`);
+        addLog(`MediaRecorder error: ${event.error}`);
       };
 
-      recorder.start(1000); // Chunks de 1 seconde
+      recorder.start(1000); // 1 second chunks
       setMediaRecorder(recorder);
       setIsRecording(true);
-      addLog('Enregistrement démarré...');
+      addLog('Recording started...');
       
     } catch (error: any) {
-      addLog(`Erreur lors du démarrage: ${error.message}`);
+      addLog(`Error starting recording: ${error.message}`);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
-      addLog('Arrêt de l\'enregistrement...');
+      addLog('Stopping recording...');
     }
   };
 
@@ -180,32 +180,37 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
   const submitShiftEnd = async () => {
     setIsSubmitting(true);
-    addLog('Début de la sauvegarde du shift...');
+    addLog('Starting shift save...');
     
     try {
-      // 1. Upload audio si présent
+      // 1. Upload audio if present
       let voiceNoteUrl = null;
       if (recordedAudio) {
-        addLog(`Upload audio: ${recordedAudio.size} bytes`);
+        addLog(`Uploading audio: ${recordedAudio.size} bytes`);
         const fileName = `shift_${Date.now()}.wav`;
         
         const { data, error } = await supabase.storage
           .from('shift-recordings')
-          .upload(fileName, recordedAudio);
+          .upload(fileName, recordedAudio, {
+            contentType: 'audio/wav'
+          });
         
         if (error) {
-          addLog(`Erreur upload: ${error.message}`);
+          addLog(`Upload error: ${error.message}`);
+          throw new Error(`Audio upload failed: ${error.message}`);
         } else {
           const { data: { publicUrl } } = supabase.storage
             .from('shift-recordings')
             .getPublicUrl(fileName);
           voiceNoteUrl = publicUrl;
-          addLog('Audio uploadé avec succès');
+          addLog('Audio uploaded successfully');
         }
       }
       
-      // 2. Créer l'enregistrement du shift
+      // 2. Create shift record
       const { data: userData } = await supabase.auth.getUser();
+      const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
+      
       const shiftData = {
         user_id: userData.user?.id,
         end_time: new Date().toISOString(),
@@ -222,22 +227,22 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         .single();
       
       if (shiftError) throw shiftError;
-      addLog(`Shift créé: ${shiftResult.id}`);
+      addLog(`Shift created: ${shiftResult.id}`);
       
-      // 3. NOUVEAU: Utiliser le Shift Continuity Manager
-      addLog('Application des règles de transfert intelligent...');
+      // 3. NEW: Use Shift Continuity Manager
+      addLog('Applying intelligent transfer rules...');
       await saveShiftHandover(
         shiftResult.id,
-        tasks, // Toutes les cartes
+        tasks, // All cards
         voiceNoteUrl,
         noteMode === 'text' ? textNote : null,
-        'Shift handover avec règles de continuité appliquées'
+        'Shift handover with continuity rules applied'
       );
       
-      addLog('Shift Continuity Manager: TOUTES les cartes archivées');
-      addLog('Les règles de transfert seront appliquées au prochain shift');
+      addLog('Shift Continuity Manager: ALL cards archived');
+      addLog('Transfer rules will be applied on next shift');
       
-      // Compter les cartes par catégorie pour le résumé
+      // Count cards by category for summary
       const stats = {
         incidents: tasks.filter(t => t.type === 'incident').length,
         clientRequests: tasks.filter(t => t.type === 'client_request').length,
@@ -246,28 +251,31 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         resolved: tasks.filter(t => t.status === 'completed' || t.status === 'resolved').length
       };
       
-      const message = `Shift terminé avec succès!
+      const message = `Thank you for your professionalism, ${userDisplayName}!
 
 ` +
-        `• ${tasks.length} cartes archivées
+        `• ${tasks.length} cards archived
 ` +
-        `• ${stats.incidents} incidents (seront transférés)
+        `• ${stats.incidents} incidents (will be transferred)
 ` +
-        `• ${stats.clientRequests} demandes clients (seront transférées)
+        `• ${stats.clientRequests} client requests (will be transferred)
 ` +
-        `• ${stats.followUps} follow-ups (si assignés)
+        `• ${stats.followUps} follow-ups (if assigned)
 ` +
-        `• ${stats.internalTasks} tâches internes (si assignées)
+        `• ${stats.internalTasks} internal tasks (if assigned)
 ` +
-        `• ${stats.resolved} cartes résolues (archivées seulement)
+        `• ${stats.resolved} resolved cards (archived only)
 
 ` +
-        `${voiceNoteUrl ? 'Audio' : 'Notes texte'} enregistré(es) pour l'équipe suivante`;
+        `${voiceNoteUrl ? 'Audio note' : 'Text notes'} recorded for next team
+
+` +
+        `Your shift handover has been successfully registered in the system.`;
       
-      addLog('Shift terminé avec succès!');
+      addLog('Shift completed successfully!');
       alert(message);
       
-      // Nettoyer le stream audio
+      // Clean up audio stream
       if (audioStream) {
         audioStream.getTracks().forEach(track => track.stop());
       }
@@ -275,8 +283,8 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       onClose();
       
     } catch (error: any) {
-      addLog(`Erreur générale: ${error.message}`);
-      alert(`Erreur: ${error.message}`);
+      addLog(`General error: ${error.message}`);
+      alert(`Error: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -296,15 +304,20 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
           <div className="p-6 border-b bg-background">
             <h2 className="text-2xl font-playfair font-bold mb-2">
               {isVoiceNoteScreen 
-                ? "Fin de shift - laissez une note vocale à votre collègue"
-                : "Fin de shift - mettez à jour vos cartes"
+                ? "End of shift - leave a voice note for your colleague"
+                : "End of shift - update your cards"
               }
             </h2>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
                 {isVoiceNoteScreen 
-                  ? `Question ${totalTasks + 1} - expliquez à votre collègue ce qu'il doit savoir`
-                  : `Question ${currentTaskIndex + 1} sur ${totalTasks}`
+                  ? (
+                      <div style={{ color: '#BBA88A', fontSize: '1.25rem', fontWeight: '500', lineHeight: '1.3' }}>
+                        <div>How did the shift go. And what needs attention.</div>
+                        <div>Stay concise</div>
+                      </div>
+                    )
+                  : `Question ${currentTaskIndex + 1} of ${totalTasks}`
                 }
               </div>
               <div className="flex items-center gap-4">
@@ -342,7 +355,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                   className="flex items-center gap-2 hotel-button-hover"
                   >
                   <Mic className="h-4 w-4" />
-                  Note vocale
+                  Voice Note
                   </Button>
                   <Button
                   variant={noteMode === 'text' ? 'default' : 'outline'}
@@ -350,7 +363,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                   className="flex items-center gap-2 hotel-button-hover"
                   >
                     <Type className="h-4 w-4" />
-                    Note écrite
+                    Written Note
                   </Button>
                 </div>
 
@@ -363,13 +376,13 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                         <Button
                           onClick={initializeMicrophone}
                           size="lg"
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 text-lg font-medium"
+                          className="px-8 py-4 text-lg font-medium text-white transition-all duration-200 bg-[#BBA88A] hover:bg-[#DEAE53] hover:text-[#1E1A37]"
                         >
                           <Mic className="h-6 w-6 mr-2" />
-                          Activer le microphone
+                          Enable Microphone
                         </Button>
                         <p className="text-sm text-muted-foreground mt-2">
-                          Cliquez pour demander l'accès au microphone
+                          Click to request microphone access
                         </p>
                       </div>
                     )}
@@ -377,6 +390,14 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                     {/* Interface d'enregistrement */}
                     {microphoneReady && (
                       <div className="text-center space-y-6">
+                        {!isRecording && !recordedAudio && (
+                          <div className="mb-6">
+                            <p className="text-lg font-medium text-[#BBA88A] mb-2">
+                              Press the green button when you are ready!
+                            </p>
+                          </div>
+                        )}
+                        
                         <div className="flex justify-center gap-4">
                           <Button
                             onClick={handleVoiceNote}
@@ -399,15 +420,15 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                         <div className="space-y-2">
                           <p className="text-lg font-medium">
                             {isRecording 
-                              ? "Enregistrement en cours... Cliquez pour arrêter" 
-                              : "Cliquez pour commencer l'enregistrement"
+                              ? "Recording in progress... Click to stop" 
+                              : "Click to start recording"
                             }
                           </p>
                           
                           {recordedAudio && (
                             <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
                               <p className="text-green-700 font-medium">
-                                ✓ Enregistrement terminé ({Math.round(recordedAudio.size / 1024)} KB)
+                                ✓ Recording completed ({Math.round(recordedAudio.size / 1024)} KB)
                               </p>
                               <audio 
                                 controls 
@@ -418,8 +439,8 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                           )}
                         </div>
                         
-                        {/* Journal des logs */}
-                        {recordingLogs.length > 0 && (
+                        {/* Journal des logs - MASQUÉ EN PRODUCTION */}
+                        {recordingLogs.length > 0 && false && (
                           <div className="bg-black text-green-400 p-4 rounded-lg font-mono text-sm h-32 overflow-y-auto text-left">
                             {recordingLogs.map((log, index) => (
                               <div key={index}>{log}</div>
@@ -435,17 +456,17 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                 {noteMode === 'text' && (
                   <div className="space-y-4">
                     <Label htmlFor="textNote" className="text-lg font-medium">
-                      Message pour votre collègue
+                      Message for your colleague
                     </Label>
                     <Textarea
                       id="textNote"
                       value={textNote}
                       onChange={(e) => setTextNote(e.target.value)}
-                      placeholder="Expliquez à votre collègue ce qu'il doit savoir pour le prochain shift..."
+                      placeholder="Explain to your colleague what they need to know for the next shift..."
                       className="min-h-[200px] text-base hotel-hover"
                     />
                     <p className="text-sm text-muted-foreground">
-                      {textNote.length} caractères
+                      {textNote.length} characters
                     </p>
                   </div>
                 )}
@@ -456,17 +477,21 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                     onClick={submitShiftEnd}
                     disabled={isSubmitting || (noteMode === 'voice' && !recordedAudio && !isRecording) || (noteMode === 'text' && !textNote.trim())}
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px]"
+                    className={(
+                      (isSubmitting || (noteMode === 'voice' && !recordedAudio && !isRecording) || (noteMode === 'text' && !textNote.trim()))
+                        ? "bg-[#F5F5DC] text-gray-400 cursor-not-allowed px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px]"
+                        : "bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px] transition-all duration-200"
+                    )}
                   >
                     {isSubmitting ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Envoi...
+                        Sending...
                       </>
                     ) : (
                       <>
                         <Send className="h-5 w-5" />
-                        Terminer le shift
+                        Register Your End of Shift
                       </>
                     )}
                   </Button>
@@ -477,7 +502,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
             <>
               <div className="p-6 bg-muted/30">
                 <h3 className="text-lg font-medium">
-                  La situation a-t-elle évoluée concernant : {currentTask?.title} ?
+                  Has the situation evolved regarding: {currentTask?.title}?
                 </h3>
               </div>
 
@@ -500,16 +525,18 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
               <Button
                 onClick={handleValidate}
                 size="lg"
-                className="h-12 w-12 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
+                className="h-12 px-6 bg-primary hover:bg-primary/90 shadow-lg text-white font-medium"
               >
-                <Check className="h-6 w-6" />
+                <Check className="h-4 w-4 mr-2" />
+                Next
               </Button>
               <Button
                 onClick={handleCardEdit}
                 size="lg"
-                className="h-12 w-12 rounded-full bg-muted hover:bg-muted/90 text-muted-foreground shadow-lg"
+                className="h-12 px-6 bg-muted hover:bg-muted/90 text-muted-foreground shadow-lg font-medium"
               >
-                <Edit3 className="h-6 w-6" />
+                <Edit3 className="h-4 w-4 mr-2" />
+                Modify
               </Button>
             </div>
           )}

@@ -257,7 +257,7 @@ const KanbanColumn = ({
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tasks, loading, error, refetch } = useTasks();
-  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('active'); // CHANGÉ POUR TESTER END SHIFT
+  const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started'); // LOGIQUE CORRECTE: End Shift s'active après Begin Shift
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isTaskFullEditOpen, setIsTaskFullEditOpen] = useState(false); // NOUVEAU: État pour TaskFullEditView
@@ -534,7 +534,8 @@ const ShiftManagement = () => {
             <Button
               onClick={() => handleShiftAction('close')}
               disabled={shiftStatus !== 'active'}
-              className="h-12 text-base end-shift-button"
+              className="h-12 text-base"
+              variant={shiftStatus === 'active' ? 'default' : 'secondary'}
             >
               <StopCircle className="h-5 w-5 mr-2" />
               End Shift

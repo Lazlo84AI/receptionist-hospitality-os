@@ -19,6 +19,7 @@ export const useLatestShiftHandover = () => {
   const fetchLatestShiftHandover = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching latest shift handover...');
       
       // Récupérer le dernier shift terminé avec des données de passation
       const { data, error } = await supabase
@@ -28,47 +29,62 @@ export const useLatestShiftHandover = () => {
           voice_note_transcription,
           handover_notes,
           user_id,
-          end_time,
-          profiles!shifts_user_id_fkey (
-            first_name,
-            last_name
-          )
+          end_time
         `)
         .eq('status', 'completed')
-        .not('voice_note_transcription', 'is', null)
-        .or('voice_note_url.not.is.null,handover_notes.not.is.null')
+        .or('voice_note_url.not.is.null,voice_note_transcription.not.is.null,handover_notes.not.is.null')
+        .neq('handover_notes', 'No handover notes')
         .order('end_time', { ascending: false })
         .limit(1)
         .single();
 
+      console.log('📊 Query result:', { data, error });
+
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('❌ Supabase error:', error);
         throw error;
       }
 
       if (data) {
-        const profileData = data.profiles as any;
-        const previousShiftUser = profileData 
-          ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim()
-          : 'Unknown User';
+        console.log('✅ Shift handover data found:', data);
+        
+        // Récupérer le nom de l'utilisateur séparément
+        let previousShiftUser = 'Unknown User';
+        if (data.user_id) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', data.user_id)
+            .single();
+            
+          if (profileData && !profileError) {
+            previousShiftUser = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
+          }
+        }
 
-        setShiftData({
+        const shiftHandoverData = {
           voice_note_url: data.voice_note_url,
           voice_note_transcription: data.voice_note_transcription,
           handover_notes: data.handover_notes,
           previous_shift_user: previousShiftUser,
           previous_shift_end_time: data.end_time
-        });
+        };
+        
+        console.log('📝 Setting shift data:', shiftHandoverData);
+        setShiftData(shiftHandoverData);
       } else {
+        console.log('❌ No shift handover data found');
         setShiftData(null);
       }
       
       setError(null);
     } catch (err) {
-      console.error('Error fetching latest shift handover:', err);
+      console.error('💥 Error fetching latest shift handover:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch shift handover');
       setShiftData(null);
     } finally {
       setLoading(false);
+      console.log('🏁 Fetch completed');
     }
   };
 

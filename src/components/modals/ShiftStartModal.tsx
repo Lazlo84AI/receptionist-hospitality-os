@@ -225,9 +225,20 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
           {/* Header */}
           <div className="p-6 border-b bg-background">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">
-                Shift Start: Please review the to-do list
-              </h2>
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {isFirstScreen 
+                    ? "Voice note or Handover note from the last shift"
+                    : "Shift Start: Please review the to-do list"
+                  }
+                </h2>
+                <p className="text-sm mt-1" style={{ color: '#BBA88A' }}>
+                  {isFirstScreen
+                    ? "Information from your colleague's previous shift. Please listen or read."
+                    : "Check the details of every card. And click on Next when it's done."
+                  }
+                </p>
+              </div>
             </div>
             
             {/* Progress bar seulement pour les cartes */}
@@ -252,12 +263,9 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
               // ÉCRAN 0 : Audio Player + Handover Notes (comme vos captures)
               <div className="space-y-6">
                 <div className="text-center mb-8">
-                  <h3 className="text-lg font-semibold mb-2">
-                    {shiftData ? 'Voice Note from Your Predecessor' : 'Shift Handover Information'}
-                  </h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-3">
                     {shiftData 
-                      ? `Key information from ${shiftData.previous_shift_user || 'the previous team'}` 
+                      ? `From ${shiftData.previous_shift_user || 'the previous team'} - ${shiftData.previous_shift_end_time ? new Date(shiftData.previous_shift_end_time).toLocaleDateString('fr-FR') + ' ' + new Date(shiftData.previous_shift_end_time).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) : 'Unknown date'}` 
                       : 'No handover data available from previous shift'
                     }
                   </p>

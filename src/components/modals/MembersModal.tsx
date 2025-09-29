@@ -83,41 +83,62 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
   };
 
   const handleAssign = async () => {
-    console.log('🚀 DÉBUT handleAssign');
-    console.log('📋 task:', task);
-    console.log('👥 selectedMembers:', selectedMembers);
+    console.log('DEBUT handleAssign');
+    console.log('task:', task);
+    console.log('selectedMembers:', selectedMembers);
     
     if (task && selectedMembers.length > 0) {
       try {
-        console.log('💾 Tentative sauvegarde en base...');
-        console.log('🎯 task.id:', task.id);
-        console.log('📝 Data à sauver:', { 
-          assigned_to: selectedMembers, 
+        // PROTECTION: Recuperer les assignes actuels depuis la base pour eviter l'ecrasement
+        console.log('Recuperation des assignes actuels depuis la base...');
+        const { data: currentTask, error: fetchError } = await supabase
+          .from('task')
+          .select('assigned_to')
+          .eq('id', task.id)
+          .single();
+        
+        if (fetchError) {
+          console.error('Erreur recuperation task actuelle:', fetchError);
+          throw new Error(`Erreur recuperation: ${fetchError.message}`);
+        }
+        
+        const currentAssigned = currentTask?.assigned_to || [];
+        console.log('Assignes actuels en base:', currentAssigned);
+        console.log('Nouveaux selectionnes:', selectedMembers);
+        
+        // Merger les assignes existants avec les nouveaux (eviter les doublons)
+        const mergedAssigned = [...new Set([...currentAssigned, ...selectedMembers])];
+        console.log('Assignes merges (sans doublons):', mergedAssigned);
+        
+        console.log('Tentative sauvegarde en base...');
+        console.log('task.id:', task.id);
+        console.log('Data a sauver:', { 
+          assigned_to: mergedAssigned, 
           updated_at: new Date().toISOString() 
         });
 
-        // 1. Sauvegarder directement dans task.assigned_to (format uuid[])
+        // 1. Sauvegarder avec les assignes merges
         const { data: updateResult, error: updateError } = await supabase
           .from('task')
           .update({ 
-            assigned_to: selectedMembers, // Array d'UUID comme requis
+            assigned_to: mergedAssigned, // Utiliser les assignes merges
             updated_at: new Date().toISOString()
           })
           .eq('id', task.id)
-          .select(); // Ajouter select() pour voir le résultat
+          .select(); // Ajouter select() pour voir le resultat
 
-        console.log('📊 Résultat update Supabase:', updateResult);
-        console.log('❌ Erreur update Supabase:', updateError);
+        console.log('Resultat update Supabase:', updateResult);
+        console.log('Erreur update Supabase:', updateError);
 
         if (updateError) {
-          console.error('💥 Erreur détaillée:', updateError);
+          console.error('Erreur detaillee:', updateError);
           throw new Error(`Erreur sauvegarde: ${updateError.message}`);
         }
 
-        console.log('✅ Sauvegarde réussie!');
+        console.log('Sauvegarde reussie!');
 
-        // 2. Préparer les données pour webhook (optionnel)
-        const membersData = selectedMembers.map(memberId => {
+        // 2. Preparer les donnees pour webhook (avec tous les assignes)
+        const membersData = mergedAssigned.map(memberId => {
           const memberInfo = hotelMembers.find(m => m.id === memberId);
           return {
             id: memberId,
@@ -127,36 +148,40 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           };
         });
 
-        console.log('📤 Webhook data:', membersData);
+        console.log('Webhook data:', membersData);
 
         // 3. Envoyer webhook (optionnel mais utile pour notifications)
         try {
           await sendTaskUpdatedEvent(
             task.id,
             task,
-            { ...task, assigned_to: selectedMembers },
+            { ...task, assigned_to: mergedAssigned },
             profiles,
             locations,
             { members: membersData }
           );
-          console.log('📬 Webhook envoyé avec succès');
+          console.log('Webhook envoye avec succes');
         } catch (webhookError) {
-          console.warn('⚠️ Webhook failed but assignment was saved:', webhookError);
+          console.warn('Webhook failed but assignment was saved:', webhookError);
         }
 
-        const memberNames = membersData.map(m => m.name).join(', ');
+        const newMemberNames = selectedMembers
+          .filter(memberId => !currentAssigned.includes(memberId))
+          .map(memberId => hotelMembers.find(m => m.id === memberId)?.name || 'Unknown')
+          .join(', ');
+        
         toast({
-          title: "Membres assignés",
-          description: `${memberNames} ont été assignés avec succès`,
+          title: "Membres ajoutes",
+          description: `${newMemberNames} ont ete ajoutes avec succes (total: ${mergedAssigned.length} assignes)`,
         });
         
-        console.log('🔄 Calling onUpdate...');
-        // 4. Rafraîchir les données
+        console.log('Calling onUpdate...');
+        // 4. Rafraichir les donnees
         if (onUpdate) {
           onUpdate();
         }
       } catch (error) {
-        console.error('❌ ERREUR COMPLÈTE:', error);
+        console.error('ERREUR COMPLETE:', error);
         toast({
           title: "Erreur d'assignation",
           description: error.message || "Impossible d'assigner les membres",
@@ -164,14 +189,14 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
         });
       }
     } else {
-      console.log('⚠️ Conditions non remplies:', {
+      console.log('Conditions non remplies:', {
         hasTask: !!task,
         selectedMembersCount: selectedMembers.length,
         selectedMembers
       });
     }
     
-    console.log('🏁 Fermeture modal');
+    console.log('Fermeture modal');
     onClose();
   };
 

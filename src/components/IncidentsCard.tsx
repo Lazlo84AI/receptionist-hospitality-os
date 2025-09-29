@@ -28,9 +28,9 @@ const transformIncident = (incident: TaskItem) => ({
 export function IncidentsCard() {
   const { tasks, loading, error, refetch } = useTasks();
   
-  // Filter incidents from all tasks
+  // Filter incidents from all tasks (exclude completed)
   const incidents = tasks
-    .filter(task => task.type === 'incident')
+    .filter(task => task.type === 'incident' && task.status !== 'completed')
     .map(transformIncident);
 
   // State pour la modale - EXACTEMENT COMME SHIFT MANAGEMENT

@@ -50,8 +50,11 @@ export function FollowUpsCard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  // Filter and transform follow-ups and personal tasks from unified tasks
-  const followUpTasks = tasks.filter(task => task.type === 'follow_up' || task.type === 'internal_task');
+  // Filter and transform follow-ups and personal tasks from unified tasks (exclude completed)
+  const followUpTasks = tasks.filter(task => 
+    (task.type === 'follow_up' || task.type === 'internal_task') && 
+    task.status !== 'completed'
+  );
   const followUps = followUpTasks.map(task => ({
     id: task.id,
     title: task.title,
