@@ -207,17 +207,38 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         }
       }
       
-      // 2. Create shift record
+      // 2. Get user profile and service
       const { data: userData } = await supabase.auth.getUser();
       const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
       
+      // Fetch user's service from profiles
+      let userService = null;
+      if (userData.user?.id) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('service')
+          .eq('id', userData.user.id)
+          .single();
+        
+        if (!profileError && profileData) {
+          userService = profileData.service;
+          addLog(`User service: ${userService}`);
+        }
+      }
+      
+      // 3. Create shift record with service
+      const shiftStartTime = new Date();
+      shiftStartTime.setHours(shiftStartTime.getHours() - 8); // Assume 8h shift
+      
       const shiftData = {
         user_id: userData.user?.id,
+        start_time: shiftStartTime.toISOString(),
         end_time: new Date().toISOString(),
         status: 'completed',
         voice_note_url: voiceNoteUrl,
         voice_note_transcription: noteMode === 'text' ? textNote : null,
         handover_notes: noteMode === 'text' ? textNote : (recordedAudio ? 'Voice note recorded' : 'No handover notes'),
+        service: userService,
       };
       
       const { data: shiftResult, error: shiftError } = await supabase
@@ -228,6 +249,20 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       
       if (shiftError) throw shiftError;
       addLog(`Shift created: ${shiftResult.id}`);
+      
+      // 4. Tag all activity_logs created during this shift
+      const { error: tagError } = await supabase
+        .from('activity_logs')
+        .update({ shift_id: shiftResult.id })
+        .gte('created_at', shiftStartTime.toISOString())
+        .lte('created_at', new Date().toISOString())
+        .is('shift_id', null); // Only tag untagged logs
+      
+      if (tagError) {
+        console.warn('Warning tagging activity logs:', tagError);
+      } else {
+        addLog('Activity logs tagged with shift_id');
+      }
       
       // 3. NEW: Use Shift Continuity Manager
       addLog('Applying intelligent transfer rules...');
@@ -475,10 +510,10 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                 <div className="flex justify-center pt-8">
                   <Button
                     onClick={submitShiftEnd}
-                    disabled={isSubmitting || (noteMode === 'voice' && !recordedAudio && !isRecording) || (noteMode === 'text' && !textNote.trim())}
+                    disabled={isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim())}
                     size="lg"
                     className={(
-                      (isSubmitting || (noteMode === 'voice' && !recordedAudio && !isRecording) || (noteMode === 'text' && !textNote.trim()))
+                      (isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim()))
                         ? "bg-[#F5F5DC] text-gray-400 cursor-not-allowed px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px]"
                         : "bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px] transition-all duration-200"
                     )}

@@ -25,6 +25,7 @@ export const useLatestShiftHandover = () => {
       const { data, error } = await supabase
         .from('shifts')
         .select(`
+          id,
           voice_note_url,
           voice_note_transcription,
           handover_notes,
@@ -32,11 +33,10 @@ export const useLatestShiftHandover = () => {
           end_time
         `)
         .eq('status', 'completed')
-        .or('voice_note_url.not.is.null,voice_note_transcription.not.is.null,handover_notes.not.is.null')
-        .neq('handover_notes', 'No handover notes')
+        .not('end_time', 'is', null)
         .order('end_time', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       console.log('📊 Query result:', { data, error });
 

@@ -71,7 +71,6 @@ export const saveShiftHandover = async (
     .from('shift_handovers')
     .insert({
       from_shift_id: fromShiftId,
-      to_shift_id: null,
       handover_data: handoverData,
       additional_notes: additionalNotes || null
     })
@@ -89,7 +88,6 @@ export const getShiftHandover = async (newUserId: string) => {
   const { data: latestHandover, error: handoverError } = await supabase
     .from('shift_handovers')
     .select('*')
-    .is('to_shift_id', null)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -159,11 +157,7 @@ export const getShiftHandover = async (newUserId: string) => {
 };
 
 export const completeHandover = async (handoverId: string, newShiftId: string) => {
-  const { error } = await supabase
-    .from('shift_handovers')
-    .update({ to_shift_id: newShiftId })
-    .eq('id', handoverId);
-    
-  if (error) throw error;
-  console.log('Handover finalisé pour shift:', newShiftId);
+  // Cette fonction n'est plus nécessaire car to_shift_id a été supprimé
+  // On garde la fonction pour compatibilité mais elle ne fait rien
+  console.log('Handover completed for shift:', newShiftId);
 };
