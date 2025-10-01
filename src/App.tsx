@@ -12,7 +12,7 @@ import ShiftManagement from "./pages/ShiftManagement";
 import Connaissances from "./pages/Connaissances";
 import TrainingManagement from "./pages/TrainingManagement";
 import Assistant from "./pages/Assistant";
-import MesShifts from "./pages/MesShifts";
+import MyShifts from "./pages/MyShifts";
 import TeamDispatch from "./pages/TeamDispatch";
 import ServiceControl from "./pages/ServiceControl";
 import ServiceControl2 from "./pages/ServiceControl2";
@@ -36,7 +36,7 @@ const App = () => (
             <Route path="/connaissances" element={<ProtectedRoute><Connaissances /></ProtectedRoute>} />
             <Route path="/training" element={<ProtectedRoute><TrainingManagement /></ProtectedRoute>} />
             <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
-            <Route path="/mes-shifts" element={<ProtectedRoute><MesShifts /></ProtectedRoute>} />
+            <Route path="/team-shifts" element={<ProtectedRoute><MyShifts /></ProtectedRoute>} />
             <Route path="/team-dispatch" element={<ProtectedRoute><TeamDispatch /></ProtectedRoute>} />
             <Route path="/service-control" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
             <Route path="/service-control2" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />

@@ -111,10 +111,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="flex items-center space-x-2 cursor-pointer hotel-hover"
-              onClick={() => navigate('/mes-shifts')}
+              onClick={() => navigate('/team-shifts')}
             >
               <Calendar className="h-4 w-4" />
-              <span>My Shifts</span>
+              <span>Team Shifts</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
