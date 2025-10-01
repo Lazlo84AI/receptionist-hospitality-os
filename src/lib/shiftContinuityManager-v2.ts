@@ -1,29 +1,13 @@
-// Shift Continuity Manager - Version corrigée avec règles créateur + assigné
+// Shift Continuity Manager - Version simplifiée avec filtrage par service
 import { supabase } from '@/integrations/supabase/client';
 import { TaskItem } from '@/types/database';
 
-export interface HandoverRules {
-  // Cartes TOUJOURS transférées (incidents en cours + client requests)
-  alwaysTransfer: string[]; // ['incident', 'client_request']
-  
-  // Cartes transférées selon assignation OU création (follow-ups + internal tasks)
-  conditionalTransfer: string[]; // ['follow_up', 'internal_task'] 
-  
-  // Cartes archivées mais pas transférées
-  archiveOnly: string[]; // ['completed', 'resolved']
-}
-
-export const HANDOVER_RULES: HandoverRules = {
-  alwaysTransfer: ['incident', 'client_request'],
-  conditionalTransfer: ['follow_up', 'internal_task'],
-  archiveOnly: ['completed', 'resolved']
-};
-
 /**
- * RÈGLES MÉTIER MISES À JOUR :
- * 1. Incidents & Client Requests → TOUJOURS transférés
- * 2. Follow-ups & Internal Tasks → Transférés si assigné OU créateur
- * 3. Cartes résolues → Archivées seulement
+ * RÈGLES SIMPLIFIÉES :
+ * - Les cartes 'in_progress' et 'pending' sont transférées au prochain shift
+ * - Les cartes 'completed' et 'verified' ne sont PAS transférées (archivées uniquement)
+ * - Critère 1 : Cartes créées PAR le service (ex: reception)
+ * - Critère 2 : Cartes assignées À quelqu'un du service (ex: reception)
  */
 
 export const saveShiftHandover = async (
@@ -33,7 +17,7 @@ export const saveShiftHandover = async (
   transcription?: string,
   additionalNotes?: string
 ) => {
-  console.log('Sauvegarde handover - TOUTES les cartes archivées');
+  console.log('💾 Sauvegarde handover - TOUTES les cartes archivées');
   
   const handoverData = {
     timestamp: new Date().toISOString(),
@@ -78,13 +62,14 @@ export const saveShiftHandover = async (
     .single();
     
   if (error) throw error;
-  console.log('Handover sauvegardé:', data.id);
+  console.log('✅ Handover sauvegardé:', data.id);
   return data;
 };
 
-export const getShiftHandover = async (newUserId: string) => {
-  console.log('Récupération handover pour utilisateur:', newUserId);
+export const getShiftHandover = async (userService: string) => {
+  console.log(`🔍 Récupération handover pour service: ${userService}`);
   
+  // 1. Récupérer le dernier snapshot
   const { data: latestHandover, error: handoverError } = await supabase
     .from('shift_handovers')
     .select('*')
@@ -93,56 +78,85 @@ export const getShiftHandover = async (newUserId: string) => {
     .single();
     
   if (handoverError || !latestHandover) {
-    console.log('Aucun handover en attente');
+    console.log('❌ Aucun handover en attente');
     return { tasks: [], voiceNote: null, notes: null };
   }
   
   const handoverData = latestHandover.handover_data;
   const allTasks = handoverData.all_tasks || [];
   
-  console.log(`${allTasks.length} cartes archivées trouvées`);
+  console.log(`📦 ${allTasks.length} cartes archivées trouvées`);
   
-  // RÈGLES DE FILTRAGE CORRIGÉES
-  const tasksToTransfer = allTasks.filter(taskSnapshot => {
+  // 2. Collecter TOUS les UUIDs (créateurs + assignés)
+  const allUserIds = new Set<string>();
+  allTasks.forEach((taskSnapshot: any) => {
+    if (taskSnapshot.createdBy) {
+      allUserIds.add(taskSnapshot.createdBy);
+    }
+    if (taskSnapshot.data?.assigned_to) {
+      taskSnapshot.data.assigned_to.forEach((id: string) => allUserIds.add(id));
+    }
+  });
+  
+  console.log(`👥 ${allUserIds.size} utilisateurs uniques à vérifier`);
+  
+  // 3. UNE SEULE requête pour récupérer tous les services
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, service')
+    .in('id', Array.from(allUserIds));
+  
+  if (profileError) {
+    console.error('❌ Erreur récupération profiles:', profileError);
+    return { tasks: [], voiceNote: null, notes: null };
+  }
+  
+  // 4. Mapping UUID → service
+  const userServiceMap: Record<string, string> = {};
+  profiles?.forEach(p => {
+    if (p.service) {
+      userServiceMap[p.id] = p.service;
+    }
+  });
+  
+  console.log(`🗺️ Mapping créé pour ${Object.keys(userServiceMap).length} utilisateurs`);
+  
+  // 5. Filtrer les tâches selon les 2 critères
+  const tasksToTransfer = allTasks.filter((taskSnapshot: any) => {
     const task = taskSnapshot.data;
     
-    // RÈGLE 1: Cartes résolues = archivées seulement
-    if (task.status === 'completed' || task.status === 'resolved') {
-      console.log(`Carte ${task.title} archivée (${task.status})`);
+    // Filtre status : uniquement in_progress et pending
+    if (task.status !== 'in_progress' && task.status !== 'pending') {
+      console.log(`📦 Carte "${task.title}" archivée (${task.status})`);
       return false;
     }
     
-    // RÈGLE 2: Incidents et client requests = TOUJOURS transférés  
-    if (HANDOVER_RULES.alwaysTransfer.includes(task.type)) {
-      console.log(`Carte ${task.title} transférée (${task.type} prioritaire)`);
+    // Critère 1 : Créée par mon service
+    const creatorService = userServiceMap[taskSnapshot.createdBy];
+    if (creatorService === userService) {
+      console.log(`✅ Carte "${task.title}" - créée par ${userService}`);
       return true;
     }
     
-    // RÈGLE 3 CORRIGÉE: Follow-ups et internal tasks = selon assignation OU création
-    if (HANDOVER_RULES.conditionalTransfer.includes(task.type)) {
-      const isAssigned = task.assignedTo === newUserId;
-      const isCreator = taskSnapshot.createdBy === newUserId;
-      
-      if (isAssigned || isCreator) {
-        const reason = [];
-        if (isAssigned) reason.push('assignée');
-        if (isCreator) reason.push('créée par l\'utilisateur');
-        console.log(`Carte ${task.title} transférée (${reason.join(' et ')})`);
-        return true;
-      } else {
-        console.log(`Carte ${task.title} non transférée (ni assignée ni créée par l'utilisateur)`);
-        return false;
-      }
+    // Critère 2 : Assignée à quelqu'un de mon service
+    const assignedIds = task.assigned_to || [];
+    const hasMyService = assignedIds.some((id: string) => 
+      userServiceMap[id] === userService
+    );
+    if (hasMyService) {
+      console.log(`✅ Carte "${task.title}" - assignée à ${userService}`);
+      return true;
     }
     
+    console.log(`⏭️ Carte "${task.title}" - pas pour ${userService}`);
     return false;
   });
   
-  console.log(`${tasksToTransfer.length} cartes sélectionnées pour transfert`);
+  console.log(`📊 ${tasksToTransfer.length}/${allTasks.length} cartes transférées à ${userService}`);
   
   return {
     handoverId: latestHandover.id,
-    tasks: tasksToTransfer.map(t => t.data),
+    tasks: tasksToTransfer.map((t: any) => t.data),
     voiceNote: {
       url: handoverData.voice_note_url,
       transcription: handoverData.voice_transcription
@@ -156,8 +170,36 @@ export const getShiftHandover = async (newUserId: string) => {
   };
 };
 
+/**
+ * Lie un ensemble de tâches à un nouveau shift
+ * Met à jour le champ shift_id pour toutes les tâches spécifiées
+ */
+export const linkTasksToShift = async (taskIds: string[], newShiftId: string): Promise<void> => {
+  if (taskIds.length === 0) {
+    console.log('⚠️ Aucune tâche à lier au shift');
+    return;
+  }
+  
+  console.log(`🔗 Liaison de ${taskIds.length} tâches au shift ${newShiftId}`);
+  
+  const { error } = await supabase
+    .from('task')
+    .update({ 
+      shift_id: newShiftId,
+      updated_at: new Date().toISOString()
+    })
+    .in('id', taskIds);
+    
+  if (error) {
+    console.error('❌ Erreur lors de la liaison des tâches:', error);
+    throw error;
+  }
+  
+  console.log(`✅ ${taskIds.length} tâches liées au shift ${newShiftId}`);
+};
+
 export const completeHandover = async (handoverId: string, newShiftId: string) => {
   // Cette fonction n'est plus nécessaire car to_shift_id a été supprimé
   // On garde la fonction pour compatibilité mais elle ne fait rien
-  console.log('Handover completed for shift:', newShiftId);
+  console.log('✓ Handover completed for shift:', newShiftId);
 };

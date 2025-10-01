@@ -28,6 +28,8 @@ import { useTasks } from '@/hooks/useSupabaseData';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { sendTaskMovedEvent } from '@/lib/webhookService';
+import { useStartShift } from '@/hooks/useShiftData';
+import { getShiftHandover, linkTasksToShift } from '@/lib/shiftContinuityManager-v2';
 import {
   DndContext,
   DragEndEvent,
@@ -257,6 +259,7 @@ const KanbanColumn = ({
 const ShiftManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tasks, loading, error, refetch } = useTasks();
+  const { startShift, loading: startingShift } = useStartShift();
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started'); // LOGIQUE CORRECTE: End Shift s'active après Begin Shift
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
@@ -463,26 +466,82 @@ const ShiftManagement = () => {
   };
 
   const handleShiftStarted = async () => {
-    // Send webhook event for shift started
-    const { sendShiftStartedEvent } = await import('@/lib/webhookService');
-    const result = await sendShiftStartedEvent({
-      timestamp: new Date().toISOString(),
-      status: 'active',
-      tasks_count: tasks.length,
-    });
-
-    if (result.success) {
+    try {
+      console.log('🚀 Starting shift...');
+      
+      // 1. Get current user and their service
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('service')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile?.service) {
+        throw new Error('User service not found');
+      }
+      
+      const userService = profile.service;
+      console.log(`👤 User service: ${userService}`);
+      
+      // 2. Create shift in database
+      const shiftResult = await startShift();
+      
+      if (!shiftResult.success || !shiftResult.shift_id) {
+        throw new Error('Failed to create shift in database');
+      }
+      
+      const newShiftId = shiftResult.shift_id;
+      console.log(`✅ Shift created: ${newShiftId}`);
+      
+      // 3. Get filtered tasks from last shift
+      const { tasks: transferredTasks, stats } = await getShiftHandover(userService);
+      console.log(`📦 ${transferredTasks.length} tasks to transfer`);
+      
+      // 4. Link tasks to the new shift
+      if (transferredTasks.length > 0) {
+        const taskIds = transferredTasks.map(t => t.id);
+        await linkTasksToShift(taskIds, newShiftId);
+        console.log(`🔗 Tasks linked to shift ${newShiftId}`);
+      }
+      
+      // 5. Send webhook event
+      const { sendShiftStartedEvent } = await import('@/lib/webhookService');
+      const webhookResult = await sendShiftStartedEvent({
+        shift_id: newShiftId,
+        timestamp: new Date().toISOString(),
+        status: 'active',
+        tasks_count: transferredTasks.length,
+      });
+      
+      if (!webhookResult.success) {
+        console.warn('Webhook failed but shift was created:', webhookResult.error);
+      }
+      
+      // 6. Update UI state
       setShiftStatus('active');
-      setIsShiftStartOpen(false); // Close the modal
+      setIsShiftStartOpen(false);
+      
+      // 7. Reload tasks to show transferred ones
+      await refetch();
+      
+      // 8. Show success message
       toast({
-        title: "Shift Started",
-        description: "Your shift has been marked as active",
+        title: "Shift Started Successfully",
+        description: `${transferredTasks.length} tasks transferred from previous shift`,
         variant: "default",
       });
-    } else {
+      
+      console.log('✅ Shift start complete!');
+    } catch (error) {
+      console.error('❌ Error starting shift:', error);
       toast({
-        title: "Error",
-        description: result.error || "Failed to start shift. Please try again.",
+        title: "Error Starting Shift",
+        description: error instanceof Error ? error.message : "Failed to start shift. Please try again.",
         variant: "destructive",
       });
     }

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ShiftFacingCard } from '@/components/cards';
 import { supabase } from '@/integrations/supabase/client';
 import { saveShiftHandover } from '@/lib/shiftContinuityManager-v2';
+import { useCurrentShift, useEndShift } from '@/hooks/useShiftData';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -29,6 +30,10 @@ interface ShiftCloseModalProps {
 }
 
 export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCloseModalProps) => {
+  // Hooks pour la gestion du shift
+  const { currentShift, loading: loadingShift } = useCurrentShift();
+  const { endShift, loading: endingShift } = useEndShift();
+  
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
@@ -207,54 +212,31 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         }
       }
       
-      // 2. Get user profile and service
-      const { data: userData } = await supabase.auth.getUser();
-      const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
-      
-      // Fetch user's service from profiles
-      let userService = null;
-      if (userData.user?.id) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('service')
-          .eq('id', userData.user.id)
-          .single();
-        
-        if (!profileError && profileData) {
-          userService = profileData.service;
-          addLog(`User service: ${userService}`);
-        }
+      // 2. Check if there's an active shift
+      if (!currentShift) {
+        throw new Error('No active shift found. Please start a shift first.');
       }
       
-      // 3. Create shift record with service
-      const shiftStartTime = new Date();
-      shiftStartTime.setHours(shiftStartTime.getHours() - 8); // Assume 8h shift
+      addLog(`Found active shift: ${currentShift.id}`);
       
-      const shiftData = {
-        user_id: userData.user?.id,
-        start_time: shiftStartTime.toISOString(),
-        end_time: new Date().toISOString(),
-        status: 'completed',
-        voice_note_url: voiceNoteUrl,
-        voice_note_transcription: noteMode === 'text' ? textNote : null,
-        handover_notes: noteMode === 'text' ? textNote : (recordedAudio ? 'Voice note recorded' : 'No handover notes'),
-        service: userService,
-      };
+      // 3. End the current shift with notes
+      const endShiftResult = await endShift(
+        noteMode === 'text' ? textNote : (recordedAudio ? 'Voice note recorded' : 'No handover notes'),
+        voiceNoteUrl || undefined,
+        noteMode === 'text' ? textNote : undefined
+      );
       
-      const { data: shiftResult, error: shiftError } = await supabase
-        .from('shifts')
-        .insert(shiftData)
-        .select()
-        .single();
+      if (!endShiftResult.success) {
+        throw new Error('Failed to end shift');
+      }
       
-      if (shiftError) throw shiftError;
-      addLog(`Shift created: ${shiftResult.id}`);
+      addLog(`✅ Shift ${currentShift.id} ended successfully`);
       
       // 4. Tag all activity_logs created during this shift
       const { error: tagError } = await supabase
         .from('activity_logs')
-        .update({ shift_id: shiftResult.id })
-        .gte('created_at', shiftStartTime.toISOString())
+        .update({ shift_id: currentShift.id })
+        .gte('created_at', currentShift.start_time)
         .lte('created_at', new Date().toISOString())
         .is('shift_id', null); // Only tag untagged logs
       
@@ -264,10 +246,14 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         addLog('Activity logs tagged with shift_id');
       }
       
-      // 3. NEW: Use Shift Continuity Manager
+      // 5. Get user info for the success message
+      const { data: userData } = await supabase.auth.getUser();
+      const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
+      
+      // 6. Save shift handover snapshot
       addLog('Applying intelligent transfer rules...');
       await saveShiftHandover(
-        shiftResult.id,
+        currentShift.id,
         tasks, // All cards
         voiceNoteUrl,
         noteMode === 'text' ? textNote : null,
@@ -275,31 +261,24 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       );
       
       addLog('Shift Continuity Manager: ALL cards archived');
-      addLog('Transfer rules will be applied on next shift');
+      addLog('Transfer rules: in_progress and pending cards will transfer to next shift');
       
-      // Count cards by category for summary
+      // Count cards by status for summary
       const stats = {
-        incidents: tasks.filter(t => t.type === 'incident').length,
-        clientRequests: tasks.filter(t => t.type === 'client_request').length,
-        followUps: tasks.filter(t => t.type === 'follow_up').length,
-        internalTasks: tasks.filter(t => t.type === 'internal_task').length,
-        resolved: tasks.filter(t => t.status === 'completed' || t.status === 'resolved').length
+        pending: tasks.filter(t => t.status === 'pending').length,
+        inProgress: tasks.filter(t => t.status === 'in_progress').length,
+        completed: tasks.filter(t => t.status === 'completed').length,
+        total: tasks.length
       };
       
       const message = `Thank you for your professionalism, ${userDisplayName}!
 
 ` +
-        `• ${tasks.length} cards archived
+        `• ${stats.total} cards archived
 ` +
-        `• ${stats.incidents} incidents (will be transferred)
+        `• ${stats.completed} resolved cards (archived only)
 ` +
-        `• ${stats.clientRequests} client requests (will be transferred)
-` +
-        `• ${stats.followUps} follow-ups (if assigned)
-` +
-        `• ${stats.internalTasks} internal tasks (if assigned)
-` +
-        `• ${stats.resolved} resolved cards (archived only)
+        `• ${stats.pending + stats.inProgress} active cards (will transfer to next shift)
 
 ` +
         `${voiceNoteUrl ? 'Audio note' : 'Text notes'} recorded for next team
