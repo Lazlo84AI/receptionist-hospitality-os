@@ -312,10 +312,10 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh] p-0 gap-0">
+      <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] lg:h-[90vh] p-0 gap-0">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b bg-background">
+          <div className="p-3 sm:p-4 md:p-6 border-b bg-background">
             <h2 className="text-2xl font-playfair font-bold mb-2">
               {isVoiceNoteScreen 
                 ? "End of shift - leave a voice note for your colleague"
@@ -326,7 +326,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
               <div className="text-sm text-muted-foreground">
                 {isVoiceNoteScreen 
                   ? (
-                      <div style={{ color: '#BBA88A', fontSize: '1.25rem', fontWeight: '500', lineHeight: '1.3' }}>
+                      <div className="text-base sm:text-lg md:text-xl text-[#BBA88A] font-medium leading-snug">
                         <div>How did the shift go. And what needs attention.</div>
                         <div>Stay concise</div>
                       </div>
@@ -359,7 +359,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
           {/* Question ou Note Vocale */}
           {isVoiceNoteScreen ? (
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto">
               <div className="max-w-2xl mx-auto space-y-6">
                 {/* Choix du mode */}
                 <div className="flex justify-center gap-4 mb-8">
@@ -486,7 +486,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                 )}
 
                 {/* Bouton Submit */}
-                <div className="flex justify-center pt-8">
+                <div className="flex justify-center pt-4 sm:pt-6 md:pt-8 pb-4">
                   <Button
                     onClick={submitShiftEnd}
                     disabled={isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim())}
@@ -539,7 +539,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
               <Button
                 onClick={handleValidate}
                 size="lg"
-                className="h-12 px-6 bg-primary hover:bg-primary/90 shadow-lg text-white font-medium"
+                className="h-12 px-6 bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] shadow-lg text-white font-medium transition-all duration-200"
               >
                 <Check className="h-4 w-4 mr-2" />
                 Next

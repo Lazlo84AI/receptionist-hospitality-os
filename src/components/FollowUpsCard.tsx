@@ -184,7 +184,7 @@ export function FollowUpsCard() {
           <div className="text-center py-8 text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No follow-ups scheduled</p>
-            <p className="text-xs mt-1">All caught up!</p>
+            <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

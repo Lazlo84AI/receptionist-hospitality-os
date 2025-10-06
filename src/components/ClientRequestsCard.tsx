@@ -106,7 +106,9 @@ export function ClientRequestsCard() {
 
         {clientRequests.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No client requests found
+            <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No client requests found</p>
+            <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
           </div>
         ) : (
           <div className="space-y-4">

@@ -107,7 +107,7 @@ export function IncidentsCard() {
           <div className="text-center py-8 text-muted-foreground">
             <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No ongoing incidents</p>
-            <p className="text-xs mt-1">All incidents have been resolved!</p>
+            <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
           </div>
         ) : (
           <div className="space-y-4">

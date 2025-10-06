@@ -34,11 +34,30 @@ export const useTasks = () => {
         return;
       }
       
+      // Get active shift
+      const { data: activeShift } = await supabase
+        .from('shifts')
+        .select('id')
+        .eq('status', 'active')
+        .single();
+      
+      // If no active shift, return empty tasks
+      if (!activeShift) {
+        console.log('⚠️ No active shift found');
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ Active shift:', activeShift.id);
+      
       // Read tasks, staff_directory AND profiles separately, then join on client side
       const [tasksResponse, staffResponse, profilesResponse] = await Promise.all([
         supabase
           .from('task')
           .select('*')
+          .eq('shift_id', activeShift.id)
+          .not('status', 'in', '("completed","resolved")')
           .order('created_at', { ascending: false }),
         supabase
           .from('staff_directory')

@@ -220,10 +220,10 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[70vh] max-h-[70vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] lg:h-[90vh] p-0 gap-0 overflow-hidden">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b bg-background">
+          <div className="p-3 sm:p-4 md:p-6 border-b bg-background">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">
@@ -258,7 +258,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
             {isFirstScreen ? (
               // ÉCRAN 0 : Audio Player + Handover Notes (comme vos captures)
               <div className="space-y-6">
@@ -271,18 +271,18 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   {/* Audio Player - Left side */}
-                  <Card>
-                    <CardHeader>
+                  <Card className="md:min-h-0">
+                    <CardHeader className="pb-3 md:pb-6">
                       <CardTitle className="text-base flex items-center gap-2">
                         <FileAudio className="h-4 w-4" />
                         Audio Player
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pb-3 md:pb-6">
                       {shiftData?.voice_note_url ? (
-                        <div className="space-y-4">
+                        <div className="space-y-2 md:space-y-4">
                           <audio 
                             controls 
                             className="w-full"
@@ -295,13 +295,13 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                           <p className="text-xs text-muted-foreground">
                             Left by {shiftData.previous_shift_user || 'Previous team member'}
                             {shiftData.previous_shift_end_time && (
-                              <> • {new Date(shiftData.previous_shift_end_time).toLocaleString('fr-FR')}</>
+                              <> • {new Date(shiftData.previous_shift_end_time).toLocaleString('fr-FR')}</>  
                             )}
                           </p>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                          <FileAudio className="h-12 w-12 text-muted-foreground mb-4" />
+                        <div className="flex flex-col items-center justify-center py-4 md:py-8 text-center">
+                          <FileAudio className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-2 md:mb-4" />
                           <p className="text-sm text-muted-foreground">
                             No voice note available from the previous shift
                           </p>
@@ -311,18 +311,18 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   </Card>
 
                   {/* Handover Notes - Right side */}
-                  <Card>
-                    <CardHeader>
+                  <Card className="md:min-h-0">
+                    <CardHeader className="pb-3 md:pb-6">
                       <CardTitle className="text-base flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Handover Notes
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pb-3 md:pb-6">
                       {(shiftData?.voice_note_transcription || shiftData?.handover_notes) ? (
-                        <div className="max-h-64 overflow-y-auto text-sm leading-relaxed space-y-3 pr-2">
+                        <div className="max-h-32 md:max-h-64 overflow-y-auto text-sm leading-relaxed space-y-2 md:space-y-3 pr-2">
                           {shiftData.voice_note_transcription && (
-                            <div className="space-y-3">
+                            <div className="space-y-2 md:space-y-3">
                               {shiftData.voice_note_transcription.split('\n\n').map((paragraph, index) => (
                                 <p key={index} className="text-foreground">
                                   {paragraph}
@@ -331,7 +331,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                             </div>
                           )}
                           {shiftData.handover_notes && !shiftData.voice_note_transcription && (
-                            <div className="space-y-3">
+                            <div className="space-y-2 md:space-y-3">
                               {shiftData.handover_notes.split('\n').map((line, index) => (
                                 <p key={index} className="text-foreground">
                                   {line}
@@ -341,9 +341,9 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                          <p className="text-sm text-muted-foreground mb-2">
+                        <div className="flex flex-col items-center justify-center py-6 md:py-12 text-center">
+                          <FileText className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-2 md:mb-4" />
+                          <p className="text-sm text-muted-foreground mb-1 md:mb-2">
                             No transcription or handover notes available
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -355,11 +355,11 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   </Card>
                 </div>
 
-                {/* Bouton pour passer aux cartes */}
-                <div className="flex justify-center mt-8">
+                {/* Bouton pour passer aux cartes - Flottant responsive */}
+                <div className="fixed bottom-4 sm:bottom-6 md:bottom-8 right-4 sm:right-6 md:right-8 z-50">
                   <Button 
                     onClick={() => setCurrentTaskIndex(1)} 
-                    className="px-8"
+                    className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
                   >
                     Start Reviewing the Task Cards
                   </Button>
@@ -391,7 +391,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
 
           {/* Footer Navigation - seulement pour les cartes */}
           {!isFirstScreen && (
-            <div className="p-6 border-t bg-background">
+            <div className="p-3 sm:p-4 md:p-6 border-t bg-background">
               <div className="flex items-center justify-between">
                 <Button
                   variant="outline"
@@ -414,7 +414,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                   
                   <Button
                     onClick={handleValidate}
-                    className="bg-primary hover:bg-primary/90 text-white"
+                    className="bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
                     disabled={!currentTask}
                   >
                     Next

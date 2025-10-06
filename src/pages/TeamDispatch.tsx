@@ -277,7 +277,8 @@ const TeamDispatch = () => {
                     <div className="space-y-3">
                       {memberTasks.length === 0 ? (
                         <div className="text-center py-8 text-hotel-navy/50">
-                          <p className="text-sm">No assigned tasks</p>
+                          <p className="text-sm">No cards to show</p>
+                          <p className="text-xs mt-2">Begin the shift in Team Dispatch</p>
                         </div>
                       ) : (
                         memberTasks.map((task) => (

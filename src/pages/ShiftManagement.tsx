@@ -190,7 +190,7 @@ const KanbanColumn = ({
   });
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-w-[70vw] md:min-w-0 snap-center">
       <div className="bg-muted/50 rounded-lg p-4 h-full min-h-[600px]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-lg">{title}</h3>
@@ -244,8 +244,8 @@ const KanbanColumn = ({
                   "border-2 border-dashed rounded-lg p-8 transition-all duration-300",
                   isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted"
                 )}>
-                  <p className="text-sm">No tasks</p>
-                  <p className="text-xs mt-1">Drag a card here</p>
+                  <p className="text-sm">No cards to show</p>
+                  <p className="text-xs mt-2">Please start the shift in Shift Management</p>
                 </div>
               </div>
             )}
@@ -280,6 +280,56 @@ const ShiftManagement = () => {
       },
     })
   );
+
+  // Auto-scroll during drag - SNAP to next column
+  useEffect(() => {
+    if (!draggedTask) return;
+
+    let scrollTimeout: NodeJS.Timeout;
+    let lastScrollTime = 0;
+    const scrollCooldown = 800; // 800ms entre chaque snap
+
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      const now = Date.now();
+      if (now - lastScrollTime < scrollCooldown) return; // Cooldown actif
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const viewportWidth = window.innerWidth;
+      const edgeZone = 80; // Zone de 80px sur les bords
+
+      const kanbanContainer = document.querySelector('.flex.md\\:grid') as HTMLElement;
+      if (!kanbanContainer) return;
+
+      const currentScroll = kanbanContainer.scrollLeft;
+      const columnWidth = viewportWidth * 0.7; // 70vw comme défini
+
+      // Bord droit - snap vers la colonne suivante
+      if (clientX > viewportWidth - edgeZone) {
+        const nextColumnScroll = Math.ceil(currentScroll / columnWidth) * columnWidth;
+        if (nextColumnScroll > currentScroll) {
+          kanbanContainer.scrollTo({ left: nextColumnScroll, behavior: 'smooth' });
+          lastScrollTime = now;
+        }
+      }
+      // Bord gauche - snap vers la colonne précédente
+      else if (clientX < edgeZone) {
+        const prevColumnScroll = Math.floor(currentScroll / columnWidth) * columnWidth - columnWidth;
+        if (prevColumnScroll >= 0 && prevColumnScroll < currentScroll) {
+          kanbanContainer.scrollTo({ left: Math.max(0, prevColumnScroll), behavior: 'smooth' });
+          lastScrollTime = now;
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleDragMove, { passive: true });
+    document.addEventListener('touchmove', handleDragMove, { passive: true });
+
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('touchmove', handleDragMove);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [draggedTask]);
 
   const handleCardClick = (task: TaskItem) => {
     setSelectedTask(task);
@@ -574,86 +624,86 @@ const ShiftManagement = () => {
             <Button
               onClick={() => handleShiftAction('start')}
               disabled={shiftStatus === 'active'}
-              className="h-12 text-base"
+              className="h-auto py-3 text-sm md:text-base md:h-12"
               variant={shiftStatus === 'active' ? 'secondary' : 'default'}
             >
-              <PlayCircle className="h-5 w-5 mr-2" />
-              {shiftStatus === 'active' ? 'Active Shift' : 'Start Shift'}
+              <PlayCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span className="leading-tight">{shiftStatus === 'active' ? 'Active Shift' : 'Start Shift'}</span>
             </Button>
             
             <Button
               onClick={() => handleShiftAction('improve')}
               variant="outline"
-              className="h-12 text-base"
+              className="h-auto py-3 text-sm md:text-base md:h-12"
             >
-              <Target className="h-5 w-5 mr-2" />
-              Work Improvement
+              <Target className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span className="leading-tight">Work Improvement</span>
             </Button>
             
             <Button
               onClick={() => handleShiftAction('close')}
               disabled={shiftStatus !== 'active'}
-              className="h-12 text-base"
+              className="h-auto py-3 text-sm md:text-base md:h-12"
               variant={shiftStatus === 'active' ? 'default' : 'secondary'}
             >
-              <StopCircle className="h-5 w-5 mr-2" />
-              End Shift
+              <StopCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span className="leading-tight">End Shift</span>
             </Button>
           </div>
 
-          {/* Kanban Board avec SortableContext global */}
+          {/* Kanban Board */}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            {/* Global SortableContext pour toutes les tâches */}
-            <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="grid grid-cols-3 gap-6">
-                <KanbanColumn
-                  title="To Process"
-                  tasks={tasks}
-                  status="pending"
-                  onStatusChange={handleStatusChange}
-                  onCardClick={handleCardClick}
-                  draggedTask={draggedTask}
-                  draggedFromColumn={draggedFromColumn}
-                />
-                
-                <KanbanColumn
-                  title="In Progress"
-                  tasks={tasks}
-                  status="in_progress"
-                  onStatusChange={handleStatusChange}
-                  onCardClick={handleCardClick}
-                  draggedTask={draggedTask}
-                  draggedFromColumn={draggedFromColumn}
-                />
-                
-                <KanbanColumn
-                  title="Resolved"
-                  tasks={tasks}
-                  status="completed"
-                  onStatusChange={handleStatusChange}
-                  onCardClick={handleCardClick}
-                  draggedTask={draggedTask}
-                  draggedFromColumn={draggedFromColumn}
-                />
-              </div>
-            </SortableContext>
-
-            <DragOverlay>
-              {draggedTask ? (
-                <div className="rotate-3 scale-105 opacity-80 shadow-xl">
-                  <SortableCardFace
-                    task={draggedTask}
-                    onCardClick={() => {}}
+              {/* Global SortableContext pour toutes les tâches */}
+              <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible snap-x snap-mandatory md:snap-none -mx-8 px-8 md:mx-0 md:px-0">
+                  <KanbanColumn
+                    title="To Process"
+                    tasks={tasks}
+                    status="pending"
+                    onStatusChange={handleStatusChange}
+                    onCardClick={handleCardClick}
+                    draggedTask={draggedTask}
+                    draggedFromColumn={draggedFromColumn}
+                  />
+                  
+                  <KanbanColumn
+                    title="In Progress"
+                    tasks={tasks}
+                    status="in_progress"
+                    onStatusChange={handleStatusChange}
+                    onCardClick={handleCardClick}
+                    draggedTask={draggedTask}
+                    draggedFromColumn={draggedFromColumn}
+                  />
+                  
+                  <KanbanColumn
+                    title="Resolved"
+                    tasks={tasks}
+                    status="completed"
+                    onStatusChange={handleStatusChange}
+                    onCardClick={handleCardClick}
+                    draggedTask={draggedTask}
+                    draggedFromColumn={draggedFromColumn}
                   />
                 </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+              </SortableContext>
+
+              <DragOverlay>
+                {draggedTask ? (
+                  <div className="rotate-3 scale-105 opacity-80 shadow-xl">
+                    <SortableCardFace
+                      task={draggedTask}
+                      onCardClick={() => {}}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
         </div>
       </main>

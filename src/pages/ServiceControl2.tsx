@@ -157,8 +157,8 @@ const KanbanColumn = ({ title, tasks, status, onStatusChange, onCardClick, dragg
             {filteredTasks.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <div className={cn("border-2 border-dashed rounded-lg p-8 transition-all duration-300", isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted")}>
-                  <p className="text-sm">No tasks</p>
-                  <p className="text-xs mt-1">Drag a card here</p>
+                  <p className="text-sm">No cards to show</p>
+                  <p className="text-xs mt-2">Begin the shift in Service Control</p>
                 </div>
               </div>
             )}
