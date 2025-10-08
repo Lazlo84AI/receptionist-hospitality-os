@@ -184,37 +184,44 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         throw new Error('Catégorie obligatoire');
       }
 
+      // 0. RÉCUPÉRER LE SHIFT ACTIF
+      const { data: activeShift, error: shiftError } = await supabase
+        .from('shifts')
+        .select('id')
+        .eq('status', 'active')
+        .single();
+
+      if (shiftError || !activeShift) {
+        throw new Error('No active shift found. Please start a shift before creating tasks.');
+      }
+
+      console.log('✅ Active shift found:', activeShift.id);
+
       // 1. RÉCUPÉRER USER ACTUEL
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not found');
 
 
-      // 2. RÉCUPÉRER LE MEMBRE ASSIGNÉ OU UN PAR DÉFAUT
-      let assignedMemberId = null;
-      if (formData.assignedMember) {
-        // Chercher le membre par nom dans staff_directory
-        const { data: memberData, error: memberError } = await supabase
-          .from('staff_directory')
-          .select('id')
-          .or(`full_name.eq.${formData.assignedMember},first_name.eq.${formData.assignedMember.split(' ')[0]}`)
-          .single();
-        
-        if (memberError) {
-          console.warn('Membre assigné non trouvé:', formData.assignedMember);
-          // Utiliser le premier membre disponible comme fallback
-          const firstMember = hotelMembers?.[0];
-          assignedMemberId = firstMember?.id || null;
-        } else {
-          assignedMemberId = memberData.id;
-        }
-      } else {
-        // Pas de membre assigné, utiliser le premier disponible
-        const firstMember = hotelMembers?.[0];
-        assignedMemberId = firstMember?.id || null;
+      // 2. VÉRIFICATION MEMBRE ASSIGNÉ OBLIGATOIRE
+      if (!formData.assignedMember) {
+        throw new Error('Please assign this task to a team member before creating it.');
       }
 
+      // 3. RÉCUPÉRER L'ID DU MEMBRE ASSIGNÉ
+      const { data: memberData, error: memberError } = await supabase
+        .from('staff_directory')
+        .select('id')
+        .or(`full_name.eq.${formData.assignedMember},first_name.eq.${formData.assignedMember.split(' ')[0]}`)
+        .single();
+      
+      if (memberError || !memberData) {
+        throw new Error('Could not find the assigned member. Please select a valid team member.');
+      }
+      
+      const assignedMemberId = memberData.id;
 
-      // 3. DONNÉES DU FORMULAIRE ADAPTÉES AU FORMAT TABLE TASK UNIFIÉE
+
+      // 4. DONNÉES DU FORMULAIRE ADAPTÉES AU FORMAT TABLE TASK UNIFIÉE
       const taskData = {
         title: formData.title,                    // ✅ VRAIES DONNÉES
         description: formData.description || null, // ✅ VRAIES DONNÉES
@@ -225,6 +232,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         assigned_to: assignedMemberId ? [assignedMemberId] : null, // ✅ VRAIES DONNÉES
         location: formData.location || null,      // ✅ VRAIES DONNÉES
         status: 'pending',
+        shift_id: activeShift.id,                 // ✅ LIEN VERS LE SHIFT ACTIF
         created_by: user.id,
         updated_by: user.id,
         // Champs spécifiques selon la catégorie
@@ -239,7 +247,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       };
 
 
-      // 4. INSERTION DIRECTE DANS TABLE TASK
+      // 5. INSERTION DIRECTE DANS TABLE TASK
       const { data: result, error: insertError } = await supabase
         .from('task')
         .insert([taskData])
@@ -252,7 +260,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       }
 
 
-      // 5. AJOUTER LES REMINDERS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
+      // 6. AJOUTER LES REMINDERS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
       if (reminders.length > 0) {
         const reminderInserts = reminders.map(reminder => {
           
@@ -290,7 +298,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         }
       }
 
-      // 6. AJOUTER LES ATTACHMENTS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
+      // 7. AJOUTER LES ATTACHMENTS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
       if (attachments.length > 0) {
 
         const attachmentInserts = attachments.map(attachment => ({

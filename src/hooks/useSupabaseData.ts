@@ -57,7 +57,6 @@ export const useTasks = () => {
           .from('task')
           .select('*')
           .eq('shift_id', activeShift.id)
-          .not('status', 'in', '("completed","resolved")')
           .order('created_at', { ascending: false }),
         supabase
           .from('staff_directory')

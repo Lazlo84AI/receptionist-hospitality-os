@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import de la configuration
 import {
@@ -669,7 +670,57 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
         isOpen={modalsState.members}
         onClose={() => closeModal('members')}
         task={editedTask}
-        onUpdate={() => {/* Handle member update */}}
+        onUpdate={async () => {
+          // ✅ Recharger la tâche depuis la base pour avoir la version à jour
+          try {
+            const { data: updatedTask, error } = await supabase
+              .from('task')
+              .select('*')
+              .eq('id', editedTask.id)
+              .single();
+            
+            if (error) throw error;
+            
+            if (updatedTask) {
+              // ✅ RECONSTRUIRE LE FORMAT "Créateur → Assignés"
+              
+              // 1. Récupérer le créateur
+              let creatorDisplay = 'Inconnu';
+              if (updatedTask.created_by) {
+                const creator = profiles.find(p => p.id === updatedTask.created_by);
+                if (creator) {
+                  creatorDisplay = creator.full_name || `${creator.first_name || ''} ${creator.last_name || ''}`.trim() || updatedTask.created_by;
+                }
+              }
+              
+              // 2. Récupérer les assignés
+              let assignedDisplay = 'Non assigné';
+              if (updatedTask.assigned_to && Array.isArray(updatedTask.assigned_to) && updatedTask.assigned_to.length > 0) {
+                const assignedNames = updatedTask.assigned_to.map((id: string) => {
+                  const member = profiles.find(p => p.id === id);
+                  return member?.full_name || member?.first_name || id;
+                });
+                assignedDisplay = assignedNames.join(', ');
+              }
+              
+              // 3. Combiner au format "Créateur → Assignés"
+              const combinedDisplay = `${creatorDisplay} → ${assignedDisplay}`;
+              
+              // Mettre à jour editedTask avec le format correct
+              setEditedTask(prev => ({
+                ...prev,
+                assignedTo: combinedDisplay
+              }));
+              
+              // Marquer qu'il y a des changements pour activer le bouton Save
+              setHasChanges(true);
+              
+              console.log('✅ Task updated in TaskFullEditView:', combinedDisplay);
+            }
+          } catch (error) {
+            console.error('❌ Error reloading task:', error);
+          }
+        }}
       />
       
       <EscalationModal

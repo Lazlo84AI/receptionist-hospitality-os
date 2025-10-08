@@ -87,10 +87,20 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
     console.log('task:', task);
     console.log('selectedMembers:', selectedMembers);
     
-    if (task && selectedMembers.length > 0) {
+    // ✅ VALIDATION: Au moins 1 membre doit être assigné
+    if (selectedMembers.length === 0) {
+      toast({
+        title: "Assignation requise",
+        description: "Au moins 1 membre doit être assigné à cette tâche",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (task) {
       try {
-        // PROTECTION: Recuperer les assignes actuels depuis la base pour eviter l'ecrasement
-        console.log('Recuperation des assignes actuels depuis la base...');
+        // Récupérer les assignés actuels depuis la base
+        console.log('Récupération des assignés actuels depuis la base...');
         const { data: currentTask, error: fetchError } = await supabase
           .from('task')
           .select('assigned_to')
@@ -98,34 +108,34 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           .single();
         
         if (fetchError) {
-          console.error('Erreur recuperation task actuelle:', fetchError);
-          throw new Error(`Erreur recuperation: ${fetchError.message}`);
+          console.error('Erreur récupération task actuelle:', fetchError);
+          throw new Error(`Erreur récupération: ${fetchError.message}`);
         }
         
         const currentAssigned = currentTask?.assigned_to || [];
-        console.log('Assignes actuels en base:', currentAssigned);
-        console.log('Nouveaux selectionnes:', selectedMembers);
+        console.log('Assignés actuels en base:', currentAssigned);
+        console.log('Nouveaux sélectionnés:', selectedMembers);
         
-        // Merger les assignes existants avec les nouveaux (eviter les doublons)
-        const mergedAssigned = [...new Set([...currentAssigned, ...selectedMembers])];
-        console.log('Assignes merges (sans doublons):', mergedAssigned);
+        // ✅ REMPLACER complètement la liste (pas de merge)
+        const newAssigned = selectedMembers;
+        console.log('Nouvelle liste assignée (remplace l\'ancienne):', newAssigned);
         
         console.log('Tentative sauvegarde en base...');
         console.log('task.id:', task.id);
-        console.log('Data a sauver:', { 
-          assigned_to: mergedAssigned, 
+        console.log('Data à sauver:', { 
+          assigned_to: newAssigned, 
           updated_at: new Date().toISOString() 
         });
 
-        // 1. Sauvegarder avec les assignes merges
+        // 1. Sauvegarder avec la nouvelle liste (remplace l'ancienne)
         const { data: updateResult, error: updateError } = await supabase
           .from('task')
           .update({ 
-            assigned_to: mergedAssigned, // Utiliser les assignes merges
+            assigned_to: newAssigned, // ✅ Remplace complètement l'ancienne liste
             updated_at: new Date().toISOString()
           })
           .eq('id', task.id)
-          .select(); // Ajouter select() pour voir le resultat
+          .select();
 
         console.log('Resultat update Supabase:', updateResult);
         console.log('Erreur update Supabase:', updateError);
@@ -135,10 +145,10 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           throw new Error(`Erreur sauvegarde: ${updateError.message}`);
         }
 
-        console.log('Sauvegarde reussie!');
+        console.log('Sauvegarde réussie!');
 
-        // 2. Preparer les donnees pour webhook (avec tous les assignes)
-        const membersData = mergedAssigned.map(memberId => {
+        // 2. Préparer les données pour webhook (avec tous les assignés)
+        const membersData = newAssigned.map(memberId => {
           const memberInfo = hotelMembers.find(m => m.id === memberId);
           return {
             id: memberId,
@@ -155,24 +165,37 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
           await sendTaskUpdatedEvent(
             task.id,
             task,
-            { ...task, assigned_to: mergedAssigned },
+            { ...task, assigned_to: newAssigned },
             profiles,
             locations,
             { members: membersData }
           );
-          console.log('Webhook envoye avec succes');
+          console.log('Webhook envoyé avec succès');
         } catch (webhookError) {
           console.warn('Webhook failed but assignment was saved:', webhookError);
         }
 
-        const newMemberNames = selectedMembers
-          .filter(memberId => !currentAssigned.includes(memberId))
-          .map(memberId => hotelMembers.find(m => m.id === memberId)?.name || 'Unknown')
-          .join(', ');
+        // ✅ MESSAGES AMÉLIORÉS - Afficher qui a été ajouté/retiré
+        const added = newAssigned.filter(id => !currentAssigned.includes(id));
+        const removed = currentAssigned.filter(id => !newAssigned.includes(id));
+        
+        const addedNames = added.map(id => hotelMembers.find(m => m.id === id)?.name || 'Unknown').join(', ');
+        const removedNames = removed.map(id => hotelMembers.find(m => m.id === id)?.name || 'Unknown').join(', ');
+        
+        let description = '';
+        if (added.length > 0 && removed.length > 0) {
+          description = `Ajoutés: ${addedNames} | Retirés: ${removedNames}`;
+        } else if (added.length > 0) {
+          description = `Ajoutés: ${addedNames}`;
+        } else if (removed.length > 0) {
+          description = `Retirés: ${removedNames}`;
+        } else {
+          description = 'Aucun changement';
+        }
         
         toast({
-          title: "Membres ajoutes",
-          description: `${newMemberNames} ont ete ajoutes avec succes (total: ${mergedAssigned.length} assignes)`,
+          title: "Membres mis à jour",
+          description: `${description} (Total: ${newAssigned.length} assignés)`,
         });
         
         console.log('Calling onUpdate...');
@@ -262,9 +285,15 @@ export function MembersModal({ isOpen, onClose, task, onUpdate }: MembersModalPr
             <Button 
               onClick={handleAssign}
               disabled={selectedMembers.length === 0}
+              className="min-w-[120px]"
             >
               Assign {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ''}
             </Button>
+            {selectedMembers.length === 0 && (
+              <p className="text-xs text-destructive mt-2 text-right">
+                Au moins 1 membre requis
+              </p>
+            )}
           </div>
         </div>
       </DialogContent>

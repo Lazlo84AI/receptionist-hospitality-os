@@ -245,7 +245,7 @@ const KanbanColumn = ({
                   isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted"
                 )}>
                   <p className="text-sm">No cards to show</p>
-                  <p className="text-xs mt-2">Please start the shift in Shift Management</p>
+                  {/* Message removed - empty column is normal during active shift */}
                 </div>
               </div>
             )}
@@ -271,6 +271,26 @@ const ShiftManagement = () => {
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
   const [draggedFromColumn, setDraggedFromColumn] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Check for active shift on mount
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      const { data: activeShift } = await supabase
+        .from('shifts')
+        .select('id')
+        .eq('status', 'active')
+        .single();
+      
+      if (activeShift) {
+        setShiftStatus('active');
+        console.log('✅ Active shift detected:', activeShift.id);
+      } else {
+        setShiftStatus('not_started');
+      }
+    };
+    
+    checkActiveShift();
+  }, []);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -733,32 +753,23 @@ const ShiftManagement = () => {
       {/* Shift Close Modal */}
       <ShiftCloseModal
         isOpen={isShiftCloseOpen}
-        onClose={async () => {
+        onClose={() => {
+          // JUSTE fermer le modal, rien d'autre
+          setIsShiftCloseOpen(false);
+        }}
+        onShiftEnded={async () => {
+          // Appelé SEULEMENT après validation complète du shift
+          setShiftStatus('closed');
           setIsShiftCloseOpen(false);
           
-          // Send webhook event for shift ended
-          const { sendShiftEndedEvent } = await import('@/lib/webhookService');
-          const result = await sendShiftEndedEvent({
-            timestamp: new Date().toISOString(),
-            status: 'closed',
-            tasks_count: tasks.length,
-            completed_tasks: tasks.filter(task => task.status === 'completed').length,
-          });
+          // Refetch pour vider le kanban (plus de shift actif)
+          await refetch();
           
-          if (result.success) {
-            setShiftStatus('closed');
-            toast({
-              title: "Shift Ended",
-              description: "Your shift has been ended successfully",
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Error",
-              description: result.error || "Failed to end shift. Please try again.",
-              variant: "destructive",
-            });
-          }
+          toast({
+            title: "Shift Ended",
+            description: "Your shift has been ended successfully",
+            variant: "default",
+          });
         }}
         tasks={tasks}
         onCardClick={handleCardClick}

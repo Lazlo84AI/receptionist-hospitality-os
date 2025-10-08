@@ -25,11 +25,12 @@ import { TaskItem } from '@/types/database';
 interface ShiftCloseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onShiftEnded?: () => void; // Callback après succès
   tasks: TaskItem[];
   onCardClick?: (task: TaskItem) => void;
 }
 
-export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCloseModalProps) => {
+export const ShiftCloseModal = ({ isOpen, onClose, onShiftEnded, tasks, onCardClick }: ShiftCloseModalProps) => {
   // Hooks pour la gestion du shift
   const { currentShift, loading: loadingShift } = useCurrentShift();
   const { endShift, loading: endingShift } = useEndShift();
@@ -250,7 +251,22 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       const { data: userData } = await supabase.auth.getUser();
       const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
       
-      // 6. Récupérer TOUTES les tâches actives pour le handover (pas seulement celles du shift)
+      // 6. Récupérer TOUTES les tâches du shift (incluant completed) pour les stats
+      addLog('Fetching all shift tasks for accurate stats...');
+      const { data: allShiftTasks, error: shiftTasksError } = await supabase
+        .from('task')
+        .select('*')
+        .gte('created_at', currentShift.start_time)
+        .lte('created_at', new Date().toISOString());
+      
+      if (shiftTasksError) {
+        console.warn('Error fetching shift tasks:', shiftTasksError);
+      }
+      
+      const shiftTasks = allShiftTasks || [];
+      addLog(`Found ${shiftTasks.length} total tasks created during this shift`);
+      
+      // 7. Récupérer TOUTES les tâches actives pour le handover (pas seulement celles du shift)
       addLog('Fetching all active tasks for handover...');
       const { data: allActiveTasks, error: tasksError } = await supabase
         .from('task')
@@ -308,7 +324,12 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
         audioStream.getTracks().forEach(track => track.stop());
       }
       
-      onClose();
+      // Appeler le callback de succès si fourni
+      if (onShiftEnded) {
+        onShiftEnded();
+      } else {
+        onClose();
+      }
       
     } catch (error: any) {
       addLog(`General error: ${error.message}`);
@@ -326,8 +347,8 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] lg:h-[90vh] p-0 gap-0">
-        <div className="flex flex-col h-full">
+      <DialogContent className="max-w-4xl max-h-[100vh] w-[95vw] p-0 gap-0 flex flex-col">
+        <div className="flex flex-col h-full max-h-[100vh]">
           {/* Header */}
           <div className="p-3 sm:p-4 md:p-6 border-b bg-background">
             <h2 className="text-2xl font-playfair font-bold mb-2">
@@ -373,7 +394,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
 
           {/* Question ou Note Vocale */}
           {isVoiceNoteScreen ? (
-            <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto">
+            <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto min-h-0">
               <div className="max-w-2xl mx-auto space-y-6">
                 {/* Choix du mode */}
                 <div className="flex justify-center gap-4 mb-8">
@@ -499,44 +520,48 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                   </div>
                 )}
 
-                {/* Bouton Submit */}
-                <div className="flex justify-center pt-4 sm:pt-6 md:pt-8 pb-4">
-                  <Button
-                    onClick={submitShiftEnd}
-                    disabled={isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim())}
-                    size="lg"
-                    className={(
-                      (isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim()))
-                        ? "bg-[#F5F5DC] text-gray-400 cursor-not-allowed px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px]"
-                        : "bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white px-8 py-3 text-lg font-medium flex items-center gap-2 min-w-[200px] transition-all duration-200"
-                    )}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-5 w-5" />
-                        Register Your End of Shift
-                      </>
-                    )}
-                  </Button>
+                {/* Bouton Submit - Responsive et toujours accessible */}
+                <div className="sticky bottom-0 bg-background border-t pt-4 pb-2 sm:pb-4 mt-4">
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={submitShiftEnd}
+                      disabled={isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim())}
+                      size="lg"
+                      className={(
+                        (isSubmitting || isRecording || (noteMode === 'voice' && !recordedAudio) || (noteMode === 'text' && !textNote.trim()))
+                          ? "bg-[#F5F5DC] text-gray-400 cursor-not-allowed px-4 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg font-medium flex items-center gap-2 min-w-[180px] sm:min-w-[200px]"
+                          : "bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white px-4 sm:px-8 py-2 sm:py-3 text-sm sm:text-lg font-medium flex items-center gap-2 min-w-[180px] sm:min-w-[200px] transition-all duration-200"
+                      )}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 sm:h-5 w-4 sm:w-5 border-b-2 border-white"></div>
+                          <span className="hidden sm:inline">Sending...</span>
+                          <span className="sm:hidden">Sending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 sm:h-5 w-4 sm:w-5" />
+                          <span className="hidden sm:inline">Register Your End of Shift</span>
+                          <span className="sm:hidden">End Shift</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
             <>
-              <div className="p-6 bg-muted/30">
-                <h3 className="text-lg font-medium">
+              <div className="p-3 sm:p-4 md:p-6 bg-muted/30">
+                <h3 className="text-base sm:text-lg font-medium">
                   Has the situation evolved regarding: {currentTask?.title}?
                 </h3>
               </div>
 
               {/* Card Display - Utilisation du nouveau composant ShiftFacingCard */}
-              <div className="flex-1 p-6 overflow-y-auto">
-                <div className="max-w-2xl mx-auto">
+              <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto min-h-0">
+                <div className="max-w-2xl mx-auto space-y-4">
                   <ShiftFacingCard 
                     task={currentTask}
                     onClick={() => onCardClick?.(currentTask)}
@@ -544,30 +569,32 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
                   />
                 </div>
               </div>
+              
+              {/* Action Buttons - Intégrés dans le layout au lieu de fixed */}
+              <div className="p-3 sm:p-4 md:p-6 border-t bg-background">
+                <div className="flex justify-center gap-4">
+                  <Button
+                    onClick={handleValidate}
+                    size="lg"
+                    className="h-10 sm:h-12 px-4 sm:px-6 bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white font-medium transition-all duration-200 text-sm sm:text-base"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Next
+                  </Button>
+                  <Button
+                    onClick={handleCardEdit}
+                    size="lg"
+                    className="h-10 sm:h-12 px-4 sm:px-6 bg-muted hover:bg-muted/90 text-muted-foreground font-medium text-sm sm:text-base"
+                  >
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Modify
+                  </Button>
+                </div>
+              </div>
             </>
           )}
 
-          {/* Floating Buttons - seulement si ce n'est pas l'écran de note vocale */}
-          {!isVoiceNoteScreen && (
-            <div className="fixed bottom-8 right-8 flex flex-col gap-4">
-              <Button
-                onClick={handleValidate}
-                size="lg"
-                className="h-12 px-6 bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] shadow-lg text-white font-medium transition-all duration-200"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Next
-              </Button>
-              <Button
-                onClick={handleCardEdit}
-                size="lg"
-                className="h-12 px-6 bg-muted hover:bg-muted/90 text-muted-foreground shadow-lg font-medium"
-              >
-                <Edit3 className="h-4 w-4 mr-2" />
-                Modify
-              </Button>
-            </div>
-          )}
+
 
           {/* TaskFullEditView - Full Editable Card */}
           {editingTask && (
