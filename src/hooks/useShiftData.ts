@@ -38,6 +38,14 @@ export const useLatestShiftHandover = () => {
         .limit(1)
         .maybeSingle();
 
+      console.log('----------------------------------');
+      console.log('📡 SUPABASE QUERY:');
+      console.log('  TABLE: shifts');
+      console.log('  FILTER: status=completed AND end_time IS NOT NULL');
+      console.log('  ORDER: end_time DESC');
+      console.log('  LIMIT: 1');
+      console.log('----------------------------------');
+
       console.log('📊 Query result:', { data, error });
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found

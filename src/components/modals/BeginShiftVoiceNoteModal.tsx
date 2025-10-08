@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, PlayCircle, FileAudio, FileText } from 'lucide-react';
 import { useLatestShiftHandover } from '@/hooks/useShiftData';
+import { getShiftHandover } from '@/lib/shiftContinuityManager-v2';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BeginShiftVoiceNoteModalProps {
   isOpen: boolean;
@@ -18,9 +20,80 @@ const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
 }) => {
   const { shiftData, loading: shiftDataLoading, error: shiftDataError } = useLatestShiftHandover();
 
+  // État pour les données du shift handover
+  const [handoverData, setHandoverData] = useState<{
+    voiceNote: { url: string | null; transcription: string | null } | null;
+    notes: string | null;
+    stats: any | null;
+  }>({ voiceNote: null, notes: null, stats: null });
+
+  const [loadingHandover, setLoadingHandover] = useState(true);
+  const [handoverError, setHandoverError] = useState<string | null>(null);
+
+  // Log pour débug
+  React.useEffect(() => {
+    console.log('BeginShiftVoiceNoteModal - shiftData state:', { 
+      isLoading: shiftDataLoading, 
+      hasError: !!shiftDataError, 
+      dataReceived: !!shiftData,
+      voiceNoteUrl: shiftData?.voice_note_url,
+      hasTranscription: !!shiftData?.voice_note_transcription,
+      hasNotes: !!shiftData?.handover_notes
+    });
+  }, [shiftData, shiftDataLoading, shiftDataError]);
+
+  // Récupérer les données du shift précédent avec la fonction getShiftHandover
+  useEffect(() => {
+    const fetchHandoverData = async () => {
+      try {
+        setLoadingHandover(true);
+
+        // Récupérer le service de l'utilisateur courant
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('service')
+          .eq('id', user.id)
+          .single();
+        
+        if (!profile?.service) {
+          throw new Error('User service not found');
+        }
+
+        console.log(`💭 Fetching shift handover for service: ${profile.service}`);
+        
+        // Utiliser getShiftHandover pour obtenir les données du shift précédent
+        const handoverResult = await getShiftHandover(profile.service);
+        setHandoverData({
+          voiceNote: handoverResult.voiceNote,
+          notes: handoverResult.notes,
+          stats: handoverResult.stats
+        });
+
+        console.log('💭 Handover data:', handoverResult);
+      } catch (error) {
+        console.error('Error fetching handover data:', error);
+        setHandoverError(error instanceof Error ? error.message : 'Failed to fetch handover data');
+      } finally {
+        setLoadingHandover(false);
+      }
+    };
+
+    fetchHandoverData();
+  }, []);
+
+  // Utiliser les données du shift ou du handover (en priorité getShiftHandover)
+  const voiceNoteUrl = handoverData.voiceNote?.url || shiftData?.voice_note_url;
+  const voiceNoteTranscription = handoverData.voiceNote?.transcription || shiftData?.voice_note_transcription;
+  const handoverNotes = handoverData.notes || shiftData?.handover_notes;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -45,7 +118,7 @@ const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 overflow-y-auto max-h-[40vh]">
             {/* Audio Player - Left side */}
             <Card className="border-2 border-gray-200">
               <CardHeader>
@@ -54,8 +127,8 @@ const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
                   Audio Player
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {shiftData?.voice_note_url ? (
+              <CardContent className="overflow-y-auto max-h-[30vh]">
+                {voiceNoteUrl ? (
                   <div className="space-y-4">
                     {/* Audio element */}
                     <audio 
@@ -63,8 +136,8 @@ const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
                       className="w-full"
                       preload="metadata"
                     >
-                      <source src={shiftData.voice_note_url} type="audio/mpeg" />
-                      <source src={shiftData.voice_note_url} type="audio/wav" />
+                      <source src={voiceNoteUrl} type="audio/mpeg" />
+                      <source src={voiceNoteUrl} type="audio/wav" />
                       Your browser does not support the audio element.
                     </audio>
                     <div className="bg-blue-50 p-3 rounded-lg">
@@ -100,22 +173,22 @@ const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
                   {shiftData?.voice_note_transcription ? 'Transcription of the Voice Note' : 'Handover Notes'}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {(shiftData?.voice_note_transcription || shiftData?.handover_notes) ? (
+              <CardContent className="overflow-y-auto max-h-[30vh]">
+                  {(voiceNoteTranscription || handoverNotes) ? (
                   <div className="max-h-80 overflow-y-auto bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm leading-relaxed space-y-3">
-                      {shiftData.voice_note_transcription && (
+                      {voiceNoteTranscription && (
                         <div className="space-y-3">
-                          {shiftData.voice_note_transcription.split('\n\n').map((paragraph, index) => (
+                          {voiceNoteTranscription.split('\n\n').map((paragraph, index) => (
                             <p key={index} className="text-gray-800">
                               {paragraph}
                             </p>
                           ))}
                         </div>
                       )}
-                      {shiftData.handover_notes && !shiftData.voice_note_transcription && (
+                      {handoverNotes && !voiceNoteTranscription && (
                         <div className="space-y-2">
-                          {shiftData.handover_notes.split('\n').map((line, index) => (
+                          {handoverNotes.split('\n').map((line, index) => (
                             <p key={index} className="text-gray-800">
                               {line}
                             </p>
