@@ -15,7 +15,7 @@ BEGIN
       full_name,
       role,
       hierarchy,
-      department,
+      service,
       job_title,
       created_at,
       updated_at
@@ -25,17 +25,19 @@ BEGIN
       SPLIT_PART(NEW.raw_user_meta_data->>'first_name', ' ', 1), -- Premier prénom
       NEW.raw_user_meta_data->>'last_name', -- Nom de famille
       CONCAT(NEW.raw_user_meta_data->>'first_name', ' ', NEW.raw_user_meta_data->>'last_name'),
-      NEW.raw_user_meta_data->>'role', -- Role depuis le formulaire d'inscription
+      NEW.raw_user_meta_data->>'job_role', -- Role depuis le formulaire d'inscription
       NEW.raw_user_meta_data->>'hierarchy', -- Hierarchy depuis le formulaire
       CASE 
-        WHEN NEW.raw_user_meta_data->>'role' = 'receptionist' THEN 'Reception'
-        WHEN NEW.raw_user_meta_data->>'role' = 'Housekeeping Supervisor' THEN 'Housekeeping'
-        WHEN NEW.raw_user_meta_data->>'role' = 'Room Attendant' THEN 'Housekeeping'
-        WHEN NEW.raw_user_meta_data->>'role' = 'tech maintenance team' THEN 'Maintenance'
-        WHEN NEW.raw_user_meta_data->>'role' = 'restaurant staff' THEN 'Restaurant'
-        ELSE 'General'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'Receptionist' THEN 'reception'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'Director' THEN 'direction'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'Housekeeping Supervisor' THEN 'housekeeping'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'Room Attendant' THEN 'housekeeping'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'Tech maintenance team' THEN 'maintenance'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'Restaurant staff' THEN 'restaurant'
+        WHEN NEW.raw_user_meta_data->>'job_role' = 'AI Engineer' THEN 'artificial_intelligence'
+        ELSE 'general'
       END,
-      NEW.raw_user_meta_data->>'role', -- Job title = role initialement
+      NEW.raw_user_meta_data->>'job_role', -- Job title = role initialement
       NOW(),
       NOW()
     );

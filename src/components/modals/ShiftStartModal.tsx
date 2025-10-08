@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils';
 import { TaskItem, Comment, Reminder, ActivityLog } from '@/types/database';
 import { useLatestShiftHandover } from '@/hooks/useShiftData';
+import { getShiftHandover } from '@/lib/shiftContinuityManager-v2';
 
 interface ShiftStartModalProps {
   isOpen: boolean;
@@ -54,10 +55,63 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   const [taskActivities, setTaskActivities] = useState<ActivityLog[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  // États pour les tâches du handover
+  const [handoverTasks, setHandoverTasks] = useState<TaskItem[]>([]);
+  const [loadingHandover, setLoadingHandover] = useState(true);
+
   // Total : premier écran + toutes les cartes
-  const totalScreens = 1 + tasks.length; // écran 0 + les cartes
+  const totalScreens = 1 + handoverTasks.length; // écran 0 + les cartes
   const isFirstScreen = currentTaskIndex === 0;
-  const currentTask = !isFirstScreen ? tasks[currentTaskIndex - 1] : null;
+  const currentTask = !isFirstScreen ? handoverTasks[currentTaskIndex - 1] : null;
+
+  // Récupérer les tâches du handover au montage du modal
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const fetchHandoverTasks = async () => {
+      setLoadingHandover(true);
+      try {
+        console.log('🔍 Loading handover tasks...');
+        
+        // Récupérer le service de l'utilisateur
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log('❌ No user found');
+          setHandoverTasks([]);
+          setLoadingHandover(false);
+          return;
+        }
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('service')
+          .eq('id', user.id)
+          .single();
+        
+        if (!profile?.service) {
+          console.log('❌ No service found for user');
+          setHandoverTasks([]);
+          setLoadingHandover(false);
+          return;
+        }
+        
+        console.log(`👤 User service: ${profile.service}`);
+        
+        // Récupérer les tâches du handover filtrées par service
+        const { tasks: transferredTasks, stats } = await getShiftHandover(profile.service);
+        
+        console.log(`📦 ${transferredTasks.length} tasks loaded from handover`);
+        setHandoverTasks(transferredTasks);
+      } catch (error) {
+        console.error('❌ Error loading handover tasks:', error);
+        setHandoverTasks([]);
+      } finally {
+        setLoadingHandover(false);
+      }
+    };
+    
+    fetchHandoverTasks();
+  }, [isOpen]);
 
   // Navigation functions
   const handlePrevious = () => {
@@ -67,7 +121,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
   };
 
   const handleNext = () => {
-    if (currentTaskIndex < tasks.length) {
+    if (currentTaskIndex < handoverTasks.length) {
       setCurrentTaskIndex(currentTaskIndex + 1);
     }
   };
@@ -81,7 +135,7 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
     setReadTasks(newReadTasks);
     
     // Passer à la carte suivante si pas la dernière
-    if (currentTaskIndex < tasks.length) {
+    if (currentTaskIndex < handoverTasks.length) {
       setCurrentTaskIndex(currentTaskIndex + 1);
     } else {
       // Toutes les cartes ont été vues, fermer et démarrer le shift
@@ -245,12 +299,12 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
             {!isFirstScreen && (
               <div className="mt-4 flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">
-                  Card {currentTaskIndex} of {tasks.length}
+                  Card {currentTaskIndex} of {handoverTasks.length}
                 </div>
                 <div className="flex-1 bg-muted h-2 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${(currentTaskIndex / tasks.length) * 100}%` }}
+                    style={{ width: `${(currentTaskIndex / handoverTasks.length) * 100}%` }}
                   />
                 </div>
               </div>
@@ -357,12 +411,32 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
 
                 {/* Bouton pour passer aux cartes - Flottant responsive */}
                 <div className="fixed bottom-4 sm:bottom-6 md:bottom-8 right-4 sm:right-6 md:right-8 z-50">
-                  <Button 
-                    onClick={() => setCurrentTaskIndex(1)} 
-                    className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
-                  >
-                    Start Reviewing the Task Cards
-                  </Button>
+                  {loadingHandover ? (
+                    <Button 
+                      disabled
+                      className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Loading tasks...
+                    </Button>
+                  ) : handoverTasks.length === 0 ? (
+                    <Button 
+                      onClick={() => {
+                        onShiftStarted();
+                        onClose();
+                      }}
+                      className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                    >
+                      Start Shift (No Tasks)
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => setCurrentTaskIndex(1)} 
+                      className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                    >
+                      Start Reviewing the Task Cards
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -412,14 +486,26 @@ const ShiftStartModal: React.FC<ShiftStartModalProps> = ({
                     View Details
                   </Button>
                   
-                  <Button
-                    onClick={handleValidate}
-                    className="bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
-                    disabled={!currentTask}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
+                  {handoverTasks.length === 0 ? (
+                    <Button
+                      onClick={() => {
+                        onShiftStarted();
+                        onClose();
+                      }}
+                      className="bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                    >
+                      Start Shift
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleValidate}
+                      className="bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                      disabled={!currentTask}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

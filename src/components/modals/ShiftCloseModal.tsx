@@ -250,11 +250,25 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       const { data: userData } = await supabase.auth.getUser();
       const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
       
-      // 6. Save shift handover snapshot
+      // 6. Récupérer TOUTES les tâches actives pour le handover (pas seulement celles du shift)
+      addLog('Fetching all active tasks for handover...');
+      const { data: allActiveTasks, error: tasksError } = await supabase
+        .from('task')
+        .select('*')
+        .in('status', ['pending', 'in_progress']);
+      
+      if (tasksError) {
+        console.warn('Error fetching tasks:', tasksError);
+      }
+      
+      const tasksToArchive = allActiveTasks || [];
+      addLog(`Found ${tasksToArchive.length} active tasks to archive`);
+      
+      // 7. Save shift handover snapshot with ALL active tasks
       addLog('Applying intelligent transfer rules...');
       await saveShiftHandover(
         currentShift.id,
-        tasks, // All cards
+        tasksToArchive, // All active tasks
         voiceNoteUrl,
         noteMode === 'text' ? textNote : null,
         'Shift handover with continuity rules applied'
@@ -265,10 +279,10 @@ export const ShiftCloseModal = ({ isOpen, onClose, tasks, onCardClick }: ShiftCl
       
       // Count cards by status for summary
       const stats = {
-        pending: tasks.filter(t => t.status === 'pending').length,
-        inProgress: tasks.filter(t => t.status === 'in_progress').length,
-        completed: tasks.filter(t => t.status === 'completed').length,
-        total: tasks.length
+        pending: tasksToArchive.filter(t => t.status === 'pending').length,
+        inProgress: tasksToArchive.filter(t => t.status === 'in_progress').length,
+        completed: 0, // completed cards are not in tasksToArchive
+        total: tasksToArchive.length
       };
       
       const message = `Thank you for your professionalism, ${userDisplayName}!

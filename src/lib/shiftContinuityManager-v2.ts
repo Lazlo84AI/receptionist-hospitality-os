@@ -44,8 +44,8 @@ export const saveShiftHandover = async (
       type: task.type,
       status: task.status,
       title: task.title,
-      assignedTo: task.assignedTo,
-      createdBy: task.createdBy || task.created_by, // Support des deux formats
+      assigned_to: task.assigned_to || [],  // UUIDs array
+      created_by: task.created_by,           // UUID
       priority: task.priority,
       data: task
     }))
@@ -90,32 +90,39 @@ export const getShiftHandover = async (userService: string) => {
   // 2. Collecter TOUS les UUIDs (créateurs + assignés)
   const allUserIds = new Set<string>();
   allTasks.forEach((taskSnapshot: any) => {
-    if (taskSnapshot.createdBy) {
-      allUserIds.add(taskSnapshot.createdBy);
+    // Chercher created_by directement dans le snapshot (pas createdBy)
+    if (taskSnapshot.created_by) {
+      allUserIds.add(taskSnapshot.created_by);
     }
-    if (taskSnapshot.data?.assigned_to) {
-      taskSnapshot.data.assigned_to.forEach((id: string) => allUserIds.add(id));
+    // Chercher assigned_to directement dans le snapshot (pas dans data)
+    if (taskSnapshot.assigned_to && Array.isArray(taskSnapshot.assigned_to)) {
+      taskSnapshot.assigned_to.forEach((id: string) => allUserIds.add(id));
     }
   });
   
   console.log(`👥 ${allUserIds.size} utilisateurs uniques à vérifier`);
+  console.log(`🔍 UUIDs à chercher:`, Array.from(allUserIds));
   
-  // 3. UNE SEULE requête pour récupérer tous les services
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, service')
+  // 3. UNE SEULE requête pour récupérer tous les services depuis staff_directory
+  const { data: staffMembers, error: staffError } = await supabase
+    .from('staff_directory')
+    .select('id, department')
     .in('id', Array.from(allUserIds));
   
-  if (profileError) {
-    console.error('❌ Erreur récupération profiles:', profileError);
+  console.log(`📊 Requête staff_directory - Data:`, staffMembers);
+  console.log(`📊 Requête staff_directory - Error:`, staffError);
+  
+  if (staffError) {
+    console.error('❌ Erreur récupération staff_directory:', staffError);
     return { tasks: [], voiceNote: null, notes: null };
   }
   
-  // 4. Mapping UUID → service
+  // 4. Mapping UUID → department (department en minuscules pour matcher service)
   const userServiceMap: Record<string, string> = {};
-  profiles?.forEach(p => {
-    if (p.service) {
-      userServiceMap[p.id] = p.service;
+  staffMembers?.forEach(member => {
+    if (member.department) {
+      // Convertir department en minuscules pour matcher avec userService
+      userServiceMap[member.id] = member.department.toLowerCase();
     }
   });
   
@@ -132,14 +139,14 @@ export const getShiftHandover = async (userService: string) => {
     }
     
     // Critère 1 : Créée par mon service
-    const creatorService = userServiceMap[taskSnapshot.createdBy];
+    const creatorService = userServiceMap[taskSnapshot.created_by];
     if (creatorService === userService) {
       console.log(`✅ Carte "${task.title}" - créée par ${userService}`);
       return true;
     }
     
     // Critère 2 : Assignée à quelqu'un de mon service
-    const assignedIds = task.assigned_to || [];
+    const assignedIds = taskSnapshot.assigned_to || [];
     const hasMyService = assignedIds.some((id: string) => 
       userServiceMap[id] === userService
     );
