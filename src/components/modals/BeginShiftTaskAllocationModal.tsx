@@ -10,7 +10,9 @@ import {
   Filter, 
   Eye,
   Settings,
-  Edit
+  Edit,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
@@ -45,7 +47,19 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   // États pour l'allocation
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [selectedChecklist, setSelectedChecklist] = useState<string>('none');
-  const [assignToPerson, setAssignToPerson] = useState<string>('unassigned'); // Default value
+  const [assignToPerson, setAssignToPerson] = useState<string>('unassigned');
+  
+  // État pour tracker les modifications appliquées aux cartes
+  const [taskModifications, setTaskModifications] = useState<{
+    [taskId: string]: {
+      assignedTo?: string;
+      action?: string;
+    }
+  }>({});
+  
+  // États pour replier les sections
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isActionsOpen, setIsActionsOpen] = useState(true);
 
   // État pour les détails de tâche
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
@@ -112,9 +126,12 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   ];
 
   const checklistOptions = [
-    { value: 'none', label: 'Choose Checklist' },
+    { value: 'none', label: 'Choose Action' },
     { value: 'arrivee', label: 'Arrival Checklist' },
-    { value: 'recouche', label: 'Turndown Checklist' }
+    { value: 'recouche', label: 'Turndown Checklist' },
+    { value: 'deep_cleaning', label: 'Deep Cleaning' },
+    { value: 'ongoing_incident', label: 'Ongoing Incident' },
+    { value: 'to_repair', label: 'To Repair' }
   ];
 
   const assignmentOptions = [
@@ -184,13 +201,27 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   };
 
   const handleAssignTasks = () => {
-    if (selectedTasks.length > 0 && assignToPerson !== 'unassigned') {
-      const checklistToApply = selectedChecklist !== 'none' ? selectedChecklist : null;
-      console.log('Applying changes:');
-      console.log('- Tasks:', selectedTasks);
-      console.log('- Assigned to:', assignToPerson);
-      console.log('- Checklist applied:', checklistToApply);
+    if (selectedTasks.length > 0) {
+      const updates: typeof taskModifications = {};
       
+      selectedTasks.forEach(taskId => {
+        updates[taskId] = {
+          ...(taskModifications[taskId] || {}),
+          ...(assignToPerson !== 'unassigned' && { assignedTo: assignToPerson }),
+          ...(selectedChecklist !== 'none' && { action: selectedChecklist })
+        };
+      });
+      
+      setTaskModifications(prev => ({ ...prev, ...updates }));
+      
+      console.log('✅ Changes applied:', {
+        tasks: selectedTasks,
+        assignedTo: assignToPerson,
+        action: selectedChecklist,
+        updates
+      });
+      
+      // Reset selections
       setSelectedTasks([]);
       setSelectedChecklist('none');
       setAssignToPerson('unassigned');
@@ -219,16 +250,16 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   };
 
   // Vérification si le bouton Assign doit être actif
-  const isAssignButtonActive = selectedTasks.length > 0 && assignToPerson !== 'unassigned';
+  const isAssignButtonActive = selectedTasks.length > 0 && (assignToPerson !== 'unassigned' || selectedChecklist !== 'none');
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-7xl max-h-[95vh] p-0 flex flex-col">
+        <DialogContent className="max-w-7xl h-[95vh] p-0 flex flex-col">
           <DialogHeader className="p-6 pb-4 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <PlayCircle className="h-4 w-4 text-blue-600" />
+              <div className="w-8 h-8 bg-[#E0D3B4] rounded-full flex items-center justify-center">
+                <PlayCircle className="h-4 w-4 text-[#1E1A37]" />
               </div>
               <DialogTitle className="text-xl font-semibold">
                 Begin Service Shift - Task Allocation
@@ -237,12 +268,16 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
           </DialogHeader>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Filters - Elegant Design */}
+            {/* Filters - Collapsible */}
             <div className="flex-shrink-0 px-6 pb-6 border-b-2 border-gray-100">
-              <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="bg-[#E0D3B4]/20 rounded-lg p-4 shadow-sm">
+                <div 
+                  className="flex items-center gap-2 mb-4 cursor-pointer" 
+                  onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                >
                   <Filter className="h-4 w-4 text-gray-600" />
                   <h3 className="font-semibold text-gray-800">Filters</h3>
+                  {isFiltersOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                   {(() => {
                     const activeFiltersCount = [
                       selectedFloor !== 'all', 
@@ -252,14 +287,15 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                     ].filter(Boolean).length;
                     
                     return activeFiltersCount > 0 ? (
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 text-xs">
+                      <Badge variant="outline" className="bg-[#DEAE53] text-[#1E1A37] border-[#DEAE53] text-xs ml-2">
                         {activeFiltersCount} active
                       </Badge>
                     ) : null;
                   })()}
                 </div>
                 
-                <div className="grid grid-cols-4 gap-4">
+                {isFiltersOpen && (
+                  <div className="grid grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Floors</label>
                     <Select value={selectedFloor} onValueChange={setSelectedFloor}>
@@ -323,20 +359,25 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Actions - Elegant Design on white background */}
+            {/* Actions - Collapsible */}
             <div className="flex-shrink-0 px-6 py-6 border-b-2 border-gray-100">
-              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="bg-white rounded-lg border border-[#E0D3B4] p-4 shadow-sm">
+                <div 
+                  className="flex items-center gap-2 mb-4 cursor-pointer"
+                  onClick={() => setIsActionsOpen(!isActionsOpen)}
+                >
                   <Settings className="h-4 w-4 text-gray-600" />
                   <h3 className="font-semibold text-gray-800">Actions</h3>
+                  {isActionsOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
                 </div>
                 
-                <div className="grid grid-cols-3 gap-6">
-                  {/* Selection */}
+                {isActionsOpen && (
+                  <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-700">
                       Select
@@ -352,16 +393,16 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                         Select All
                       </label>
                       {selectedTasks.length > 0 && (
-                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                        <Badge variant="outline" className="text-xs bg-[#DEAE53] text-[#1E1A37] border-[#DEAE53]">
                           {selectedTasks.length} selected
                         </Badge>
                       )}
                     </div>
                   </div>
 
-                  {/* Checklist */}
+                  {/* Specific Actions */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700">Apply Checklist</label>
+                    <label className="text-sm font-medium text-gray-700">Apply Specific Actions</label>
                     <Select value={selectedChecklist} onValueChange={setSelectedChecklist}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -398,15 +439,16 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                         className={cn(
                           "px-4 py-2 transition-all",
                           isAssignButtonActive 
-                            ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            ? "bg-[#1E1A37] hover:bg-[#DEAE53] text-white hover:text-[#1E1A37]" 
+                            : "bg-[#E0D3B4] text-[#1E1A37]/50 cursor-not-allowed"
                         )}
                       >
                         Assign
                       </Button>
                     </div>
                   </div>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -416,16 +458,18 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
               {newCards.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <h3 className="text-lg font-semibold text-green-700">
+                    <h3 className="text-lg font-semibold text-[#BBA88A]">
                       New Cards Created ({newCards.length})
                     </h3>
-                    <Badge className="bg-green-100 text-green-700 border-green-300">
+                    <Badge className="bg-[#BBA88A] text-white border-[#BBA88A]">
                       Editable
                     </Badge>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {newCards.map((task) => {
                       const isSelected = selectedTasks.includes(task.id);
+                      const modifications = taskModifications[task.id];
+                      
                       return (
                         <div key={task.id} className="relative">
                           <div className="absolute top-2 left-2 z-10">
@@ -443,14 +487,32 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                                 e.stopPropagation();
                                 handleCardClick(task);
                               }}
-                              className="h-8 w-8 p-0 bg-green-100 hover:bg-green-200 shadow-sm"
+                              className="h-8 w-8 p-0 bg-[#BBA88A] hover:bg-[#DEAE53] shadow-sm"
                             >
-                              <Edit className="h-4 w-4 text-green-700" />
+                              <Edit className="h-4 w-4 text-white" />
                             </Button>
                           </div>
+                          
+                          {/* Afficher les modifications appliquées */}
+                          {modifications && (
+                            <div className="absolute top-12 left-2 z-10 flex flex-col gap-1">
+                              {modifications.assignedTo && (
+                                <Badge style={{ backgroundColor: '#BBA88A', color: 'white' }} className="text-xs border-0">
+                                  Assigned
+                                </Badge>
+                              )}
+                              {modifications.action && (
+                                <Badge style={{ backgroundColor: '#1E1A37', color: '#DEAE53' }} className="text-xs border-0">
+                                  {modifications.action === 'deep_cleaning' ? 'Deep' : modifications.action}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          
                           <div className={cn(
-                            "transition-all duration-200 ring-2 ring-green-200",
-                            isSelected && "ring-blue-400 shadow-lg"
+                            "transition-all duration-200 ring-2 ring-[#BBA88A]",
+                            isSelected && "ring-[#DEAE53] shadow-lg",
+                            modifications && "ring-[#E0D3B4]"
                           )}>
                             <ShiftFacingCard 
                               task={task}
@@ -498,7 +560,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                           </div>
                           <div className={cn(
                             "transition-all duration-200",
-                            isSelected && "ring-2 ring-blue-400 shadow-lg"
+                            isSelected && "ring-2 ring-[#DEAE53] shadow-lg"
                           )}>
                             <ShiftFacingCard 
                               task={task}
@@ -550,7 +612,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                           </div>
                           <div className={cn(
                             "transition-all duration-200 opacity-75",
-                            isSelected && "ring-2 ring-blue-400 shadow-lg opacity-100"
+                            isSelected && "ring-2 ring-[#DEAE53] shadow-lg opacity-100"
                           )}>
                             <ShiftFacingCard 
                               task={task}
@@ -586,7 +648,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                 </Button>
                 <Button 
                   onClick={onContinue}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                  className="bg-[#1E1A37] hover:bg-[#DEAE53] text-white hover:text-[#1E1A37] px-6"
                 >
                   <PlayCircle className="h-4 w-4 mr-2" />
                   Review Cards of Previous Shift
