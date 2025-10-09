@@ -4,7 +4,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
-import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
+import ServiceShiftCloseModal from '@/components/modals/ServiceShiftCloseModal';
 import BeginShiftWorkflow from '@/components/modals/BeginShiftWorkflow';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,8 @@ import {
   Heart,
   UserCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -286,7 +287,71 @@ const ServiceControl2 = () => {
   const { profiles } = useProfiles();
   const { locations } = useLocations();
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
+  const [isCheckingShift, setIsCheckingShift] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+
+  // Check for active shift on mount
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      try {
+        const { data: activeShift } = await supabase
+          .from('shifts')
+          .select('id')
+          .eq('status', 'active')
+          .single();
+        
+        if (activeShift) {
+          setShiftStatus('active');
+          console.log('✅ [ServiceControl2] Active shift detected:', activeShift.id);
+        } else {
+          setShiftStatus('not_started');
+          console.log('ℹ️ [ServiceControl2] No active shift found');
+        }
+      } finally {
+        setIsCheckingShift(false);
+      }
+    };
+    
+    checkActiveShift();
+  }, []);
+
+  // Listen to shift changes in real-time for synchronization
+  useEffect(() => {
+    const channel = supabase
+      .channel('shifts-realtime-sync')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'shifts' 
+        },
+        (payload) => {
+          console.log('🔔 [ServiceControl2] Shift change detected:', payload);
+          
+          // Re-check active shift when any change occurs
+          supabase
+            .from('shifts')
+            .select('id')
+            .eq('status', 'active')
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                setShiftStatus('active');
+                console.log('✅ [ServiceControl2] Shift activated from another page');
+              } else {
+                setShiftStatus('not_started');
+                console.log('✅ [ServiceControl2] Shift ended from another page');
+              }
+            });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
   const [isShiftStartOpen, setIsShiftStartOpen] = useState(false);
@@ -497,31 +562,47 @@ const ServiceControl2 = () => {
             <p className="text-muted-foreground">Manage your service tasks and housekeeping activities during your shift</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <Button 
-              onClick={() => handleShiftAction('start')} 
-              disabled={shiftStatus === 'active'} 
-              className="h-12 text-base" 
-              variant={shiftStatus === 'active' ? 'secondary' : 'default'}
-              style={shiftStatus === 'active' 
-                ? { backgroundColor: '#E0D3B4', color: '#6b7280' } 
-                : { backgroundColor: '#1f2937', color: '#DEAE35' }
-              }
-            >
-              <PlayCircle className="h-5 w-5 mr-2" />{shiftStatus === 'active' ? 'Active Shift' : 'Begin Shift'}
-            </Button>
-            <Button onClick={() => handleShiftAction('improve')} variant="outline" className="h-12 text-base">
-              <Target className="h-5 w-5 mr-2" />Work Improvement
-            </Button>
-            <Button 
-              onClick={() => handleShiftAction('close')} 
-              disabled={shiftStatus !== 'active'} 
-              className="h-12 text-base"
-              style={shiftStatus !== 'active' ? { backgroundColor: '#E0D3B4', color: '#6b7280' } : {}}
-            >
-              <StopCircle className="h-5 w-5 mr-2" />End Shift
-            </Button>
-          </div>
+          {isCheckingShift ? (
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              <Button disabled className="h-12 text-base" variant="secondary">
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Checking Shift...
+              </Button>
+              <Button onClick={() => handleShiftAction('improve')} variant="outline" className="h-12 text-base">
+                <Target className="h-5 w-5 mr-2" />Work Improvement
+              </Button>
+              <Button disabled className="h-12 text-base" variant="secondary">
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Loading...
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              <Button 
+                onClick={() => handleShiftAction('start')} 
+                disabled={shiftStatus === 'active'} 
+                className="h-12 text-base" 
+                variant={shiftStatus === 'active' ? 'secondary' : 'default'}
+                style={shiftStatus === 'active' 
+                  ? { backgroundColor: '#E0D3B4', color: '#6b7280' } 
+                  : { backgroundColor: '#1f2937', color: '#DEAE35' }
+                }
+              >
+                <PlayCircle className="h-5 w-5 mr-2" />{shiftStatus === 'active' ? 'Active Shift' : 'Begin Shift'}
+              </Button>
+              <Button onClick={() => handleShiftAction('improve')} variant="outline" className="h-12 text-base">
+                <Target className="h-5 w-5 mr-2" />Work Improvement
+              </Button>
+              <Button 
+                onClick={() => handleShiftAction('close')} 
+                disabled={shiftStatus !== 'active'} 
+                className="h-12 text-base"
+                style={shiftStatus !== 'active' ? { backgroundColor: '#E0D3B4', color: '#6b7280' } : {}}
+              >
+                <StopCircle className="h-5 w-5 mr-2" />End Shift
+              </Button>
+            </div>
+          )}
 
           {/* Bande de Filtres Fixes */}
           <div className="mb-6">
@@ -652,7 +733,22 @@ const ServiceControl2 = () => {
       
       <EnhancedTaskDetailModal task={selectedTask} isOpen={isTaskDetailOpen} onClose={() => { setIsTaskDetailOpen(false); setSelectedTask(null); }} onUpdateTask={() => refetch()} />
       <BeginShiftWorkflow isOpen={isShiftStartOpen} onClose={() => setIsShiftStartOpen(false)} tasks={filteredTasks} onShiftStarted={handleShiftStarted} profiles={profiles} />
-      <ShiftCloseModal isOpen={isShiftCloseOpen} onClose={async () => { setIsShiftCloseOpen(false); setShiftStatus('closed'); toast({ title: "Service Shift Ended", description: "Your service shift has been ended successfully", variant: "default" }); }} tasks={filteredTasks} onCardClick={handleCardClick} />
+      <ServiceShiftCloseModal 
+        isOpen={isShiftCloseOpen} 
+        onClose={() => setIsShiftCloseOpen(false)} 
+        onShiftEnded={async () => {
+          setIsShiftCloseOpen(false);
+          setShiftStatus('closed');
+          await refetch();
+          toast({ 
+            title: "Service Shift Ended", 
+            description: "Your service shift has been ended successfully", 
+            variant: "default" 
+          });
+        }}
+        tasks={filteredTasks} 
+        onCardClick={handleCardClick} 
+      />
       {!isShiftCloseOpen && !isShiftStartOpen && <VoiceCommandButton />}
     </div>
   );

@@ -9,7 +9,8 @@ import {
   PlayCircle, 
   Filter, 
   Eye,
-  Settings
+  Settings,
+  Edit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
@@ -21,7 +22,7 @@ import { useLocations } from '@/hooks/useSupabaseData';
 interface BeginShiftTaskAllocationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartShift: () => void;
+  onContinue: () => void;
   tasks: TaskItem[];
   profiles: any[];
 }
@@ -29,7 +30,7 @@ interface BeginShiftTaskAllocationModalProps {
 const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps> = ({
   isOpen,
   onClose,
-  onStartShift,
+  onContinue,
   tasks,
   profiles
 }) => {
@@ -44,7 +45,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   // États pour l'allocation
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [selectedChecklist, setSelectedChecklist] = useState<string>('none');
-  const [assignToPerson, setAssignToPerson] = useState<string>('à personne'); // Valeur par défaut
+  const [assignToPerson, setAssignToPerson] = useState<string>('unassigned'); // Default value
 
   // État pour les détails de tâche
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
@@ -66,15 +67,15 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
     
     const sortedFloors = Array.from(floors).sort((a, b) => a - b);
     
-    const floorOptions = [{ value: 'all', label: 'Tous les étages' }];
+    const floorOptions = [{ value: 'all', label: 'All Floors' }];
     
     sortedFloors.forEach(floor => {
       if (floor === -1) {
-        floorOptions.push({ value: '-1', label: 'Sous-sol (-1)' });
+        floorOptions.push({ value: '-1', label: 'Basement (-1)' });
       } else if (floor === 0) {
-        floorOptions.push({ value: '0', label: 'RDC (0)' });
+        floorOptions.push({ value: '0', label: 'Ground Floor (0)' });
       } else {
-        floorOptions.push({ value: floor.toString(), label: `Étage ${floor}` });
+        floorOptions.push({ value: floor.toString(), label: `Floor ${floor}` });
       }
     });
     
@@ -85,17 +86,17 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   const floorOptions = generateFloorOptions();
 
   const categoryOptions = [
-    { value: 'all', label: 'Toutes les catégories' },
+    { value: 'all', label: 'All Categories' },
     { value: 'ongoing_incidents', label: 'Ongoing Incidents' },
     { value: 'client_requests', label: 'Client Requests' },
     { value: 'follow_ups', label: 'Follow Ups' },
     { value: 'personal_tasks', label: 'Personal Tasks' },
-    { value: 'chambres_arrivee', label: 'Chambres "en arrivée"' },
-    { value: 'chambres_recouche', label: 'Chambres "en recouche"' }
+    { value: 'chambres_arrivee', label: 'Arrival Rooms' },
+    { value: 'chambres_recouche', label: 'Turndown Rooms' }
   ];
 
   const personOptions = [
-    { value: 'all', label: 'Toutes les personnes' },
+    { value: 'all', label: 'All People' },
     ...profiles.map(profile => ({
       value: profile.id,
       label: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown'
@@ -103,21 +104,21 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   ];
 
   const themeOptions = [
-    { value: 'all', label: 'Tous' },
-    { value: 'priority', label: 'Par priorité' },
-    { value: 'most_delayed', label: 'Les plus en retard' },
-    { value: 'previous_shift', label: 'Issues du shift précédent' },
-    { value: 'new_shift', label: 'Issues du nouveau shift' }
+    { value: 'all', label: 'All' },
+    { value: 'priority', label: 'By Priority' },
+    { value: 'most_delayed', label: 'Most Delayed' },
+    { value: 'previous_shift', label: 'From Previous Shift' },
+    { value: 'new_shift', label: 'From New Shift' }
   ];
 
   const checklistOptions = [
-    { value: 'none', label: 'Choisir checklist' },
-    { value: 'arrivee', label: 'Checklist en arrivée' },
-    { value: 'recouche', label: 'Checklist en recouche' }
+    { value: 'none', label: 'Choose Checklist' },
+    { value: 'arrivee', label: 'Arrival Checklist' },
+    { value: 'recouche', label: 'Turndown Checklist' }
   ];
 
   const assignmentOptions = [
-    { value: 'à personne', label: 'À personne' },
+    { value: 'unassigned', label: 'Unassigned' },
     ...profiles.map(profile => ({
       value: profile.id,
       label: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown'
@@ -139,7 +140,6 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
       if (selectedCategory === 'ongoing_incidents' && task.type !== 'incident') return false;
       if (selectedCategory === 'follow_ups' && task.type !== 'follow_up') return false;
       if (selectedCategory === 'personal_tasks' && task.type !== 'personal_task') return false;
-      // Ajouter logique pour chambres_arrivee et chambres_recouche si nécessaire
     }
 
     // Filtre par personne
@@ -151,18 +151,21 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
     // Filtre par thématique
     if (selectedTheme !== 'all') {
       if (selectedTheme === 'priority' && task.priority !== 'urgent') return false;
-      // Ajouter d'autres logiques de thématiques si nécessaire
     }
 
     return true;
   });
 
-  // Séparation des tâches assignées et non assignées
-  const unassignedTasks = filteredTasks.filter(task => !task.assignedTo);
-  const assignedTasks = filteredTasks.filter(task => task.assignedTo);
+  // Séparation : nouvelles cartes (modifiables) vs cartes existantes
+  const newCards = filteredTasks.filter(task => task.id.startsWith('temp-card-'));
+  const existingCards = filteredTasks.filter(task => !task.id.startsWith('temp-card-'));
+  
+  // Séparation des tâches assignées et non assignées pour les cartes existantes
+  const unassignedExisting = existingCards.filter(task => !task.assignedTo);
+  const assignedExisting = existingCards.filter(task => task.assignedTo);
 
   // Gestion de la sélection
-  const allTasks = [...unassignedTasks, ...assignedTasks];
+  const allTasks = [...newCards, ...unassignedExisting, ...assignedExisting];
   
   const handleSelectAll = () => {
     if (selectedTasks.length === allTasks.length) {
@@ -181,7 +184,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
   };
 
   const handleAssignTasks = () => {
-    if (selectedTasks.length > 0 && assignToPerson !== 'à personne') {
+    if (selectedTasks.length > 0 && assignToPerson !== 'unassigned') {
       const checklistToApply = selectedChecklist !== 'none' ? selectedChecklist : null;
       console.log('Applying changes:');
       console.log('- Tasks:', selectedTasks);
@@ -190,7 +193,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
       
       setSelectedTasks([]);
       setSelectedChecklist('none');
-      setAssignToPerson('à personne');
+      setAssignToPerson('unassigned');
     }
   };
 
@@ -200,7 +203,6 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
     // TODO: Implémenter la logique de sauvegarde en base
     setIsEditModalOpen(false);
     setEditingTask(null);
-    // Optionnel : rafraîchir la liste des tâches
   };
 
   const handleCardClick = (task: TaskItem) => {
@@ -211,13 +213,13 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
       setEditingTask(task);
       setIsEditModalOpen(true);
     } else {
-      // Cartes existantes -> Modal de détails
+      // Cartes existantes -> Modal de détails (lecture seule)
       setIsTaskDetailOpen(true);
     }
   };
 
-  // Vérification si le bouton Attribuer doit être actif
-  const isAssignButtonActive = selectedTasks.length > 0 && assignToPerson !== 'à personne';
+  // Vérification si le bouton Assign doit être actif
+  const isAssignButtonActive = selectedTasks.length > 0 && assignToPerson !== 'unassigned';
 
   return (
     <>
@@ -235,13 +237,12 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
           </DialogHeader>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Filtres - Design élégant */}
+            {/* Filters - Elegant Design */}
             <div className="flex-shrink-0 px-6 pb-6 border-b-2 border-gray-100">
               <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
                   <Filter className="h-4 w-4 text-gray-600" />
-                  <h3 className="font-semibold text-gray-800">Filtres</h3>
-                  {/* Indicateur de filtres actifs */}
+                  <h3 className="font-semibold text-gray-800">Filters</h3>
                   {(() => {
                     const activeFiltersCount = [
                       selectedFloor !== 'all', 
@@ -252,7 +253,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                     
                     return activeFiltersCount > 0 ? (
                       <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 text-xs">
-                        {activeFiltersCount} actif{activeFiltersCount > 1 ? 's' : ''}
+                        {activeFiltersCount} active
                       </Badge>
                     ) : null;
                   })()}
@@ -260,7 +261,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                 
                 <div className="grid grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Étages</label>
+                    <label className="text-sm font-medium text-gray-700">Floors</label>
                     <Select value={selectedFloor} onValueChange={setSelectedFloor}>
                       <SelectTrigger className={cn("w-full transition-all duration-200", selectedFloor !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
                         <SelectValue />
@@ -276,7 +277,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Catégorie</label>
+                    <label className="text-sm font-medium text-gray-700">Category</label>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                       <SelectTrigger className={cn("w-full transition-all duration-200", selectedCategory !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
                         <SelectValue />
@@ -292,7 +293,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Personne</label>
+                    <label className="text-sm font-medium text-gray-700">Person</label>
                     <Select value={selectedPerson} onValueChange={setSelectedPerson}>
                       <SelectTrigger className={cn("w-full transition-all duration-200", selectedPerson !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
                         <SelectValue />
@@ -308,7 +309,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Thématiques</label>
+                    <label className="text-sm font-medium text-gray-700">Themes</label>
                     <Select value={selectedTheme} onValueChange={setSelectedTheme}>
                       <SelectTrigger className={cn("w-full transition-all duration-200", selectedTheme !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
                         <SelectValue />
@@ -326,7 +327,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
               </div>
             </div>
 
-            {/* Actions - Design élégant sur fond blanc */}
+            {/* Actions - Elegant Design on white background */}
             <div className="flex-shrink-0 px-6 py-6 border-b-2 border-gray-100">
               <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
@@ -335,10 +336,10 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                 </div>
                 
                 <div className="grid grid-cols-3 gap-6">
-                  {/* Sélection - sans icône */}
+                  {/* Selection */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-700">
-                      Sélectionner
+                      Select
                     </label>
                     <div className="flex items-center space-x-3">
                       <Checkbox
@@ -348,11 +349,11 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                         className="h-4 w-4"
                       />
                       <label htmlFor="select-all" className="text-sm cursor-pointer font-medium">
-                        Tout sélectionner
+                        Select All
                       </label>
                       {selectedTasks.length > 0 && (
                         <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                          {selectedTasks.length} sélectionnée{selectedTasks.length !== 1 ? 's' : ''}
+                          {selectedTasks.length} selected
                         </Badge>
                       )}
                     </div>
@@ -360,7 +361,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
 
                   {/* Checklist */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700">Appliquer checklist</label>
+                    <label className="text-sm font-medium text-gray-700">Apply Checklist</label>
                     <Select value={selectedChecklist} onValueChange={setSelectedChecklist}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -375,9 +376,9 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                     </Select>
                   </div>
 
-                  {/* Attribution */}
+                  {/* Assignment */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700">Attribuer à</label>
+                    <label className="text-sm font-medium text-gray-700">Assign To</label>
                     <div className="flex gap-3 items-end">
                       <Select value={assignToPerson} onValueChange={setAssignToPerson}>
                         <SelectTrigger className="flex-1">
@@ -401,7 +402,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                             : "bg-gray-200 text-gray-400 cursor-not-allowed"
                         )}
                       >
-                        Attribuer
+                        Assign
                       </Button>
                     </div>
                   </div>
@@ -409,16 +410,21 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
               </div>
             </div>
 
-            {/* Liste des tâches - scrollable */}
+            {/* Task List - scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-              {/* Tâches non assignées */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                  Tâches non assignées ({unassignedTasks.length})
-                </h3>
-                {unassignedTasks.length > 0 ? (
+              {/* New Cards (Editable) */}
+              {newCards.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <h3 className="text-lg font-semibold text-green-700">
+                      New Cards Created ({newCards.length})
+                    </h3>
+                    <Badge className="bg-green-100 text-green-700 border-green-300">
+                      Editable
+                    </Badge>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {unassignedTasks.map((task) => {
+                    {newCards.map((task) => {
                       const isSelected = selectedTasks.includes(task.id);
                       return (
                         <div key={task.id} className="relative">
@@ -428,6 +434,67 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                               onCheckedChange={() => handleTaskToggle(task.id)}
                               className="bg-white border-2 shadow-sm"
                             />
+                          </div>
+                          <div className="absolute top-2 right-2 z-10">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCardClick(task);
+                              }}
+                              className="h-8 w-8 p-0 bg-green-100 hover:bg-green-200 shadow-sm"
+                            >
+                              <Edit className="h-4 w-4 text-green-700" />
+                            </Button>
+                          </div>
+                          <div className={cn(
+                            "transition-all duration-200 ring-2 ring-green-200",
+                            isSelected && "ring-blue-400 shadow-lg"
+                          )}>
+                            <ShiftFacingCard 
+                              task={task}
+                              onClick={() => handleCardClick(task)}
+                              className="hover:shadow-md transition-shadow"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Existing Unassigned Tasks (Read-only) */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">
+                  Unassigned Tasks ({unassignedExisting.length})
+                </h3>
+                {unassignedExisting.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {unassignedExisting.map((task) => {
+                      const isSelected = selectedTasks.includes(task.id);
+                      return (
+                        <div key={task.id} className="relative">
+                          <div className="absolute top-2 left-2 z-10">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleTaskToggle(task.id)}
+                              className="bg-white border-2 shadow-sm"
+                            />
+                          </div>
+                          <div className="absolute top-2 right-2 z-10">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCardClick(task);
+                              }}
+                              className="h-8 w-8 p-0 bg-white/80 hover:bg-white shadow-sm"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </div>
                           <div className={cn(
                             "transition-all duration-200",
@@ -445,19 +512,19 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    <p>Aucune tâche non assignée</p>
+                    <p>No unassigned tasks</p>
                   </div>
                 )}
               </div>
 
-              {/* Tâches déjà assignées */}
+              {/* Existing Assigned Tasks (Read-only) */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-600">
-                  Tâches déjà assignées ({assignedTasks.length})
+                  Already Assigned Tasks ({assignedExisting.length})
                 </h3>
-                {assignedTasks.length > 0 ? (
+                {assignedExisting.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {assignedTasks.map((task) => {
+                    {assignedExisting.map((task) => {
                       const isSelected = selectedTasks.includes(task.id);
                       return (
                         <div key={task.id} className="relative">
@@ -473,8 +540,8 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
-                                e.stopPropagation(); // Empêcher le clic sur la carte
-                                handleCardClick(task); // Forcer l'ouverture du bon modal
+                                e.stopPropagation();
+                                handleCardClick(task);
                               }}
                               className="h-8 w-8 p-0 bg-white/80 hover:bg-white shadow-sm"
                             >
@@ -497,31 +564,32 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    <p>Aucune tâche assignée</p>
+                    <p>No assigned tasks</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Footer fixe */}
+          {/* Fixed Footer */}
           <div className="flex-shrink-0 border-t bg-white p-6">
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-600">
-                {selectedTasks.length} tâche{selectedTasks.length !== 1 ? 's' : ''} sélectionnée{selectedTasks.length !== 1 ? 's' : ''} • 
-                {unassignedTasks.length} non assignées • 
-                {assignedTasks.length} assignées
+                {selectedTasks.length} task{selectedTasks.length !== 1 ? 's' : ''} selected • 
+                {newCards.length} new • 
+                {unassignedExisting.length} unassigned • 
+                {assignedExisting.length} assigned
               </div>
               <div className="flex gap-3">
                 <Button variant="ghost" onClick={onClose}>
-                  Annuler
+                  Cancel
                 </Button>
                 <Button 
-                  onClick={onStartShift}
+                  onClick={onContinue}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                 >
                   <PlayCircle className="h-4 w-4 mr-2" />
-                  Commencer le Service
+                  Review Cards of Previous Shift
                 </Button>
               </div>
             </div>
@@ -529,7 +597,7 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
         </DialogContent>
       </Dialog>
 
-      {/* Modal de détails des tâches */}
+      {/* Task Details Modal */}
       <EnhancedTaskDetailModal 
         task={selectedTask} 
         isOpen={isTaskDetailOpen} 
@@ -538,11 +606,11 @@ const BeginShiftTaskAllocationModal: React.FC<BeginShiftTaskAllocationModalProps
           setSelectedTask(null); 
         }} 
         onUpdateTask={() => {
-          // Logique de mise à jour si nécessaire
+          // Update logic if needed
         }}
       />
 
-      {/* Modal d'édition pour nouvelles cartes */}
+      {/* Edit Modal for New Cards */}
       {editingTask && (
         <TaskFullEditView
           isOpen={isEditModalOpen}

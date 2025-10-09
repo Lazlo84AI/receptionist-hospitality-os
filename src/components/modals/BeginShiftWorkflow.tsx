@@ -48,9 +48,9 @@ const BeginShiftWorkflow: React.FC<BeginShiftWorkflowProps> = ({
   };
 
   const handleWithoutCreation = () => {
-    console.log('✅ Without creation selected, moving to voice_note');
+    console.log('✅ Without creation selected, moving to task_allocation');
     setWorkflowData(prev => ({ ...prev, withCreation: false }));
-    setCurrentStep('voice_note');
+    setCurrentStep('task_allocation');
   };
 
   // Fonction pour générer le titre de la carte selon le type de location
@@ -100,12 +100,17 @@ const BeginShiftWorkflow: React.FC<BeginShiftWorkflowProps> = ({
       selectedLocations: selectedLocationsWithTypes.map(loc => loc.name),
       createdCards: newCards 
     }));
+    setCurrentStep('task_allocation');
+  };
+
+  const handleTaskAllocationContinue = () => {
+    console.log('✅ Task allocation continued, moving to voice_note');
     setCurrentStep('voice_note');
   };
 
   const handleVoiceNoteContinue = () => {
-    console.log('✅ Voice note continued, moving to task_allocation');
-    setCurrentStep('task_allocation');
+    console.log('✅ Voice note review completed, starting shift');
+    handleStartShift();
   };
 
   const handleStartShift = () => {
@@ -139,23 +144,23 @@ const BeginShiftWorkflow: React.FC<BeginShiftWorkflowProps> = ({
           />
         );
 
+      case 'task_allocation':
+        return (
+          <BeginShiftTaskAllocationModal
+            isOpen={isOpen}
+            onClose={handleClose}
+            onContinue={handleTaskAllocationContinue}
+            tasks={[...tasks, ...workflowData.createdCards]} // Fusionner les tâches existantes et nouvelles
+            profiles={profiles}
+          />
+        );
+
       case 'voice_note':
         return (
           <BeginShiftVoiceNoteModal
             isOpen={isOpen}
             onClose={handleClose}
             onContinue={handleVoiceNoteContinue}
-          />
-        );
-
-      case 'task_allocation':
-        return (
-          <BeginShiftTaskAllocationModal
-            isOpen={isOpen}
-            onClose={handleClose}
-            onStartShift={handleStartShift}
-            tasks={[...tasks, ...workflowData.createdCards]} // Fusionner les tâches existantes et nouvelles
-            profiles={profiles}
           />
         );
 

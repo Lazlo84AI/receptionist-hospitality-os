@@ -1,11 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, PlayCircle, FileAudio, FileText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ShiftFacingCard } from '@/components/cards/ShiftFacingCard';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Check,
+  Eye,
+  FileAudio,
+  FileText,
+  AlertTriangle, 
+  Users, 
+  Clock, 
+  Wrench,
+  User,
+  MapPin,
+  Calendar,
+  MessageCircle,
+  Loader2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { TaskItem, Comment, Reminder, ActivityLog } from '@/types/database';
 import { useLatestShiftHandover } from '@/hooks/useShiftData';
 import { getShiftHandover } from '@/lib/shiftContinuityManager-v2';
-import { supabase } from '@/integrations/supabase/client';
 
 interface BeginShiftVoiceNoteModalProps {
   isOpen: boolean;
@@ -13,45 +33,50 @@ interface BeginShiftVoiceNoteModalProps {
   onContinue: () => void;
 }
 
-const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
-  isOpen,
-  onClose,
-  onContinue
+const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onContinue 
 }) => {
+  // Données du shift précédent pour le premier écran
   const { shiftData, loading: shiftDataLoading, error: shiftDataError } = useLatestShiftHandover();
+  
+  // currentTaskIndex : compteur simple (0 = premier écran, 1+ = cartes)
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
+  const [readTasks, setReadTasks] = useState<Set<string>>(new Set());
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
+  
+  // États pour les vraies données du modal de détails
+  const [taskComments, setTaskComments] = useState<Comment[]>([]);
+  const [taskReminders, setTaskReminders] = useState<Reminder[]>([]);
+  const [taskActivities, setTaskActivities] = useState<ActivityLog[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // État pour les données du shift handover
-  const [handoverData, setHandoverData] = useState<{
-    voiceNote: { url: string | null; transcription: string | null } | null;
-    notes: string | null;
-    stats: any | null;
-  }>({ voiceNote: null, notes: null, stats: null });
-
+  // États pour les tâches du handover
+  const [handoverTasks, setHandoverTasks] = useState<TaskItem[]>([]);
   const [loadingHandover, setLoadingHandover] = useState(true);
-  const [handoverError, setHandoverError] = useState<string | null>(null);
 
-  // Log pour débug
-  React.useEffect(() => {
-    console.log('BeginShiftVoiceNoteModal - shiftData state:', { 
-      isLoading: shiftDataLoading, 
-      hasError: !!shiftDataError, 
-      dataReceived: !!shiftData,
-      voiceNoteUrl: shiftData?.voice_note_url,
-      hasTranscription: !!shiftData?.voice_note_transcription,
-      hasNotes: !!shiftData?.handover_notes
-    });
-  }, [shiftData, shiftDataLoading, shiftDataError]);
+  // Total : premier écran + toutes les cartes
+  const totalScreens = 1 + handoverTasks.length; // écran 0 + les cartes
+  const isFirstScreen = currentTaskIndex === 0;
+  const currentTask = !isFirstScreen ? handoverTasks[currentTaskIndex - 1] : null;
 
-  // Récupérer les données du shift précédent avec la fonction getShiftHandover
+  // Récupérer les tâches du handover au montage du modal
   useEffect(() => {
-    const fetchHandoverData = async () => {
+    if (!isOpen) return;
+    
+    const fetchHandoverTasks = async () => {
+      setLoadingHandover(true);
       try {
-        setLoadingHandover(true);
-
-        // Récupérer le service de l'utilisateur courant
+        console.log('🔍 [BeginShift Voice Note] Loading handover tasks...');
+        
+        // Récupérer le service de l'utilisateur
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          throw new Error('User not authenticated');
+          console.log('❌ [BeginShift] No user found');
+          setHandoverTasks([]);
+          setLoadingHandover(false);
+          return;
         }
         
         const { data: profile } = await supabase
@@ -61,197 +86,707 @@ const BeginShiftVoiceNoteModal: React.FC<BeginShiftVoiceNoteModalProps> = ({
           .single();
         
         if (!profile?.service) {
-          throw new Error('User service not found');
+          console.log('❌ [BeginShift] No service found for user');
+          setHandoverTasks([]);
+          setLoadingHandover(false);
+          return;
         }
-
-        console.log(`💭 Fetching shift handover for service: ${profile.service}`);
         
-        // Utiliser getShiftHandover pour obtenir les données du shift précédent
-        const handoverResult = await getShiftHandover(profile.service);
-        setHandoverData({
-          voiceNote: handoverResult.voiceNote,
-          notes: handoverResult.notes,
-          stats: handoverResult.stats
-        });
-
-        console.log('💭 Handover data:', handoverResult);
+        console.log(`👤 [BeginShift] User service: ${profile.service}`);
+        
+        // Récupérer les tâches du handover filtrées par service
+        const { tasks: transferredTasks, stats } = await getShiftHandover(profile.service);
+        
+        console.log(`📦 [BeginShift] ${transferredTasks.length} tasks loaded from handover`);
+        setHandoverTasks(transferredTasks);
       } catch (error) {
-        console.error('Error fetching handover data:', error);
-        setHandoverError(error instanceof Error ? error.message : 'Failed to fetch handover data');
+        console.error('❌ [BeginShift] Error loading handover tasks:', error);
+        setHandoverTasks([]);
       } finally {
         setLoadingHandover(false);
       }
     };
+    
+    fetchHandoverTasks();
+  }, [isOpen]);
 
-    fetchHandoverData();
-  }, []);
+  // Navigation functions
+  const handlePrevious = () => {
+    if (currentTaskIndex > 1) {
+      setCurrentTaskIndex(currentTaskIndex - 1);
+    }
+  };
 
-  // Utiliser les données du shift ou du handover (en priorité getShiftHandover)
-  const voiceNoteUrl = handoverData.voiceNote?.url || shiftData?.voice_note_url;
-  const voiceNoteTranscription = handoverData.voiceNote?.transcription || shiftData?.voice_note_transcription;
-  const handoverNotes = handoverData.notes || shiftData?.handover_notes;
+  const handleNext = () => {
+    if (currentTaskIndex < handoverTasks.length) {
+      setCurrentTaskIndex(currentTaskIndex + 1);
+    }
+  };
+
+  // Fonction pour valider et passer à la carte suivante
+  const handleValidate = () => {
+    if (!currentTask) return;
+    
+    const newReadTasks = new Set(readTasks);
+    newReadTasks.add(currentTask.id);
+    setReadTasks(newReadTasks);
+    
+    // Passer à la carte suivante si pas la dernière
+    if (currentTaskIndex < handoverTasks.length) {
+      setCurrentTaskIndex(currentTaskIndex + 1);
+    } else {
+      // Toutes les cartes ont été vues, revenir à Task Allocation
+      onContinue();
+    }
+  };
+
+  // Configuration pour le modal de détails (lecture seule)
+  const getTypeConfigForDetails = (type: string) => {
+    switch (type) {
+      case 'incident':
+        return { 
+          icon: AlertTriangle, 
+          color: 'bg-red-100 text-red-600',
+          label: 'Incident' 
+        };
+      case 'client_request':
+        return { 
+          icon: Users, 
+          color: 'bg-green-100 text-green-600',
+          label: 'Client Request' 
+        };
+      case 'follow_up':
+        return { 
+          icon: Clock, 
+          color: 'bg-gray-600 text-white',
+          label: 'Follow-up' 
+        };
+      case 'internal_task':
+        return { 
+          icon: Wrench, 
+          color: 'bg-yellow-100 text-yellow-600',
+          label: 'Internal Task' 
+        };
+      default:
+        return { 
+          icon: Wrench, 
+          color: 'bg-gray-100 text-gray-600',
+          label: 'Task' 
+        };
+    }
+  };
+
+  // Fonction pour récupérer les données détaillées d'une tâche
+  const fetchTaskDetails = async (task: TaskItem) => {
+    setLoadingDetails(true);
+    try {
+      // Récupérer les commentaires
+      const { data: comments, error: commentsError } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('task_id', task.id)
+        .order('created_at', { ascending: false });
+
+      if (commentsError) {
+        console.error('Erreur chargement commentaires:', commentsError);
+      } else {
+        setTaskComments(comments || []);
+      }
+
+      // Récupérer les reminders
+      const { data: reminders, error: remindersError } = await supabase
+        .from('reminders')
+        .select(`
+          *,
+          profiles:created_by (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('task_id', task.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (remindersError) {
+        console.error('Erreur chargement reminders:', remindersError);
+      } else {
+        setTaskReminders(reminders || []);
+      }
+
+      // Récupérer les activités
+      const { data: activities, error: activitiesError } = await supabase
+        .from('activity_log')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('task_id', task.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (activitiesError) {
+        console.error('Erreur chargement activités:', activitiesError);
+      } else {
+        setTaskActivities(activities || []);
+      }
+
+    } catch (error) {
+      console.error('Erreur générale lors du chargement des détails:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  // Fonction pour afficher les détails (lecture seule)
+  const handleCardClick = (task: TaskItem) => {
+    setShowTaskDetail(true);
+    fetchTaskDetails(task);
+  };
+
+  // Fonction pour formater le temps relatif
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return "Il y a moins d'une minute";
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''}`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `Il y a ${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `Il y a ${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <PlayCircle className="h-4 w-4 text-blue-600" />
-            </div>
-            <DialogTitle className="text-xl font-semibold">
-              Begin Service Shift - Voice Note Review
-            </DialogTitle>
-          </div>
-        </DialogHeader>
-
-        <div className="py-6">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-semibold mb-2">
-              {shiftData ? 'Voice Note from Your Predecessor' : 'Shift Handover Information'}
-            </h3>
-            <p className="text-gray-600">
-              {shiftData 
-                ? `Key information from ${shiftData.previous_shift_user || 'the previous team'}` 
-                : 'No handover data available from previous shift'
-              }
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 overflow-y-auto max-h-[40vh]">
-            {/* Audio Player - Left side */}
-            <Card className="border-2 border-gray-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileAudio className="h-5 w-5 text-blue-600" />
-                  Audio Player
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-y-auto max-h-[30vh]">
-                {voiceNoteUrl ? (
-                  <div className="space-y-4">
-                    {/* Audio element */}
-                    <audio 
-                      controls 
-                      className="w-full"
-                      preload="metadata"
-                    >
-                      <source src={voiceNoteUrl} type="audio/mpeg" />
-                      <source src={voiceNoteUrl} type="audio/wav" />
-                      Your browser does not support the audio element.
-                    </audio>
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>Left by:</strong> {shiftData.previous_shift_user || 'Previous team member'}
-                      </p>
-                      {shiftData.previous_shift_end_time && (
-                        <p className="text-sm text-blue-700 mt-1">
-                          <strong>Time:</strong> {new Date(shiftData.previous_shift_end_time).toLocaleString('fr-FR')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <FileAudio className="h-16 w-16 text-gray-300 mb-4" />
-                    <p className="text-gray-500 font-medium mb-2">
-                      No voice note available
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      The previous shift didn't leave any audio message
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Text Transcript or Handover Notes - Right side */}
-            <Card className="border-2 border-gray-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-green-600" />
-                  {shiftData?.voice_note_transcription ? 'Transcription of the Voice Note' : 'Handover Notes'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-y-auto max-h-[30vh]">
-                  {(voiceNoteTranscription || handoverNotes) ? (
-                  <div className="max-h-80 overflow-y-auto bg-gray-50 p-4 rounded-lg">
-                    <div className="text-sm leading-relaxed space-y-3">
-                      {voiceNoteTranscription && (
-                        <div className="space-y-3">
-                          {voiceNoteTranscription.split('\n\n').map((paragraph, index) => (
-                            <p key={index} className="text-gray-800">
-                              {paragraph}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                      {handoverNotes && !voiceNoteTranscription && (
-                        <div className="space-y-2">
-                          {handoverNotes.split('\n').map((line, index) => (
-                            <p key={index} className="text-gray-800">
-                              {line}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <FileText className="h-16 w-16 text-gray-300 mb-4" />
-                    <p className="text-gray-500 font-medium mb-2">
-                      No transcription or notes available
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      The previous shift didn't leave any written information
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Information Panel */}
-          {shiftData && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-              <h4 className="font-medium text-yellow-800 mb-2">Shift Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] lg:h-[90vh] p-0 gap-0 overflow-hidden">
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="p-3 sm:p-4 md:p-6 border-b bg-background">
+              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-yellow-700 font-medium">Previous Shift:</span>
-                  <p className="text-yellow-600">{shiftData.previous_shift_user || 'Unknown'}</p>
-                </div>
-                <div>
-                  <span className="text-yellow-700 font-medium">Shift End:</span>
-                  <p className="text-yellow-600">
-                    {shiftData.previous_shift_end_time 
-                      ? new Date(shiftData.previous_shift_end_time).toLocaleString('fr-FR')
-                      : 'Not specified'
+                  <h2 className="text-xl font-semibold">
+                    {isFirstScreen 
+                      ? "Voice note or Handover note from the last shift"
+                      : "Review Cards from Previous Shift"
+                    }
+                  </h2>
+                  <p className="text-sm mt-1" style={{ color: '#BBA88A' }}>
+                    {isFirstScreen
+                      ? "Information from your colleague's previous shift. Please listen or read."
+                      : "Check the details of every card. Click Next when done."
                     }
                   </p>
                 </div>
-                <div>
-                  <span className="text-yellow-700 font-medium">Status:</span>
-                  <p className="text-yellow-600">Ready for review</p>
+              </div>
+              
+              {/* Progress bar seulement pour les cartes */}
+              {!isFirstScreen && (
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    Card {currentTaskIndex} of {handoverTasks.length}
+                  </div>
+                  <div className="flex-1 bg-muted h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${(currentTaskIndex / handoverTasks.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+              {isFirstScreen ? (
+                // ÉCRAN 0 : Audio Player + Handover Notes
+                <div className="space-y-6">
+                  <div className="text-center mb-8">
+                    <p className="text-muted-foreground mb-3">
+                      {shiftData 
+                        ? `From ${shiftData.previous_shift_user || 'the previous team'} - ${shiftData.previous_shift_end_time ? new Date(shiftData.previous_shift_end_time).toLocaleDateString('fr-FR') + ' ' + new Date(shiftData.previous_shift_end_time).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) : 'Unknown date'}` 
+                        : 'No handover data available from previous shift'
+                      }
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                    {/* Audio Player - Left side */}
+                    <Card className="md:min-h-0">
+                      <CardHeader className="pb-3 md:pb-6">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FileAudio className="h-4 w-4" />
+                          Audio Player
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pb-3 md:pb-6">
+                        {shiftData?.voice_note_url ? (
+                          <div className="space-y-2 md:space-y-4">
+                            <audio 
+                              controls 
+                              className="w-full"
+                              preload="metadata"
+                            >
+                              <source src={shiftData.voice_note_url} type="audio/mpeg" />
+                              <source src={shiftData.voice_note_url} type="audio/wav" />
+                              Your browser does not support the audio element.
+                            </audio>
+                            <p className="text-xs text-muted-foreground">
+                              Left by {shiftData.previous_shift_user || 'Previous team member'}
+                              {shiftData.previous_shift_end_time && (
+                                <> • {new Date(shiftData.previous_shift_end_time).toLocaleString('fr-FR')}</>  
+                              )}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-4 md:py-8 text-center">
+                            <FileAudio className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-2 md:mb-4" />
+                            <p className="text-sm text-muted-foreground">
+                              No voice note available from the previous shift
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Handover Notes - Right side */}
+                    <Card className="md:min-h-0">
+                      <CardHeader className="pb-3 md:pb-6">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Handover Notes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pb-3 md:pb-6">
+                        {(shiftData?.voice_note_transcription || shiftData?.handover_notes) ? (
+                          <div className="max-h-32 md:max-h-64 overflow-y-auto text-sm leading-relaxed space-y-2 md:space-y-3 pr-2">
+                            {shiftData.voice_note_transcription && (
+                              <div className="space-y-2 md:space-y-3">
+                                {shiftData.voice_note_transcription.split('\n\n').map((paragraph, index) => (
+                                  <p key={index} className="text-foreground">
+                                    {paragraph}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {shiftData.handover_notes && !shiftData.voice_note_transcription && (
+                              <div className="space-y-2 md:space-y-3">
+                                {shiftData.handover_notes.split('\n').map((line, index) => (
+                                  <p key={index} className="text-foreground">
+                                    {line}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-6 md:py-12 text-center">
+                            <FileText className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-2 md:mb-4" />
+                            <p className="text-sm text-muted-foreground mb-1 md:mb-2">
+                              No transcription or handover notes available
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              The previous shift didn't leave any written information
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Bouton pour passer aux cartes - Flottant responsive */}
+                  <div className="fixed bottom-4 sm:bottom-6 md:bottom-8 right-4 sm:right-6 md:right-8 z-50">
+                    {loadingHandover ? (
+                      <Button 
+                        disabled
+                        className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg"
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading tasks...
+                      </Button>
+                    ) : handoverTasks.length === 0 ? (
+                      <Button 
+                        onClick={onContinue}
+                        className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                      >
+                        Begin Shift (No Cards to Review)
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => setCurrentTaskIndex(1)} 
+                        className="px-4 py-2 sm:px-6 sm:py-3 md:px-8 text-sm sm:text-base shadow-lg bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                      >
+                        Start Reviewing the Task Cards
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                // ÉCRANS 1+ : Navigation des cartes
+                <div className="space-y-6">
+                  <div className="max-w-2xl mx-auto">
+                    {currentTask && (
+                      <ShiftFacingCard 
+                        task={currentTask}
+                        onClick={() => handleCardClick(currentTask)}
+                        className="hover:border-blue-400 hover:shadow-lg"
+                      />
+                    )}
+                    
+                    {/* Status de lecture */}
+                    {currentTask && readTasks.has(currentTask.id) && (
+                      <div className="mt-3 flex items-center justify-center gap-2 text-green-600">
+                        <Check className="h-4 w-4" />
+                        <span className="text-sm font-medium">Task Read</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Navigation - seulement pour les cartes */}
+            {!isFirstScreen && (
+              <div className="p-3 sm:p-4 md:p-6 border-t bg-background">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentTaskIndex <= 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      onClick={() => currentTask && handleCardClick(currentTask)} 
+                      variant="outline"
+                      disabled={!currentTask}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Details
+                    </Button>
+                    
+                    {handoverTasks.length === 0 ? (
+                      <Button
+                        onClick={onContinue}
+                        className="bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                      >
+                        Begin Shift
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleValidate}
+                        className="bg-[#1E1A37] hover:bg-[#DEAE53] hover:text-[#1E1A37] text-white transition-all duration-200"
+                        disabled={!currentTask}
+                      >
+                        {currentTaskIndex === handoverTasks.length ? 'Begin Shift' : 'Next'}
+                        {currentTaskIndex < handoverTasks.length && <ChevronRight className="h-4 w-4 ml-1" />}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-between items-center pt-4 border-t">
-            <Button variant="ghost" onClick={onClose} className="text-gray-600">
-              Cancel
-            </Button>
-            <div className="flex gap-3">
-              <Button onClick={onContinue} className="bg-blue-600 hover:bg-blue-700 text-white px-6">
-                Continue to Task Allocation
-              </Button>
-            </div>
+            )}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de détails - Vue lecture seule - PARTIE 1 */}
+      <Dialog 
+        open={showTaskDetail} 
+        onOpenChange={(open) => {
+          setShowTaskDetail(open);
+          if (!open) {
+            setTaskComments([]);
+            setTaskReminders([]);
+            setTaskActivities([]);
+            setLoadingDetails(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-playfair text-xl text-palace-navy">
+              Task Details - Read Only
+            </DialogTitle>
+          </DialogHeader>
+          {currentTask && (() => {
+            const typeConfig = getTypeConfigForDetails(currentTask.type);
+            const TypeIcon = typeConfig.icon;
+            
+            return (
+            <div className="space-y-6">
+              {/* Task Header */}
+              <div className="flex items-start gap-3">
+                <div className={cn("p-3 rounded-full", typeConfig.color)}>
+                  <TypeIcon className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <Badge variant="outline" className="mb-2">
+                    {typeConfig.label}
+                  </Badge>
+                  <h3 className="text-xl font-semibold mb-2">{currentTask.title}</h3>
+                  {currentTask.priority === 'urgent' && (
+                    <Badge className="bg-red-500 text-white">
+                      Urgent
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {currentTask.description && (
+                <div>
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {currentTask.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Task Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentTask.guestName && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Client</p>
+                      <p className="text-muted-foreground">{currentTask.guestName}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.roomNumber && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Chambre</p>
+                      <p className="text-muted-foreground">{currentTask.roomNumber}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.location && !currentTask.roomNumber && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Localisation</p>
+                      <p className="text-muted-foreground">{currentTask.location}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.assignedTo && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Assigné à</p>
+                      <p className="text-muted-foreground">{currentTask.assignedTo}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {currentTask.dueDate && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Échéance</p>
+                      <p className="text-muted-foreground">
+                        {new Date(currentTask.dueDate).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {currentTask.recipient && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Destinataire</p>
+                      <p className="text-muted-foreground">{currentTask.recipient}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status */}
+              <div>
+                <h4 className="font-medium mb-2">Statut</h4>
+                <Badge variant={currentTask.status === 'completed' ? 'default' : 'secondary'}>
+                  {currentTask.status === 'pending' && 'En attente'}
+                  {currentTask.status === 'in_progress' && 'En cours'}
+                  {currentTask.status === 'completed' && 'Terminé'}
+                </Badge>
+              </div>
+
+              {/* Comments Section */}
+              <div className="border-t pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Commentaires et activité</h4>
+                </div>
+                
+                <div className="mb-4 p-3 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
+                  <p className="text-sm text-muted-foreground italic">
+                    Zone de commentaire (consultation uniquement)
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {loadingDetails ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">Chargement des commentaires...</span>
+                    </div>
+                  ) : taskComments.length > 0 ? (
+                    taskComments.map((comment: any) => (
+                      <div key={comment.id} className="flex space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-medium">
+                              {comment.profiles?.first_name?.charAt(0) || 'U'}
+                              {comment.profiles?.last_name?.charAt(0) || ''}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-foreground">
+                              {comment.profiles?.first_name} {comment.profiles?.last_name || 'Utilisateur'}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatRelativeTime(comment.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-foreground">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground">
+                        Aucun commentaire pour cette tâche
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Reminders Section */}
+              <div className="border-t pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">Reminder(s) configuré(s)</h4>
+                </div>
+                
+                {loadingDetails ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">Chargement des reminders...</span>
+                  </div>
+                ) : taskReminders.length > 0 ? (
+                  <div className="space-y-3">
+                    {taskReminders.map((reminder: any) => (
+                      <div key={reminder.id} className="bg-muted/30 rounded-lg p-4">
+                        <p className="text-foreground mb-2">
+                          {reminder.title}
+                        </p>
+                        {reminder.message && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {reminder.message}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            Configuré par {reminder.profiles?.first_name} {reminder.profiles?.last_name}
+                          </span>
+                          <span>
+                            {new Date(reminder.reminder_time).toLocaleDateString('fr-FR')}
+                          </span>
+                        </div>
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-xs">
+                            {reminder.frequency === 'once' && 'Une fois'}
+                            {reminder.frequency === 'daily' && 'Quotidien'}
+                            {reminder.frequency === 'weekly' && 'Hebdomadaire'}
+                            {reminder.frequency === 'monthly' && 'Mensuel'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Aucun reminder configuré pour cette tâche
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Activities Section */}
+              <div className="border-t pt-6">
+                <h4 className="font-medium text-foreground mb-4">Activités récentes</h4>
+                
+                {loadingDetails ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">Chargement des activités...</span>
+                  </div>
+                ) : taskActivities.length > 0 ? (
+                  <div className="space-y-3 text-sm">
+                    {taskActivities.map((activity: any) => (
+                      <div key={activity.id} className="flex items-center gap-2 text-muted-foreground">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span>
+                          {activity.profiles?.first_name} {activity.profiles?.last_name} {activity.description} – {formatRelativeTime(activity.created_at)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Aucune activité récente pour cette tâche
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowTaskDetail(false);
+                    setTaskComments([]);
+                    setTaskReminders([]);
+                    setTaskActivities([]);
+                    setLoadingDetails(false);
+                  }}
+                >
+                  Fermer
+                </Button>
+              </div>
+            </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
