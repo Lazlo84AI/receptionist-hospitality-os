@@ -8,7 +8,7 @@ import { TaskItem } from '@/types/database';
 interface BeginShiftWorkflowProps {
   isOpen: boolean;
   onClose: () => void;
-  onShiftStarted: () => void;
+  onShiftStarted: (createdCards?: TaskItem[]) => void; // ✅ Ajout paramètre
   tasks: TaskItem[];
   profiles: any[];
 }
@@ -91,7 +91,7 @@ const BeginShiftWorkflow: React.FC<BeginShiftWorkflowProps> = ({
         assignedTo: null, // Non assignée
         guestName: null,
         description: `Daily task for ${location.name}`,
-        category: 'daily_task'
+        category: 'internal_task' // ✅ CORRIGÉ : internal_task au lieu de daily_task
       };
     });
     
@@ -115,8 +115,9 @@ const BeginShiftWorkflow: React.FC<BeginShiftWorkflowProps> = ({
 
   const handleStartShift = () => {
     console.log('✅ Shift starting, completing workflow');
+    console.log('📦 Passing created cards to onShiftStarted:', workflowData.createdCards.length);
     setCurrentStep('completed');
-    onShiftStarted();
+    onShiftStarted(workflowData.createdCards); // ✅ Passer les cartes créées
     handleClose();
   };
 

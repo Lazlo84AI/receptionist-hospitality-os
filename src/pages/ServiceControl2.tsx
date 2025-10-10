@@ -31,6 +31,8 @@ import { useTasks, useProfiles, useLocations } from '@/hooks/useSupabaseData';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { sendTaskMovedEvent } from '@/lib/webhookService';
+import { useStartShift } from '@/hooks/useShiftData';
+import { getShiftHandover, linkTasksToShift } from '@/lib/shiftContinuityManager-v2';
 import {
   DndContext,
   DragEndEvent,
@@ -286,6 +288,7 @@ const ServiceControl2 = () => {
   const { tasks, loading, error, refetch } = useTasks();
   const { profiles } = useProfiles();
   const { locations } = useLocations();
+  const { startShift } = useStartShift();
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
   const [isCheckingShift, setIsCheckingShift] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
@@ -533,20 +536,134 @@ const ServiceControl2 = () => {
     }
   };
 
-  const handleShiftStarted = async () => {
-    const { sendShiftStartedEvent } = await import('@/lib/webhookService');
-    const result = await sendShiftStartedEvent({
-      timestamp: new Date().toISOString(),
-      status: 'active',
-      tasks_count: filteredTasks.length,
-    });
-
-    if (result.success) {
+  const handleShiftStarted = async (createdCards: TaskItem[] = []) => {
+    try {
+      console.log('🚀 [ServiceControl2] Starting shift...');
+      console.log('📝 [ServiceControl2] Received', createdCards.length, 'cards from workflow');
+      
+      // 1. Get current user and their service
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('service')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile?.service) {
+        throw new Error('User service not found');
+      }
+      
+      const userService = profile.service;
+      console.log(`👤 [ServiceControl2] User service: ${userService}`);
+      
+      // 2. Create shift in database
+      const shiftResult = await startShift();
+      
+      if (!shiftResult.success || !shiftResult.shift_id) {
+        throw new Error('Failed to create shift in database');
+      }
+      
+      const newShiftId = shiftResult.shift_id;
+      console.log(`✅ [ServiceControl2] Shift created: ${newShiftId}`);
+      
+      // 3. CREATE NEW CARDS from workflow in Supabase
+      let insertedCardsCount = 0;
+      if (createdCards.length > 0) {
+        try {
+          console.log(`🏭 [ServiceControl2] Creating ${createdCards.length} new cards in Supabase...`);
+          
+          const cardsToInsert = createdCards.map(card => ({
+            title: card.title,
+            description: card.description || null,
+            location: card.location || card.roomNumber || null, // ✅ location text
+            category: card.category || 'internal_task', // ✅ category obligatoire
+            priority: card.priority || 'normal',
+            status: card.status || 'pending',
+            service: userService, // ✅ Service de l'utilisateur
+            shift_id: newShiftId, // ✅ Liées au nouveau shift
+            created_by: user.id,
+            assigned_to: card.assignedTo ? [card.assignedTo] : null,
+            origin_type: 'team' // ✅ Ajout origin_type
+          }));
+          
+          console.log('📦 [ServiceControl2] Cards to insert:', cardsToInsert);
+          
+          const { data: insertedCards, error: insertError } = await supabase
+            .from('task')
+            .insert(cardsToInsert)
+            .select();
+          
+          if (insertError) {
+            console.error('❌ [ServiceControl2] Error creating cards:', insertError);
+            console.error('❌ [ServiceControl2] Error details:', JSON.stringify(insertError, null, 2));
+            // ✅ Ne pas throw - continuer avec les anciennes cartes
+            toast({
+              title: "Warning",
+              description: `Failed to create ${createdCards.length} new cards, but continuing with handover tasks`,
+              variant: "default",
+            });
+          } else {
+            insertedCardsCount = insertedCards?.length || 0;
+            console.log(`✅ [ServiceControl2] Created ${insertedCardsCount} cards in Supabase`);
+            console.log('✅ [ServiceControl2] Inserted cards:', insertedCards);
+          }
+        } catch (error) {
+          console.error('❌ [ServiceControl2] Exception creating cards:', error);
+          // ✅ Ne pas throw - continuer avec les anciennes cartes
+        }
+      }
+      
+      // 4. Get filtered tasks from last shift
+      const { tasks: transferredTasks, stats } = await getShiftHandover(userService);
+      console.log(`📦 [ServiceControl2] ${transferredTasks.length} tasks to transfer from previous shift`);
+      
+      // 5. Link old tasks to the new shift
+      if (transferredTasks.length > 0) {
+        const taskIds = transferredTasks.map(t => t.id);
+        await linkTasksToShift(taskIds, newShiftId);
+        console.log(`🔗 [ServiceControl2] Linked ${transferredTasks.length} old tasks to shift ${newShiftId}`);
+      }
+      
+      // 6. Send webhook event
+      const { sendShiftStartedEvent } = await import('@/lib/webhookService');
+      const webhookResult = await sendShiftStartedEvent({
+        shift_id: newShiftId,
+        timestamp: new Date().toISOString(),
+        status: 'active',
+        tasks_count: transferredTasks.length + insertedCardsCount,
+      });
+      
+      if (!webhookResult.success) {
+        console.warn('[ServiceControl2] Webhook failed but shift was created:', webhookResult.error);
+      }
+      
+      // 7. Update UI state
       setShiftStatus('active');
       setIsShiftStartOpen(false);
-      toast({ title: "Service Shift Started", description: "Your service shift has been marked as active", variant: "default" });
-    } else {
-      toast({ title: "Error", description: result.error || "Failed to start service shift. Please try again.", variant: "destructive" });
+      
+      // 8. Reload tasks to show all cards
+      await refetch();
+      
+      // 9. Show success message
+      const totalCards = transferredTasks.length + insertedCardsCount;
+      toast({
+        title: "Service Shift Started",
+        description: `${insertedCardsCount} new cards created, ${transferredTasks.length} tasks transferred (Total: ${totalCards} cards)`,
+        variant: "default",
+      });
+      
+      console.log('✅ [ServiceControl2] Shift start complete!');
+    } catch (error) {
+      console.error('❌ [ServiceControl2] Error starting shift:', error);
+      toast({
+        title: "Error Starting Shift",
+        description: error instanceof Error ? error.message : "Failed to start shift. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
