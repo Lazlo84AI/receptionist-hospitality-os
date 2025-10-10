@@ -119,6 +119,20 @@ export const useStartShift = () => {
         throw new Error('User not authenticated');
       }
 
+      // Récupérer le service de l'utilisateur depuis staff_directory
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff_directory')
+        .select('service')
+        .eq('id', user.id)
+        .single();
+
+      if (staffError) {
+        console.error('Error fetching user service:', staffError);
+        throw new Error('Failed to fetch user service');
+      }
+
+      const userService = staffData?.service || 'reception'; // Fallback to 'reception'
+
       // Terminer tout shift actif existant pour cet utilisateur
       const { error: updateError } = await supabase
         .from('shifts')
@@ -133,13 +147,14 @@ export const useStartShift = () => {
         console.warn('Warning updating existing shifts:', updateError);
       }
 
-      // Créer un nouveau shift
+      // Créer un nouveau shift avec le service
       const { data: newShift, error: insertError } = await supabase
         .from('shifts')
         .insert({
           user_id: user.id,
           start_time: new Date().toISOString(),
-          status: 'active'
+          status: 'active',
+          service: userService // ✅ AJOUTÉ: service
         })
         .select()
         .single();
