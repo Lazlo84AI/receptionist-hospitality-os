@@ -40,8 +40,43 @@ const QuizzModal = ({
   const [showResult, setShowResult] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const totalQuestions = questions.length;
+  // Affichage de chargement si on attend les questions de la DB
+  if (useDatabase && isLoadingQuestions) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
+          <div className="flex flex-col h-full items-center justify-center">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-champagne-gold" />
+              <h3 className="text-xl font-semibold mb-2">Chargement du quiz</h3>
+              <p className="text-muted-foreground">Récupération des questions pour "{thematic}"...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Affichage d'erreur si problème de chargement
+  if (useDatabase && questionsError) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
+          <div className="flex flex-col h-full items-center justify-center">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+              <XCircle className="h-12 w-12 mx-auto mb-4 text-red-600" />
+              <h3 className="text-xl font-semibold mb-2">Erreur de chargement</h3>
+              <p className="text-muted-foreground mb-4">Impossible de charger les questions pour "{thematic}"</p>
+              <Button onClick={onClose}>Fermer</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const currentQuestion = questionsToUse[currentQuestionIndex];
+  const totalQuestions = questionsToUse.length;
   const progressPercentage = ((currentQuestionIndex + 1) / totalQuestions) * 100;
 
   const handleAnswerSelect = (answerIndex: number) => {
@@ -81,7 +116,7 @@ const QuizzModal = ({
 
   const calculateScore = () => {
     let correct = 0;
-    questions.forEach(question => {
+    questionsToUse.forEach(question => {
       if (selectedAnswers[question.id] === question.correct_answer) {
         correct++;
       }

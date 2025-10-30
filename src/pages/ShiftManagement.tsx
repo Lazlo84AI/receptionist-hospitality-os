@@ -7,6 +7,7 @@ import { TaskFullEditView } from '@/components/modules/TaskFullEditView'; // NOU
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import { ShiftCloseModal } from '@/components/modals/ShiftCloseModal';
 import ShiftStartModal from '@/components/modals/ShiftStartModal';
+import ShiftActionSelector from '@/components/shift/ShiftActionSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -639,37 +640,11 @@ const ShiftManagement = () => {
             </p>
           </div>
 
-          {/* Shift Action Buttons */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <Button
-              onClick={() => handleShiftAction('start')}
-              disabled={shiftStatus === 'active'}
-              className="h-auto py-3 text-sm md:text-base md:h-12"
-              variant={shiftStatus === 'active' ? 'secondary' : 'default'}
-            >
-              <PlayCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="leading-tight">{shiftStatus === 'active' ? 'Active Shift' : 'Start Shift'}</span>
-            </Button>
-            
-            <Button
-              onClick={() => handleShiftAction('improve')}
-              variant="outline"
-              className="h-auto py-3 text-sm md:text-base md:h-12"
-            >
-              <Target className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="leading-tight">Work Improvement</span>
-            </Button>
-            
-            <Button
-              onClick={() => handleShiftAction('close')}
-              disabled={shiftStatus !== 'active'}
-              className="h-auto py-3 text-sm md:text-base md:h-12"
-              variant={shiftStatus === 'active' ? 'default' : 'secondary'}
-            >
-              <StopCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="leading-tight">End Shift</span>
-            </Button>
-          </div>
+          {/* Shift Action Selector - Responsive */}
+          <ShiftActionSelector 
+            shiftStatus={shiftStatus}
+            onShiftAction={handleShiftAction}
+          />
 
           {/* Kanban Board */}
           <DndContext

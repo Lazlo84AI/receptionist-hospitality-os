@@ -6,6 +6,7 @@ import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import ServiceShiftCloseModal from '@/components/modals/ServiceShiftCloseModal';
 import BeginShiftWorkflow from '@/components/modals/BeginShiftWorkflow';
+import ShiftActionSelector from '@/components/shift/ShiftActionSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,8 @@ import {
   UserCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -292,6 +295,8 @@ const ServiceControl2 = () => {
   const [shiftStatus, setShiftStatus] = useState<'not_started' | 'active' | 'closed'>('not_started');
   const [isCheckingShift, setIsCheckingShift] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isDesktopFiltersCollapsed, setIsDesktopFiltersCollapsed] = useState(false);
 
   // Check for active shift on mount
   useEffect(() => {
@@ -694,108 +699,292 @@ const ServiceControl2 = () => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <Button 
-                onClick={() => handleShiftAction('start')} 
-                disabled={shiftStatus === 'active'} 
-                className="h-12 text-base" 
-                variant={shiftStatus === 'active' ? 'secondary' : 'default'}
-                style={shiftStatus === 'active' 
-                  ? { backgroundColor: '#E0D3B4', color: '#6b7280' } 
-                  : { backgroundColor: '#1f2937', color: '#DEAE35' }
-                }
-              >
-                <PlayCircle className="h-5 w-5 mr-2" />{shiftStatus === 'active' ? 'Active Shift' : 'Begin Shift'}
-              </Button>
-              <Button onClick={() => handleShiftAction('improve')} variant="outline" className="h-12 text-base">
-                <Target className="h-5 w-5 mr-2" />Work Improvement
-              </Button>
-              <Button 
-                onClick={() => handleShiftAction('close')} 
-                disabled={shiftStatus !== 'active'} 
-                className="h-12 text-base"
-                style={shiftStatus !== 'active' ? { backgroundColor: '#E0D3B4', color: '#6b7280' } : {}}
-              >
-                <StopCircle className="h-5 w-5 mr-2" />End Shift
-              </Button>
+            <div className="mb-8">
+              {/* Version mobile : bouton + popup */}
+              <div className="flex md:hidden gap-4 items-start">
+                <div className="flex-1">
+                  <ShiftActionSelector 
+                    shiftStatus={shiftStatus} 
+                    onShiftAction={handleShiftAction} 
+                  />
+                </div>
+                <Button
+                  onClick={() => setIsFiltersOpen(true)}
+                  variant="outline"
+                  className="h-14 px-6 text-base font-medium transition-all duration-200 hover:shadow-md"
+                  style={{ 
+                    backgroundColor: '#E0D3B4', 
+                    borderColor: '#D4C5A0', 
+                    color: '#8B7355'
+                  }}
+                >
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  Filtres
+                </Button>
+              </div>
+              
+              {/* Version desktop : ShiftActionSelector normal */}
+              <div className="hidden md:block">
+                <ShiftActionSelector 
+                  shiftStatus={shiftStatus} 
+                  onShiftAction={handleShiftAction} 
+                />
+              </div>
             </div>
           )}
 
-          {/* Bande de Filtres Fixes */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">Filtres</h3>
-              {(() => {
-                const activeFiltersCount = [selectedFloor !== 'all', selectedCategory !== 'all', selectedPerson !== 'all', selectedTheme !== 'all'].filter(Boolean).length;
-                const clearAllFilters = () => {
-                  setSelectedFloor('all');
-                  setSelectedCategory('all');
-                  setSelectedPerson('all');
-                  setSelectedTheme('all');
-                };
-                return activeFiltersCount > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                      {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
-                    </Badge>
-                    <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-yellow-700 hover:text-yellow-800 hover:bg-yellow-50 h-6 px-2 text-xs">
-                      Effacer tout
-                    </Button>
+          {/* Section des filtres pour DESKTOP - Version repliable avec couleur RAL 9016 Blanc */}
+          <div className="hidden md:block mb-6">
+            <Card className="border-2 bg-white" style={{ borderColor: '#E5E7EB' }}>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2 text-gray-800">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filtres
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsDesktopFiltersCollapsed(!isDesktopFiltersCollapsed)}
+                    className="h-8 w-8 p-0 hover:bg-gray-100 transition-all duration-200 text-gray-600"
+                  >
+                    {isDesktopFiltersCollapsed ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronUp className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              {!isDesktopFiltersCollapsed && (
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Étages</label>
+                      <Select value={selectedFloor} onValueChange={setSelectedFloor}>
+                        <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", selectedFloor !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner un étage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {floorOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Catégorie</label>
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", selectedCategory !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoryOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Personne</label>
+                      <Select value={selectedPerson} onValueChange={setSelectedPerson}>
+                        <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", selectedPerson !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner une personne" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {personOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Thématiques</label>
+                      <Select value={selectedTheme} onValueChange={setSelectedTheme}>
+                        <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", selectedTheme !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner un thème" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {themeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                ) : null;
-              })()}
-            </div>
-            
-            <div className="grid grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Étages</label>
-                <Select value={selectedFloor} onValueChange={setSelectedFloor}>
-                  <SelectTrigger className={cn("w-full transition-all duration-200", selectedFloor !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                    <SelectValue placeholder="Sélectionner un étage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {floorOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Catégorie</label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className={cn("w-full transition-all duration-200", selectedCategory !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                    <SelectValue placeholder="Sélectionner une catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Personne</label>
-                <Select value={selectedPerson} onValueChange={setSelectedPerson}>
-                  <SelectTrigger className={cn("w-full transition-all duration-200", selectedPerson !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                    <SelectValue placeholder="Sélectionner une personne" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {personOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Thématiques</label>
-                <Select value={selectedTheme} onValueChange={setSelectedTheme}>
-                  <SelectTrigger className={cn("w-full transition-all duration-200", selectedTheme !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                    <SelectValue placeholder="Sélectionner un thème" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {themeOptions.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  
+                  {/* Indicateur de filtres actifs pour desktop */}
+                  {(() => {
+                    const activeFiltersCount = [selectedFloor !== 'all', selectedCategory !== 'all', selectedPerson !== 'all', selectedTheme !== 'all'].filter(Boolean).length;
+                    const clearAllFilters = () => {
+                      setSelectedFloor('all');
+                      setSelectedCategory('all');
+                      setSelectedPerson('all');
+                      setSelectedTheme('all');
+                    };
+                    return activeFiltersCount > 0 ? (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300">
+                            {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
+                          </Badge>
+                          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-gray-700 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200">
+                            Effacer tout
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </CardContent>
+              )}
+            </Card>
           </div>
+
+          {/* Volet latéral de Filtres style Trello - MOBILE UNIQUEMENT */}
+          {isFiltersOpen && (
+            <>
+              {/* Overlay backdrop */}
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                onClick={() => setIsFiltersOpen(false)}
+              />
+              
+              {/* Volet latéral */}
+              <div className={cn(
+                "fixed top-0 right-0 h-full bg-white shadow-2xl z-50 md:hidden transition-transform duration-300 ease-in-out",
+                isFiltersOpen ? "translate-x-0" : "translate-x-full"
+              )} style={{ width: "66.666%" }}>
+                
+                {/* En-tête du volet */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+                  <h3 className="text-xl font-semibold text-gray-900">Filtres</h3>
+                  <Button
+                    onClick={() => setIsFiltersOpen(false)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </Button>
+                </div>
+                
+                {/* Contenu du volet - Filtres empilés verticalement */}
+                <div className="p-6 h-full overflow-y-auto pb-20">
+                  <div className="space-y-8">
+                    
+                    {/* Filtre Étages */}
+                    <div>
+                      <label className="block text-lg font-medium text-gray-800 mb-4">Étages</label>
+                      <Select value={selectedFloor} onValueChange={setSelectedFloor}>
+                        <SelectTrigger className={cn("w-full h-12 text-base transition-all duration-200", selectedFloor !== 'all' && "ring-2 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner un étage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {floorOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value} className="text-base py-3">
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Catégorie */}
+                    <div>
+                      <label className="block text-lg font-medium text-gray-800 mb-4">Catégorie</label>
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className={cn("w-full h-12 text-base transition-all duration-200", selectedCategory !== 'all' && "ring-2 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoryOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value} className="text-base py-3">
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Personne */}
+                    <div>
+                      <label className="block text-lg font-medium text-gray-800 mb-4">Personne</label>
+                      <Select value={selectedPerson} onValueChange={setSelectedPerson}>
+                        <SelectTrigger className={cn("w-full h-12 text-base transition-all duration-200", selectedPerson !== 'all' && "ring-2 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner une personne" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {personOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value} className="text-base py-3">
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Thématiques - Dernier filtre avec direction vers le haut */}
+                    <div>
+                      <label className="block text-lg font-medium text-gray-800 mb-4">Thématiques</label>
+                      <Select value={selectedTheme} onValueChange={setSelectedTheme}>
+                        <SelectTrigger className={cn("w-full h-12 text-base transition-all duration-200", selectedTheme !== 'all' && "ring-2 ring-yellow-400 border-yellow-400")}>
+                          <SelectValue placeholder="Sélectionner un thème" />
+                        </SelectTrigger>
+                        <SelectContent side="top" align="start">
+                          {themeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value} className="text-base py-3">
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Indicateur de filtres actifs dans le volet */}
+                    {(() => {
+                      const activeFiltersCount = [selectedFloor !== 'all', selectedCategory !== 'all', selectedPerson !== 'all', selectedTheme !== 'all'].filter(Boolean).length;
+                      const clearAllFilters = () => {
+                        setSelectedFloor('all');
+                        setSelectedCategory('all');
+                        setSelectedPerson('all');
+                        setSelectedTheme('all');
+                      };
+                      return activeFiltersCount > 0 ? (
+                        <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                              <span className="text-base font-medium text-yellow-800">
+                                {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={clearAllFilters} 
+                              className="text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 text-base px-3 py-2"
+                            >
+                              Effacer tout
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()} 
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Navigation pour les 4 colonnes */}
           <div className="flex items-center justify-between mb-4">
@@ -826,18 +1015,19 @@ const ServiceControl2 = () => {
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={filteredTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible snap-x snap-mandatory md:snap-none -mx-8 px-8 md:mx-0 md:px-0">
                 {visibleColumns.map(column => (
-                  <KanbanColumn
-                    key={column.status}
-                    title={column.title}
-                    tasks={filteredTasks}
-                    status={column.status}
-                    onStatusChange={handleStatusChange}
-                    onCardClick={handleCardClick}
-                    draggedTask={draggedTask}
-                    draggedFromColumn={draggedFromColumn}
-                  />
+                  <div key={column.status} className="flex-1 min-w-[70vw] md:min-w-0 snap-center">
+                    <KanbanColumn
+                      title={column.title}
+                      tasks={filteredTasks}
+                      status={column.status}
+                      onStatusChange={handleStatusChange}
+                      onCardClick={handleCardClick}
+                      draggedTask={draggedTask}
+                      draggedFromColumn={draggedFromColumn}
+                    />
+                  </div>
                 ))}
               </div>
             </SortableContext>
