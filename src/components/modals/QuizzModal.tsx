@@ -1,72 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { X, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface QuizQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation?: string;
-}
+import { trainingQuestions, type TrainingQuestion } from '@/data/trainingQuestions';
+import { useQuizQuestions, type TrainingQuestionCompatible } from '@/hooks/useQuizQuestions';
 
 interface QuizzModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  questions?: QuizQuestion[];
+  questions?: TrainingQuestion[];
+  thematic?: string | null; // Nouvelle prop pour Supabase
+  useDatabase?: boolean; // Flag pour utiliser Supabase ou questions statiques
 }
 
-const defaultQuestions: QuizQuestion[] = [
-  {
-    id: "1",
-    question: "Que faut-il impérativement mettre dans le chafing-dish pour les oeufs brouillés ?",
-    options: [
-      "Du sel",
-      "Du lait", 
-      "De l'eau",
-      "Du fromage"
-    ],
-    correctAnswer: 2, // De l'eau
-    explanation: "Il faut toujours mettre de l'eau dans le chafing-dish pour maintenir une température douce et éviter que les œufs ne collent ou brûlent."
-  },
-  {
-    id: "2", 
-    question: "Quelle est la température idéale pour servir le café au petit-déjeuner ?",
-    options: [
-      "60-65°C",
-      "70-75°C",
-      "80-85°C", 
-      "90-95°C"
-    ],
-    correctAnswer: 2, // 80-85°C
-    explanation: "La température optimale pour servir le café est entre 80-85°C, permettant une dégustation agréable sans brûler les papilles."
-  },
-  {
-    id: "3",
-    question: "Combien de temps maximum peut-on laisser des produits laitiers à température ambiante ?",
-    options: [
-      "30 minutes",
-      "1 heure", 
-      "2 heures",
-      "4 heures"
-    ],
-    correctAnswer: 2, // 2 heures
-    explanation: "Les produits laitiers ne doivent pas rester plus de 2 heures à température ambiante pour éviter la prolifération bactérienne."
-  }
-];
+// Utilisation par défaut des questions de formation
 
 const QuizzModal = ({ 
   isOpen, 
   onClose, 
   title = "Training Assessment",
-  questions = defaultQuestions 
+  questions = trainingQuestions,
+  thematic = null,
+  useDatabase = false
 }: QuizzModalProps) => {
+  // Hook pour récupérer les questions depuis Supabase
+  const { data: dbQuestions, isLoading: isLoadingQuestions, error: questionsError } = useQuizQuestions(
+    thematic,
+    null, // document filter (optionnel)
+    useDatabase && !!thematic // enabled seulement si useDatabase = true et thematic existe
+  );
+  
+  // Déterminer quelles questions utiliser
+  const questionsToUse = useDatabase && dbQuestions ? dbQuestions : questions;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: number }>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string }>({});
   const [showResult, setShowResult] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
@@ -76,9 +46,10 @@ const QuizzModal = ({
 
   const handleAnswerSelect = (answerIndex: number) => {
     if (!showResult) {
+      const answerLetter = String.fromCharCode(65 + answerIndex); // Convert 0,1,2,3 to A,B,C,D
       setSelectedAnswers(prev => ({
         ...prev,
-        [currentQuestion.id]: answerIndex
+        [currentQuestion.id]: answerLetter
       }));
     }
   };
@@ -105,13 +76,13 @@ const QuizzModal = ({
   };
 
   const selectedAnswer = selectedAnswers[currentQuestion.id];
-  const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+  const isCorrect = selectedAnswer === currentQuestion.correct_answer;
   const hasSelectedAnswer = selectedAnswer !== undefined;
 
   const calculateScore = () => {
     let correct = 0;
     questions.forEach(question => {
-      if (selectedAnswers[question.id] === question.correctAnswer) {
+      if (selectedAnswers[question.id] === question.correct_answer) {
         correct++;
       }
     });
@@ -200,7 +171,7 @@ const QuizzModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
         <div className="flex flex-col h-full">
-          {/* Header avec progression */}
+          {/* Header avec progression et navigation */}
           <div className="bg-white border-b px-6 py-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
@@ -213,6 +184,41 @@ const QuizzModal = ({
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-5 w-5" />
               </Button>
+            </div>
+            
+            {/* Navigation en haut */}
+            <div className="flex items-center justify-between mb-4">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentQuestionIndex === 0}
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Précédent
+              </Button>
+
+              <span className="text-sm text-muted-foreground font-medium">
+                {currentQuestionIndex + 1} / {totalQuestions}
+              </span>
+
+              {!showResult ? (
+                <Button
+                  onClick={handleSubmitAnswer}
+                  disabled={!hasSelectedAnswer}
+                  className="bg-champagne-gold hover:bg-champagne-gold/80 text-palace-navy"
+                >
+                  Valider
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNext}
+                  className="flex items-center gap-2"
+                >
+                  {currentQuestionIndex < totalQuestions - 1 ? "Suivant" : "Terminer"}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             
             {/* Barre de progression */}
@@ -238,9 +244,10 @@ const QuizzModal = ({
 
                 {/* Options de réponse */}
                 <div className="space-y-4">
-                  {currentQuestion.options.map((option, index) => {
-                    const isSelected = selectedAnswer === index;
-                    const isCorrectAnswer = index === currentQuestion.correctAnswer;
+                  {currentQuestion.answers.map((option, index) => {
+                    const answerLetter = String.fromCharCode(65 + index); // A, B, C, D
+                    const isSelected = selectedAnswer === answerLetter;
+                    const isCorrectAnswer = answerLetter === currentQuestion.correct_answer;
                     
                     let buttonClass = "w-full p-6 text-left border-2 rounded-lg transition-all duration-200 hover:bg-gray-50";
                     
@@ -319,42 +326,6 @@ const QuizzModal = ({
             </div>
           </div>
 
-          {/* Footer navigation */}
-          <div className="bg-white border-t px-6 py-4">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Précédent
-              </Button>
-
-              <span className="text-sm text-muted-foreground">
-                {currentQuestionIndex + 1} / {totalQuestions}
-              </span>
-
-              {!showResult ? (
-                <Button
-                  onClick={handleSubmitAnswer}
-                  disabled={!hasSelectedAnswer}
-                  className="bg-champagne-gold hover:bg-champagne-gold/80 text-palace-navy"
-                >
-                  Valider
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  className="flex items-center gap-2"
-                >
-                  {currentQuestionIndex < totalQuestions - 1 ? "Suivant" : "Terminer"}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
