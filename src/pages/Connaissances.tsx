@@ -7,8 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Circle, BookOpen, ArrowRight, User, Star, Clock, Play, Award, Search } from 'lucide-react';
+import { CheckCircle, Circle, BookOpen, ArrowRight, User, Star, Clock, Play, Award, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
 interface Activity {
   id: string;
@@ -55,6 +58,11 @@ const Connaissances = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
+
+  // États pour la gestion mobile
+  const isMobile = useIsMobile();
+  const [isStatsCollapsed, setIsStatsCollapsed] = useState(true); // Par défaut fermé sur mobile
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   // Données de test
   const modules: Module[] = [
@@ -299,9 +307,9 @@ const Connaissances = () => {
       <Header onMenuToggle={() => setSidebarOpen(true)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
-      <div className="container mx-auto px-6 py-8">
+      <div className={cn("mx-auto py-8", isMobile ? "px-4" : "container px-6")}>
         {/* Header Section */}
-        <div className="text-left mb-8 bg-white rounded-lg p-6 shadow-sm border border-champagne-gold/20">
+        <div className={cn("text-left mb-8 bg-white rounded-lg shadow-sm border border-champagne-gold/20", isMobile ? "p-4" : "p-6")}>
           <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
             Manage Your Training
           </h1>
@@ -314,254 +322,554 @@ const Connaissances = () => {
         {!selectedModule ? (
           // Vue dashboard principale
           <>
-            {/* Barre latérale gauche - Profil & Suivi */}
-            <div className="w-1/4 space-y-6">
-              {/* Profil apprenant */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-champagne-gold/20 rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-champagne-gold" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm">Marie Dubois</CardTitle>
-                      <p className="text-xs text-muted-foreground">Receptionist</p>
-                    </div>
+            {isMobile ? (
+              // Layout mobile avec bloc supérieur repliable
+              <div className="space-y-4">
+                {/* Bloc statistiques repliable en haut */}
+                <Collapsible open={!isStatsCollapsed} onOpenChange={(open) => setIsStatsCollapsed(!open)}>
+                  <Card className="border-2 bg-[#E0D3B4] border-[#E0D3B4]">
+                    <CollapsibleTrigger className="w-full hover:bg-[#D5C8A1] transition-colors">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-palace-navy">Your Statistics</h3>
+                          <div className="flex items-center gap-2">
+                            {isStatsCollapsed ? (
+                              <ChevronDown className="h-5 w-5 text-palace-navy" />
+                            ) : (
+                              <ChevronUp className="h-5 w-5 text-palace-navy" />
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 bg-[#E0D3B4]">
+                        {/* Profil utilisateur */}
+                        <div className="flex items-center gap-3 mb-4 p-3 bg-white/50 rounded-lg">
+                          <div className="w-12 h-12 bg-[#BBA57A]/20 rounded-full flex items-center justify-center">
+                            <User className="h-6 w-6 text-[#BBA57A]" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-base text-palace-navy">Marie Dubois</h4>
+                            <p className="text-sm text-gray-600">Receptionist</p>
+                          </div>
+                        </div>
+
+                        {/* Statistiques globales */}
+                        <div className="mb-4 p-3 bg-white/50 rounded-lg">
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div>
+                              <div className="text-lg font-semibold text-palace-navy">
+                                {modules.filter(m => m.status === 'completed').length}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Completed</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-semibold text-palace-navy">
+                                {modules.filter(m => m.status === 'in_learning').length}
+                              </div>
+                              <div className="text-xs text-muted-foreground">In Progress</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-semibold text-palace-navy">
+                                {Math.round(modules.reduce((acc, m) => acc + m.progress, 0) / modules.length)}%
+                              </div>
+                              <div className="text-xs text-muted-foreground">Average</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Progression détaillée par module */}
+                        <div className="space-y-3 mb-4">
+                          <h4 className="font-medium text-sm text-gray-700">Progress by Module:</h4>
+                          {modules.map((module) => (
+                            <div key={module.id} className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  {module.title.length > 25 ? module.title.substring(0, 25) + '...' : module.title}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    className={cn(
+                                      "text-xs px-2 py-0.5",
+                                      module.status === 'completed' 
+                                        ? "bg-green-100 text-green-700" 
+                                        : module.status === 'in_learning'
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-gray-100 text-gray-700"
+                                    )}
+                                  >
+                                    {module.progress}%
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Progress value={module.progress} className="h-2" />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{module.completedActivities}/{module.totalActivities} activities</span>
+                                <span>{getCategoryLabel(module.category)?.split(' ')[0]}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Bouton d'action */}
+                        <Button size="sm" className="w-full h-9">
+                          <Award className="h-4 w-4 mr-2" />
+                          View Detailed Progress
+                        </Button>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+
+                {/* Zone centrale mobile */}
+                <div className="space-y-4">
+                  {/* Barre de recherche mobile */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input 
+                      placeholder="Rechercher formations..."
+                      className="h-12 text-base pl-10 pr-4 rounded-lg border-2 border-gray-200 focus:border-palace-navy transition-all duration-200"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+
+                  {/* Liste des formations en bandeaux mobiles */}
                   <div>
-                    <h4 className="font-medium text-sm mb-3">Progress by Module:</h4>
-                    {modules.map((module) => (
-                      <div key={module.id} className="space-y-2 mb-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-muted-foreground">{module.title}</span>
-                          <span className="text-xs font-medium">{module.progress}%</span>
-                        </div>
-                        <Progress value={module.progress} className="h-2" />
-                      </div>
-                    ))}
-                  </div>
-                  <Button className="w-full" size="sm">
-                    <Award className="h-4 w-4 mr-2" />
-                    View My Progress
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Zone centrale */}
-            <div className="flex-1 space-y-6">
-              {/* Barre de recherche */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
-                  <Input 
-                    placeholder="Rechercher dans les formations et QCM..."
-                    className="h-16 text-lg pl-14 pr-6 rounded-xl border-2 border-gray-200 focus:border-palace-navy transition-all duration-200"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Section des filtres */}
-              <div className="mb-6">
-                <Card className="border-2 bg-white">
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold">
+                        Formations
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          ({filteredTrainings.length})
+                        </span>
+                      </h2>
                       
-                      {/* Par statut */}
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Statut</label>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", statusFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                            <SelectValue placeholder="Tous les statuts" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Tous les statuts</SelectItem>
-                            <SelectItem value="in_learning">In Learning</SelectItem>
-                            <SelectItem value="qcm_to_do">QCM to do</SelectItem>
-                            <SelectItem value="to_rework">To rework</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Bouton filtres avec Sheet */}
+                      <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+                        <SheetTrigger asChild>
+                          <Button 
+                            className="h-9 px-3 bg-[#BBA57A] hover:bg-[#A89569] text-white border-[#BBA57A] hover:border-[#A89569]"
+                          >
+                            <Filter className="h-4 w-4 mr-2" />
+                            Filters
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right" className="w-80">
+                          <SheetHeader>
+                            <SheetTitle>Filters</SheetTitle>
+                          </SheetHeader>
+                          
+                          <div className="space-y-6 mt-6">
+                            {/* Filtre par statut */}
+                            <div>
+                              <label className="block text-sm font-medium mb-3 text-gray-700">Status</label>
+                              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="All statuses" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All statuses</SelectItem>
+                                  <SelectItem value="in_learning">In Learning</SelectItem>
+                                  <SelectItem value="qcm_to_do">QCM to do</SelectItem>
+                                  <SelectItem value="to_rework">To rework</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                      {/* Par catégorie */}
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Catégorie</label>
-                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                          <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", categoryFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                            <SelectValue placeholder="Toutes les catégories" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Toutes les catégories</SelectItem>
-                            <SelectItem value="guest_reception">Guest Reception</SelectItem>
-                            <SelectItem value="housekeeping">Housekeeping service</SelectItem>
-                            <SelectItem value="safety">Safety standard</SelectItem>
-                            <SelectItem value="equipment">Connaissance sur les appareils de l'hôtel</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                            {/* Filtre par catégorie */}
+                            <div>
+                              <label className="block text-sm font-medium mb-3 text-gray-700">Category</label>
+                              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="All categories" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All categories</SelectItem>
+                                  <SelectItem value="guest_reception">Guest Reception</SelectItem>
+                                  <SelectItem value="housekeeping">Housekeeping service</SelectItem>
+                                  <SelectItem value="safety">Safety standard</SelectItem>
+                                  <SelectItem value="equipment">Hotel equipment knowledge</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                      {/* Par objectif */}
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Objectif</label>
-                        <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
-                          <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", objectiveFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
-                            <SelectValue placeholder="Tous les objectifs" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Tous les objectifs</SelectItem>
-                            <SelectItem value="better_clients">Better with clients</SelectItem>
-                            <SelectItem value="better_shift">Un shift mieux réussi</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                            {/* Filtre par objectif */}
+                            <div>
+                              <label className="block text-sm font-medium mb-3 text-gray-700">Objective</label>
+                              <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="All objectives" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All objectives</SelectItem>
+                                  <SelectItem value="better_clients">Better with clients</SelectItem>
+                                  <SelectItem value="better_shift">Better shift management</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                      {/* Résultats et reset */}
-                      <div className="flex flex-col justify-end">
-                        <div className="mb-2">
-                          <span className="text-sm text-gray-600">
-                            {filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''} trouvée{filteredTrainings.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        {(statusFilter !== 'all' || categoryFilter !== 'all' || objectiveFilter !== 'all' || searchQuery !== '') && (
+                            {/* Résultats et boutons d'action */}
+                            <div className="pt-4 border-t">
+                              <div className="text-sm text-gray-600 mb-4">
+                                {filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''} found
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {(statusFilter !== 'all' || categoryFilter !== 'all' || objectiveFilter !== 'all' || searchQuery !== '') && (
+                                  <Button 
+                                    variant="outline" 
+                                    className="w-full"
+                                    onClick={() => {
+                                      setStatusFilter('all');
+                                      setCategoryFilter('all');
+                                      setObjectiveFilter('all');
+                                      setSearchQuery('');
+                                    }}
+                                  >
+                                    Reset all filters
+                                  </Button>
+                                )}
+                                
+                                <Button 
+                                  className="w-full"
+                                  onClick={() => setIsFilterSheetOpen(false)}
+                                >
+                                  Apply filters
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+                    </div>
+                    
+                    {filteredTrainings.length > 0 ? (
+                      <div className="space-y-3">
+                        {filteredTrainings.map((training) => (
+                          <Card 
+                            key={training.id} 
+                            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-palace-navy rounded-lg border border-gray-200"
+                            onClick={() => handleModuleSelect(training)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                {/* Titre et progression */}
+                                <div>
+                                  <h3 className="font-semibold text-base mb-2">{training.title}</h3>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-palace-navy transition-all duration-300"
+                                        style={{ width: `${training.progress}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-xs font-medium">{training.progress}%</span>
+                                  </div>
+                                </div>
+                                
+                                {/* Métadonnées en ligne */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {training.duration || 7}min
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <BookOpen className="h-3 w-3" />
+                                      {getCategoryLabel(training.category)?.split(' ')[0]}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={cn("text-xs px-2 py-1", getTypeBadgeClass(training.type))}>
+                                      {getTypeLabel(training.type)}
+                                    </Badge>
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="border-dashed border-2 border-gray-300">
+                        <CardContent className="p-6 text-center">
+                          <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm text-gray-600 mb-2">Aucune formation trouvée</p>
                           <Button 
                             variant="outline" 
-                            size="sm" 
+                            size="sm"
                             onClick={() => {
+                              setSearchQuery('');
                               setStatusFilter('all');
                               setCategoryFilter('all');
                               setObjectiveFilter('all');
-                              setSearchQuery('');
                             }}
-                            className="text-gray-700 hover:text-gray-800 hover:bg-gray-100"
                           >
                             Réinitialiser
                           </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Liste des formations en bandeaux ligne */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">
-                  Formations et QCM
-                  <span className="text-base font-normal text-muted-foreground ml-2">
-                    ({filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''})
-                  </span>
-                </h2>
-                
-                {filteredTrainings.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredTrainings.map((training) => (
-                      <Card 
-                        key={training.id} 
-                        className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-palace-navy"
-                        onClick={() => handleModuleSelect(training)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            
-                            {/* Informations principales - Gauche */}
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg mb-2">{training.title}</h3>
-                              <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                                
-                                {/* Thématique */}
-                                <span className="flex items-center gap-1">
-                                  <BookOpen className="h-4 w-4" />
-                                  {getCategoryLabel(training.category)}
-                                </span>
-                                
-                                {/* Temps de lecture */}
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  {training.duration || 7} min
-                                </span>
-                                
-                                {/* Progression */}
-                                <span className="flex items-center gap-2">
-                                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div 
-                                      className="h-full bg-palace-navy transition-all duration-300"
-                                      style={{ width: `${training.progress}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs font-medium">{training.progress}%</span>
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Type de formation - Centre */}
-                            <div className="mr-6">
-                              <Badge className={cn("text-sm px-3 py-1 border-2", getTypeBadgeClass(training.type))}>
-                                {getTypeLabel(training.type)}
-                              </Badge>
-                            </div>
-
-                            {/* Statut et Action - Droite */}
-                            <div className="flex items-center gap-3">
-                              {/* Badge de statut */}
-                              <Badge 
-                                className={cn(
-                                  "text-xs border-2 font-medium px-2 py-1",
-                                  training.status === 'completed' 
-                                    ? "bg-[#BBA57A] text-white border-[#BBA57A]" 
-                                    : "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"
-                                )}
-                              >
-                                {training.status === 'in_learning' && 'In Learning'}
-                                {training.status === 'qcm_to_do' && 'QCM to do'}
-                                {training.status === 'to_rework' && 'To rework'}
-                                {training.status === 'completed' && 'Completed'}
-                              </Badge>
-                              
-                              {/* Bouton d'action */}
-                              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                <ArrowRight className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
                         </CardContent>
                       </Card>
-                    ))}
+                    )}
                   </div>
-                ) : (
-                  // Message quand aucune formation ne correspond aux filtres
-                  <Card className="border-dashed border-2 border-gray-300">
-                    <CardContent className="p-8 text-center">
-                      <div className="text-gray-400 mb-4">
-                        <BookOpen className="h-12 w-12 mx-auto mb-2" />
+                </div>
+              </div>
+            ) : (
+              // Layout desktop existant
+              <>
+                {/* Barre latérale gauche - Profil & Suivi */}
+                <div className="w-1/4 space-y-6">
+                  {/* Profil apprenant */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-champagne-gold/20 rounded-full flex items-center justify-center">
+                          <User className="h-6 w-6 text-champagne-gold" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-sm">Marie Dubois</CardTitle>
+                          <p className="text-xs text-muted-foreground">Receptionist</p>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-medium text-gray-600 mb-2">
-                        Aucune formation trouvée
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Essayez d'ajuster vos filtres ou votre recherche
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setSearchQuery('');
-                          setStatusFilter('all');
-                          setCategoryFilter('all');
-                          setObjectiveFilter('all');
-                        }}
-                        className="text-sm"
-                      >
-                        Réinitialiser les filtres
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm mb-3">Progress by Module:</h4>
+                        {modules.map((module) => (
+                          <div key={module.id} className="space-y-2 mb-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-muted-foreground">{module.title}</span>
+                              <span className="text-xs font-medium">{module.progress}%</span>
+                            </div>
+                            <Progress value={module.progress} className="h-2" />
+                          </div>
+                        ))}
+                      </div>
+                      <Button className="w-full" size="sm">
+                        <Award className="h-4 w-4 mr-2" />
+                        View My Progress
                       </Button>
                     </CardContent>
                   </Card>
-                )}
-              </div>
-            </div>
+                </div>
+
+                {/* Zone centrale desktop */}
+                <div className="flex-1 space-y-6">
+                  {/* Barre de recherche */}
+                  <div className="mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+                      <Input 
+                        placeholder="Rechercher dans les formations et QCM..."
+                        className="h-16 text-lg pl-14 pr-6 rounded-xl border-2 border-gray-200 focus:border-palace-navy transition-all duration-200"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section des filtres */}
+                  <div className="mb-6">
+                    <Card className="border-2 bg-white">
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                          
+                          {/* Par statut */}
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700">Statut</label>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                              <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", statusFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                                <SelectValue placeholder="Tous les statuts" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Tous les statuts</SelectItem>
+                                <SelectItem value="in_learning">In Learning</SelectItem>
+                                <SelectItem value="qcm_to_do">QCM to do</SelectItem>
+                                <SelectItem value="to_rework">To rework</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Par catégorie */}
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700">Catégorie</label>
+                            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                              <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", categoryFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                                <SelectValue placeholder="Toutes les catégories" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Toutes les catégories</SelectItem>
+                                <SelectItem value="guest_reception">Guest Reception</SelectItem>
+                                <SelectItem value="housekeeping">Housekeeping service</SelectItem>
+                                <SelectItem value="safety">Safety standard</SelectItem>
+                                <SelectItem value="equipment">Connaissance sur les appareils de l'hôtel</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Par objectif */}
+                          <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700">Objectif</label>
+                            <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
+                              <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", objectiveFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                                <SelectValue placeholder="Tous les objectifs" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Tous les objectifs</SelectItem>
+                                <SelectItem value="better_clients">Better with clients</SelectItem>
+                                <SelectItem value="better_shift">Un shift mieux réussi</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Résultats et reset */}
+                          <div className="flex flex-col justify-end">
+                            <div className="mb-2">
+                              <span className="text-sm text-gray-600">
+                                {filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''} trouvée{filteredTrainings.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            {(statusFilter !== 'all' || categoryFilter !== 'all' || objectiveFilter !== 'all' || searchQuery !== '') && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => {
+                                  setStatusFilter('all');
+                                  setCategoryFilter('all');
+                                  setObjectiveFilter('all');
+                                  setSearchQuery('');
+                                }}
+                                className="text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                              >
+                                Réinitialiser
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Liste des formations en bandeaux ligne */}
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">
+                      Formations et QCM
+                      <span className="text-base font-normal text-muted-foreground ml-2">
+                        ({filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''})
+                      </span>
+                    </h2>
+                    
+                    {filteredTrainings.length > 0 ? (
+                      <div className="space-y-3">
+                        {filteredTrainings.map((training) => (
+                          <Card 
+                            key={training.id} 
+                            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-palace-navy"
+                            onClick={() => handleModuleSelect(training)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                
+                                {/* Informations principales - Gauche */}
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-lg mb-2">{training.title}</h3>
+                                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                                    
+                                    {/* Thématique */}
+                                    <span className="flex items-center gap-1">
+                                      <BookOpen className="h-4 w-4" />
+                                      {getCategoryLabel(training.category)}
+                                    </span>
+                                    
+                                    {/* Temps de lecture */}
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-4 w-4" />
+                                      {training.duration || 7} min
+                                    </span>
+                                    
+                                    {/* Progression */}
+                                    <span className="flex items-center gap-2">
+                                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-full bg-palace-navy transition-all duration-300"
+                                          style={{ width: `${training.progress}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs font-medium">{training.progress}%</span>
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Type de formation - Centre */}
+                                <div className="mr-6">
+                                  <Badge className={cn("text-sm px-3 py-1 border-2", getTypeBadgeClass(training.type))}>
+                                    {getTypeLabel(training.type)}
+                                  </Badge>
+                                </div>
+
+                                {/* Statut et Action - Droite */}
+                                <div className="flex items-center gap-3">
+                                  {/* Badge de statut */}
+                                  <Badge 
+                                    className={cn(
+                                      "text-xs border-2 font-medium px-2 py-1",
+                                      training.status === 'completed' 
+                                        ? "bg-[#BBA57A] text-white border-[#BBA57A]" 
+                                        : "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"
+                                    )}
+                                  >
+                                    {training.status === 'in_learning' && 'In Learning'}
+                                    {training.status === 'qcm_to_do' && 'QCM to do'}
+                                    {training.status === 'to_rework' && 'To rework'}
+                                    {training.status === 'completed' && 'Completed'}
+                                  </Badge>
+                                  
+                                  {/* Bouton d'action */}
+                                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      // Message quand aucune formation ne correspond aux filtres
+                      <Card className="border-dashed border-2 border-gray-300">
+                        <CardContent className="p-8 text-center">
+                          <div className="text-gray-400 mb-4">
+                            <BookOpen className="h-12 w-12 mx-auto mb-2" />
+                          </div>
+                          <h3 className="text-lg font-medium text-gray-600 mb-2">
+                            Aucune formation trouvée
+                          </h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Essayez d'ajuster vos filtres ou votre recherche
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setSearchQuery('');
+                              setStatusFilter('all');
+                              setCategoryFilter('all');
+                              setObjectiveFilter('all');
+                            }}
+                            className="text-sm"
+                          >
+                            Réinitialiser les filtres
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </>
         ) : (
           // Vue activité avec question
