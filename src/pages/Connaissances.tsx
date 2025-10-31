@@ -220,13 +220,13 @@ const Connaissances = () => {
     }
   };
 
-  const getTypeBadgeVariant = (type: string | undefined) => {
+  const getTypeBadgeClass = (type: string | undefined) => {
     switch (type) {
-      case 'assimilation': return 'secondary' as const;
-      case 'activation': return 'outline' as const;
-      case 'retention': return 'default' as const;
-      case 'application': return 'destructive' as const;
-      default: return 'secondary' as const;
+      case 'assimilation': return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"; // Découvrir
+      case 'activation': return "bg-[#BBA57A] text-white border-[#BBA57A]";        // Réfléchir  
+      case 'retention': return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]";    // S'entraîner
+      case 'application': return "bg-[#BBA57A] text-white border-[#BBA57A]";       // Mettre en pratique
+      default: return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]";
     }
   };
 
@@ -500,7 +500,7 @@ const Connaissances = () => {
 
                             {/* Type de formation - Centre */}
                             <div className="mr-6">
-                              <Badge variant={getTypeBadgeVariant(training.type)} className="text-sm px-3 py-1">
+                              <Badge className={cn("text-sm px-3 py-1 border-2", getTypeBadgeClass(training.type))}>
                                 {getTypeLabel(training.type)}
                               </Badge>
                             </div>
@@ -509,13 +509,11 @@ const Connaissances = () => {
                             <div className="flex items-center gap-3">
                               {/* Badge de statut */}
                               <Badge 
-                                variant={training.status === 'completed' ? 'default' : 'outline'}
                                 className={cn(
-                                  "text-xs",
-                                  training.status === 'in_learning' && "bg-blue-100 text-blue-700",
-                                  training.status === 'qcm_to_do' && "bg-orange-100 text-orange-700",
-                                  training.status === 'to_rework' && "bg-red-100 text-red-700",
-                                  training.status === 'completed' && "bg-green-100 text-green-700"
+                                  "text-xs border-2 font-medium px-2 py-1",
+                                  training.status === 'completed' 
+                                    ? "bg-[#BBA57A] text-white border-[#BBA57A]" 
+                                    : "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"
                                 )}
                               >
                                 {training.status === 'in_learning' && 'In Learning'}
