@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Circle, BookOpen, ArrowRight, User, Star, Clock, Play, Award } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CheckCircle, Circle, BookOpen, ArrowRight, User, Star, Clock, Play, Award, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Activity {
@@ -22,6 +24,11 @@ interface Module {
   completedActivities: number;
   activities: Activity[];
   illustration?: string;
+  category?: 'guest_reception' | 'housekeeping' | 'safety' | 'equipment';
+  objective?: 'better_clients' | 'better_shift';
+  duration?: number; // minutes
+  type?: 'assimilation' | 'activation' | 'retention' | 'application';
+  status?: 'in_learning' | 'qcm_to_do' | 'to_rework' | 'completed';
 }
 
 interface Question {
@@ -43,6 +50,12 @@ const Connaissances = () => {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
 
+  // Variables d'état pour la recherche et les filtres
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [objectiveFilter, setObjectiveFilter] = useState('all');
+
   // Données de test
   const modules: Module[] = [
     {
@@ -51,6 +64,11 @@ const Connaissances = () => {
       progress: 75,
       totalActivities: 4,
       completedActivities: 3,
+      category: 'guest_reception',
+      objective: 'better_clients',
+      duration: 7,
+      type: 'assimilation',
+      status: 'in_learning',
       activities: [
         { id: '1', title: 'Understanding client priorities', completed: true },
         { id: '2', title: 'Adapting language to the client', completed: true },
@@ -64,6 +82,11 @@ const Connaissances = () => {
       progress: 60,
       totalActivities: 5,
       completedActivities: 3,
+      category: 'housekeeping',
+      objective: 'better_shift',
+      duration: 12,
+      type: 'activation',
+      status: 'qcm_to_do',
       activities: [
         { id: '1', title: 'Pre-cleaning preparation', completed: true },
         { id: '2', title: 'Disinfection protocols', completed: true },
@@ -78,6 +101,11 @@ const Connaissances = () => {
       progress: 40,
       totalActivities: 5,
       completedActivities: 2,
+      category: 'guest_reception',
+      objective: 'better_clients',
+      duration: 15,
+      type: 'retention',
+      status: 'to_rework',
       activities: [
         { id: '1', title: 'Guest reception and seating', completed: true },
         { id: '2', title: 'Room service order taking', completed: true },
@@ -92,6 +120,11 @@ const Connaissances = () => {
       progress: 20,
       totalActivities: 6,
       completedActivities: 1,
+      category: 'safety',
+      objective: 'better_shift',
+      duration: 20,
+      type: 'application',
+      status: 'in_learning',
       activities: [
         { id: '1', title: 'Security rounds', completed: true },
         { id: '2', title: 'Access management', completed: false },
@@ -99,6 +132,23 @@ const Connaissances = () => {
         { id: '4', title: 'Video surveillance', completed: false },
         { id: '5', title: 'Communication with authorities', completed: false },
         { id: '6', title: 'Incident reporting', completed: false }
+      ]
+    },
+    {
+      id: '5',
+      title: 'Equipment Maintenance Basics',
+      progress: 90,
+      totalActivities: 3,
+      completedActivities: 3,
+      category: 'equipment',
+      objective: 'better_shift',
+      duration: 8,
+      type: 'assimilation',
+      status: 'completed',
+      activities: [
+        { id: '1', title: 'Coffee machine cleaning', completed: true },
+        { id: '2', title: 'Basic troubleshooting', completed: true },
+        { id: '3', title: 'Reporting issues', completed: true }
       ]
     }
   ];
@@ -158,6 +208,58 @@ const Connaissances = () => {
     setSelectedAnswers([]);
     setShowResult(false);
   };
+
+  // Fonctions utilitaires pour les badges et labels
+  const getTypeLabel = (type: string | undefined) => {
+    switch (type) {
+      case 'assimilation': return 'Découvrir';
+      case 'activation': return 'Réfléchir';
+      case 'retention': return 'S\'entraîner';
+      case 'application': return 'Mettre en pratique';
+      default: return 'Formation';
+    }
+  };
+
+  const getTypeBadgeVariant = (type: string | undefined) => {
+    switch (type) {
+      case 'assimilation': return 'secondary' as const;
+      case 'activation': return 'outline' as const;
+      case 'retention': return 'default' as const;
+      case 'application': return 'destructive' as const;
+      default: return 'secondary' as const;
+    }
+  };
+
+  const getCategoryLabel = (category: string | undefined) => {
+    switch (category) {
+      case 'guest_reception': return 'Guest Reception';
+      case 'housekeeping': return 'Housekeeping service';
+      case 'safety': return 'Safety standard';
+      case 'equipment': return 'Connaissance sur les appareils de l\'hôtel';
+      default: return 'Formation';
+    }
+  };
+
+  // Logique de filtrage avec useMemo pour les performances
+  const filteredTrainings = useMemo(() => {
+    return modules.filter(module => {
+      // Recherche textuelle
+      const matchesSearch = searchQuery === '' || 
+        module.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        getCategoryLabel(module.category).toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Filtre par statut
+      const matchesStatus = statusFilter === 'all' || module.status === statusFilter;
+      
+      // Filtre par catégorie
+      const matchesCategory = categoryFilter === 'all' || module.category === categoryFilter;
+      
+      // Filtre par objectif
+      const matchesObjective = objectiveFilter === 'all' || module.objective === objectiveFilter;
+      
+      return matchesSearch && matchesStatus && matchesCategory && matchesObjective;
+    });
+  }, [searchQuery, statusFilter, categoryFilter, objectiveFilter, modules]);
 
   const handleAnswerSelect = (optionIndex: number) => {
     const currentQuestion = questions[currentActivity];
@@ -250,118 +352,216 @@ const Connaissances = () => {
 
             {/* Zone centrale */}
             <div className="flex-1 space-y-6">
-              {/* Bandeau d'accueil */}
-              <Card className="bg-gradient-to-r from-champagne-gold/10 to-palace-navy/10">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                       <h1 className="text-2xl font-playfair font-bold text-palace-navy mb-2">
-                         👋 Welcome to the hotel team!
-                       </h1>
-                        <p className="text-muted-foreground mb-4">
-                          14/15 modules completed · 1000 points to unlock
-                        </p>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="secondary" className="bg-success-green/10 text-success-green">
-                          <Star className="h-3 w-3 mr-1" />
-                          Expert Level
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">950/1000 points</span>
-                      </div>
-                    </div>
-                    <div className="text-6xl opacity-20">🏨</div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Capsules récentes */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Modules In Progress</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {modules.slice(0, 4).map((module) => (
-                    <Card 
-                      key={module.id} 
-                      className="cursor-pointer hover:shadow-lg transition-all duration-200"
-                      onClick={() => handleModuleSelect(module)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                            <BookOpen className="h-6 w-6 text-palace-navy" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium text-sm mb-1">{module.title}</h3>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">7 min</span>
-                              <Badge 
-                                variant={module.progress === 100 ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {module.progress === 100 ? "Completed" : module.progress > 0 ? "In Progress" : "New"}
-                              </Badge>
-                            </div>
-                            <Progress value={module.progress} className="h-1" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              {/* Barre de recherche */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+                  <Input 
+                    placeholder="Rechercher dans les formations et QCM..."
+                    className="h-16 text-lg pl-14 pr-6 rounded-xl border-2 border-gray-200 focus:border-palace-navy transition-all duration-200"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </div>
 
-              {/* Sessions à venir */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-urgence-red/10 rounded-lg flex items-center justify-center">
-                        <Play className="h-6 w-6 text-urgence-red" />
+              {/* Section des filtres */}
+              <div className="mb-6">
+                <Card className="border-2 bg-white">
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      
+                      {/* Par statut */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Statut</label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", statusFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                            <SelectValue placeholder="Tous les statuts" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tous les statuts</SelectItem>
+                            <SelectItem value="in_learning">In Learning</SelectItem>
+                            <SelectItem value="qcm_to_do">QCM to do</SelectItem>
+                            <SelectItem value="to_rework">To rework</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium mb-1">Workshop: Handling an Angry Guest</h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>Starts in 6 hours</span>
-                          <Badge variant="outline" className="text-xs">
-                            Group Training
-                          </Badge>
+
+                      {/* Par catégorie */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Catégorie</label>
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                          <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", categoryFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                            <SelectValue placeholder="Toutes les catégories" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Toutes les catégories</SelectItem>
+                            <SelectItem value="guest_reception">Guest Reception</SelectItem>
+                            <SelectItem value="housekeeping">Housekeeping service</SelectItem>
+                            <SelectItem value="safety">Safety standard</SelectItem>
+                            <SelectItem value="equipment">Connaissance sur les appareils de l'hôtel</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Par objectif */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Objectif</label>
+                        <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
+                          <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", objectiveFilter !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
+                            <SelectValue placeholder="Tous les objectifs" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tous les objectifs</SelectItem>
+                            <SelectItem value="better_clients">Better with clients</SelectItem>
+                            <SelectItem value="better_shift">Un shift mieux réussi</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Résultats et reset */}
+                      <div className="flex flex-col justify-end">
+                        <div className="mb-2">
+                          <span className="text-sm text-gray-600">
+                            {filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''} trouvée{filteredTrainings.length > 1 ? 's' : ''}
+                          </span>
                         </div>
+                        {(statusFilter !== 'all' || categoryFilter !== 'all' || objectiveFilter !== 'all' || searchQuery !== '') && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setStatusFilter('all');
+                              setCategoryFilter('all');
+                              setObjectiveFilter('all');
+                              setSearchQuery('');
+                            }}
+                            className="text-gray-700 hover:text-gray-800 hover:bg-gray-100"
+                          >
+                            Réinitialiser
+                          </Button>
+                        )}
                       </div>
-                      <Button size="sm" variant="outline">
-                        Sign up
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Mes capsules */}
+              {/* Liste des formations en bandeaux ligne */}
               <div>
-                <h2 className="text-xl font-semibold mb-4">My Modules by Category</h2>
-                <div className="grid gap-4">
-                  {['Guest Reception', 'Housekeeping Service', 'Safety Standards'].map((theme, index) => (
-                    <Card key={theme}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-palace-navy/10 rounded-lg flex items-center justify-center">
-                              <BookOpen className="h-4 w-4 text-palace-navy" />
+                <h2 className="text-xl font-semibold mb-4">
+                  Formations et QCM
+                  <span className="text-base font-normal text-muted-foreground ml-2">
+                    ({filteredTrainings.length} formation{filteredTrainings.length > 1 ? 's' : ''})
+                  </span>
+                </h2>
+                
+                {filteredTrainings.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredTrainings.map((training) => (
+                      <Card 
+                        key={training.id} 
+                        className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-palace-navy"
+                        onClick={() => handleModuleSelect(training)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            
+                            {/* Informations principales - Gauche */}
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-2">{training.title}</h3>
+                              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                                
+                                {/* Thématique */}
+                                <span className="flex items-center gap-1">
+                                  <BookOpen className="h-4 w-4" />
+                                  {getCategoryLabel(training.category)}
+                                </span>
+                                
+                                {/* Temps de lecture */}
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  {training.duration || 7} min
+                                </span>
+                                
+                                {/* Progression */}
+                                <span className="flex items-center gap-2">
+                                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-palace-navy transition-all duration-300"
+                                      style={{ width: `${training.progress}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-medium">{training.progress}%</span>
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <h3 className="font-medium">{theme}</h3>
-                              <p className="text-sm text-muted-foreground">{3 + index} modules available</p>
+
+                            {/* Type de formation - Centre */}
+                            <div className="mr-6">
+                              <Badge variant={getTypeBadgeVariant(training.type)} className="text-sm px-3 py-1">
+                                {getTypeLabel(training.type)}
+                              </Badge>
+                            </div>
+
+                            {/* Statut et Action - Droite */}
+                            <div className="flex items-center gap-3">
+                              {/* Badge de statut */}
+                              <Badge 
+                                variant={training.status === 'completed' ? 'default' : 'outline'}
+                                className={cn(
+                                  "text-xs",
+                                  training.status === 'in_learning' && "bg-blue-100 text-blue-700",
+                                  training.status === 'qcm_to_do' && "bg-orange-100 text-orange-700",
+                                  training.status === 'to_rework' && "bg-red-100 text-red-700",
+                                  training.status === 'completed' && "bg-green-100 text-green-700"
+                                )}
+                              >
+                                {training.status === 'in_learning' && 'In Learning'}
+                                {training.status === 'qcm_to_do' && 'QCM to do'}
+                                {training.status === 'to_rework' && 'To rework'}
+                                {training.status === 'completed' && 'Completed'}
+                              </Badge>
+                              
+                              {/* Bouton d'action */}
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
-                          <Button size="sm" variant="ghost">
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  // Message quand aucune formation ne correspond aux filtres
+                  <Card className="border-dashed border-2 border-gray-300">
+                    <CardContent className="p-8 text-center">
+                      <div className="text-gray-400 mb-4">
+                        <BookOpen className="h-12 w-12 mx-auto mb-2" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-600 mb-2">
+                        Aucune formation trouvée
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Essayez d'ajuster vos filtres ou votre recherche
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setSearchQuery('');
+                          setStatusFilter('all');
+                          setCategoryFilter('all');
+                          setObjectiveFilter('all');
+                        }}
+                        className="text-sm"
+                      >
+                        Réinitialiser les filtres
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           </>

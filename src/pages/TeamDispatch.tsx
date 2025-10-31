@@ -7,6 +7,7 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
+import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { useTasks, useProfiles } from '@/hooks/useSupabaseData';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import {
@@ -58,6 +59,8 @@ const TeamDispatch = () => {
   const [selectedColumns, setSelectedColumns] = useState<(string | null)[]>([null, null, null, null]);
   const [isSelectingMember, setIsSelectingMember] = useState(false);
   const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null);
+  // État pour le bandeau mobile collapsible
+  const [isMobileStatsExpanded, setIsMobileStatsExpanded] = useState(false);
   
   // Hooks de données
   const { tasks, loading: tasksLoading, error: tasksError, refetch } = useTasks();
@@ -268,26 +271,26 @@ const TeamDispatch = () => {
               </p>
             </div>
             
-            {/* Navigation Controls */}
-            <div className="flex items-center space-x-2">
+            {/* Navigation Controls - Identique à Service Control */}
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={prevPage}
                 disabled={currentColumnIndex === 0}
-                className="border-hotel-yellow text-hotel-navy hotel-hover"
+                className="h-8 w-8 p-0 border-hotel-yellow text-hotel-navy hotel-hover"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="text-sm text-hotel-navy/70">
-                {Math.floor(currentColumnIndex / COLUMNS_PER_PAGE) + 1} / {maxPage + 1}
+                Colonnes {currentColumnIndex + 1}-{Math.min(currentColumnIndex + COLUMNS_PER_PAGE, totalColumns)} / {totalColumns}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={nextPage}
                 disabled={currentColumnIndex >= maxPage * COLUMNS_PER_PAGE}
-                className="border-hotel-yellow text-hotel-navy hotel-hover"
+                className="h-8 w-8 p-0 border-hotel-yellow text-hotel-navy hotel-hover"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -304,17 +307,80 @@ const TeamDispatch = () => {
           )}
 
           {/* Team Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="hotel-column">
+          
+          {/* Version Mobile : Bandeau collapsible */}
+          <div className="md:hidden mb-8">
+            {/* Bandeau compact - cliquable pour déplier */}
+            <div 
+              className="rounded-lg p-4 cursor-pointer transition-all duration-300"
+              style={{ backgroundColor: '#BBA57A' }}
+              onClick={() => setIsMobileStatsExpanded(!isMobileStatsExpanded)}
+            >
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[#1E1A37]/70">Total Tasks</p>
-                  <p className="text-2xl font-bold text-[#1E1A37]">{tasks.length}</p>
+                <div className="flex items-center gap-3">
+                  <Users className="h-6 w-6 text-white" />
+                  <div>
+                    <h3 className="text-white font-semibold">Team Dispatch Overview</h3>
+                    <p className="text-white/80 text-sm">
+                      {selectedColumns.filter(id => id !== null).length} members • {tasks.length} tasks
+                    </p>
+                  </div>
                 </div>
-                <ClipboardList className="h-8 w-8 text-[#DEAE53]" />
+                <div className="text-white">
+                  {isMobileStatsExpanded ? '↑' : '↓'}
+                </div>
               </div>
+              
+              {/* Section dépliable */}
+              {isMobileStatsExpanded && (
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/90">Team Members</span>
+                      <span className="text-white font-bold">
+                        {selectedColumns.filter(id => id !== null).length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/90">Total Tasks</span>
+                      <span className="text-white font-bold">{tasks.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/90">Pending</span>
+                      <span className="text-white font-bold">
+                        {tasks.filter(t => t.status === 'pending').length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/90">Urgent</span>
+                      <span className="text-white font-bold">
+                        {tasks.filter(t => t.priority === 'urgent').length}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Bouton Filtres dans la section dépliée */}
+                  <div className="mt-4 pt-3 border-t border-white/20">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsSelectingMember(true);
+                      }}
+                      className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                      variant="outline"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Manage Team Members
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
 
+          {/* Version Desktop : Cartes séparées (ordre reorganisé) */}
+          <div className="hidden md:grid grid-cols-4 gap-6 mb-8">
+            {/* 1. Team Members d'abord */}
             <div className="hotel-column">
               <div className="flex items-center justify-between">
                 <div>
@@ -327,6 +393,18 @@ const TeamDispatch = () => {
               </div>
             </div>
 
+            {/* 2. Total Tasks */}
+            <div className="hotel-column">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#1E1A37]/70">Total Tasks</p>
+                  <p className="text-2xl font-bold text-[#1E1A37]">{tasks.length}</p>
+                </div>
+                <ClipboardList className="h-8 w-8 text-[#DEAE53]" />
+              </div>
+            </div>
+
+            {/* 3. Pending */}
             <div className="hotel-column">
               <div className="flex items-center justify-between">
                 <div>
@@ -341,6 +419,7 @@ const TeamDispatch = () => {
               </div>
             </div>
 
+            {/* 4. Urgent */}
             <div className="hotel-column">
               <div className="flex items-center justify-between">
                 <div>
@@ -356,18 +435,18 @@ const TeamDispatch = () => {
             </div>
           </div>
 
-          {/* Team Columns */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-1">
-              {visibleColumns.map((member: any) => {
-                const memberTasks = taskAssignments[member.id] || [];
-                // Ne filtrer que pending et in_progress
-                const activeTasks = memberTasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
-                
-                const Icon = member.icon;
-                
-                return (
-                  <div key={`${member.id}-${member.columnIndex}`} className="hotel-column h-fit">
+          {/* Team Columns avec navigation horizontale mobile comme Service Control */}
+          <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible snap-x snap-mandatory md:snap-none -mx-8 px-8 md:mx-0 md:px-0">
+            {visibleColumns.map((member: any) => {
+              const memberTasks = taskAssignments[member.id] || [];
+              // Ne filtrer que pending et in_progress
+              const activeTasks = memberTasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
+              
+              const Icon = member.icon;
+              
+              return (
+                <div key={`${member.id}-${member.columnIndex}`} className="flex-1 min-w-[70vw] md:min-w-0 snap-center">
+                  <div className="hotel-column h-fit">
                     {/* Column Header avec boutons */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-3 flex-1">
@@ -474,18 +553,20 @@ const TeamDispatch = () => {
                       </div>
                     </ScrollArea>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
             
-            {/* Bouton Ajouter Colonne */}
-            <Button
-              variant="outline"
-              onClick={handleAddColumn}
-              className="h-fit border-[#DEAE53] text-[#1E1A37] hover:bg-[#DEAE53]/20 self-start"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+            {/* Bouton + pour ajouter une colonne - à droite de la dernière colonne */}
+            <div className="flex-shrink-0 flex items-start">
+              <Button
+                variant="outline"
+                onClick={handleAddColumn}
+                className="h-fit p-3 border-[#DEAE53] text-[#1E1A37] hover:bg-[#DEAE53]/20"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </main>
@@ -568,6 +649,9 @@ const TeamDispatch = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      
+      {/* Bouton flottant de création de tâche */}
+      <VoiceCommandButton />
     </div>
   );
 };

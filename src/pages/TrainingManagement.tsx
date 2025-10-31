@@ -7,6 +7,7 @@ import TrainingTaskCreationModal from '@/components/modals/TrainingTaskCreationM
 import PdfViewerModal from '@/components/modals/PdfViewerModal';
 import QuizzModal from '@/components/modals/QuizzModal';
 import { CardFaceModal } from '@/components/shared/CardFaceModal';
+import TrainingActionSelector from '@/components/training/TrainingActionSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -168,7 +169,7 @@ const KanbanColumn = ({
   });
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-w-[70vw] md:min-w-0 snap-center">
       <div className="bg-muted/50 rounded-lg p-4 h-full min-h-[600px]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-lg">{title}</h3>
@@ -249,6 +250,56 @@ const TrainingManagement = () => {
       },
     })
   );
+
+  // Auto-scroll during drag - SNAP to next column (identique à Shift Management)
+  useEffect(() => {
+    if (!draggedTask) return;
+
+    let scrollTimeout: NodeJS.Timeout;
+    let lastScrollTime = 0;
+    const scrollCooldown = 800; // 800ms entre chaque snap
+
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      const now = Date.now();
+      if (now - lastScrollTime < scrollCooldown) return; // Cooldown actif
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const viewportWidth = window.innerWidth;
+      const edgeZone = 80; // Zone de 80px sur les bords
+
+      const kanbanContainer = document.querySelector('.flex.md\\:grid') as HTMLElement;
+      if (!kanbanContainer) return;
+
+      const currentScroll = kanbanContainer.scrollLeft;
+      const columnWidth = viewportWidth * 0.7; // 70vw comme défini
+
+      // Bord droit - snap vers la colonne suivante
+      if (clientX > viewportWidth - edgeZone) {
+        const nextColumnScroll = Math.ceil(currentScroll / columnWidth) * columnWidth;
+        if (nextColumnScroll > currentScroll) {
+          kanbanContainer.scrollTo({ left: nextColumnScroll, behavior: 'smooth' });
+          lastScrollTime = now;
+        }
+      }
+      // Bord gauche - snap vers la colonne précédente
+      else if (clientX < edgeZone) {
+        const prevColumnScroll = Math.floor(currentScroll / columnWidth) * columnWidth - columnWidth;
+        if (prevColumnScroll >= 0 && prevColumnScroll < currentScroll) {
+          kanbanContainer.scrollTo({ left: Math.max(0, prevColumnScroll), behavior: 'smooth' });
+          lastScrollTime = now;
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleDragMove, { passive: true });
+    document.addEventListener('touchmove', handleDragMove, { passive: true });
+
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('touchmove', handleDragMove);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [draggedTask]);
 
   const handleCardClick = (task: TaskItem) => {
     setSelectedTask(task);
@@ -459,75 +510,14 @@ const TrainingManagement = () => {
             </p>
           </div>
 
-          {/* Training Action Buttons */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <Button
-              onClick={handleLearnANewKnowledge}
-              className="h-12 text-base text-white transition-all duration-200"
-              style={{ 
-                backgroundColor: '#1E1A37',  /* WARM RAL Pantone 5255C */
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#DEAE35'; /* Yellow hover */
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#1E1A37'; /* Back to WARM */
-              }}
-            >
-              <Play className="h-5 w-5 mr-2" />
-              Start Training
-            </Button>
-            
-            <Button
-              onClick={handleMyProgress}
-              className="h-12 text-base text-gray-800 transition-all duration-200"
-              style={{ 
-                backgroundColor: '#E0D3B4',  /* Sand RAL Pantone 7500C */
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#DEAE35'; /* Yellow hover */
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#E0D3B4'; /* Back to Sand */
-              }}
-            >
-              <Target className="h-5 w-5 mr-2" />
-              My Progress
-            </Button>
-            
-            <Button
-              onClick={handleMakeYourQuizz}
-              className="h-12 text-base text-white transition-all duration-200"
-              style={{ 
-                backgroundColor: '#BBA57A',  /* Gold RAL Pantone 4006C */
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#DEAE35'; /* Yellow hover */
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#BBA57A'; /* Back to Gold */
-              }}
-            >
-              <Award className="h-5 w-5 mr-2" />
-              Complete Quizz
-            </Button>
-          </div>
+          {/* Training Action Selector - Responsive */}
+          <TrainingActionSelector
+            onStartTraining={handleLearnANewKnowledge}
+            onMyProgress={handleMyProgress}
+            onCompleteQuizz={handleMakeYourQuizz}
+          />
 
-          {/* Training Tasks Counter */}
-          <div className="mb-6">
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="text-sm">
-                <BookOpen className="h-4 w-4 mr-1" />
-                {trainingTasks.length} Training Tasks
-              </Badge>
-              <Badge variant="outline" className="text-sm">
-                <Trophy className="h-4 w-4 mr-1" />
-                {trainingTasks.filter(t => t.status === 'completed').length} Completed
-              </Badge>
-            </div>
-          </div>
-
-          {/* Kanban Board */}
+          {/* Kanban Board avec navigation horizontale mobile */}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -535,7 +525,7 @@ const TrainingManagement = () => {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={trainingTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible snap-x snap-mandatory md:snap-none -mx-8 px-8 md:mx-0 md:px-0">
                 <KanbanColumn
                   title="To Process"
                   tasks={trainingTasks}
