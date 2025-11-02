@@ -394,7 +394,7 @@ const Connaissances = () => {
       <Header onMenuToggle={() => setSidebarOpen(true)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
-      <div className={cn("mx-auto py-8", isMobile ? "px-4" : "container px-6")}>
+      <div className={cn("mx-auto py-8", isMobile ? "px-4 max-w-full" : "container px-6")}>
         {/* Header Section */}
         <div className={cn("text-left mb-8 bg-white rounded-lg shadow-sm border border-champagne-gold/20", isMobile ? "p-4" : "p-6")}>
           <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
@@ -405,13 +405,13 @@ const Connaissances = () => {
           </p>
         </div>
         
-        <div className="flex gap-6">
+        <div className={isMobile ? "w-full" : "flex gap-6"}>
         {!selectedModule ? (
           // Vue dashboard principale
           <>
             {isMobile ? (
               // Layout mobile avec bloc supérieur repliable
-              <div className="space-y-4">
+              <div className="space-y-4 w-full max-w-full">
                 {/* Bloc statistiques repliable en haut */}
                 <Collapsible open={!isStatsCollapsed} onOpenChange={(open) => setIsStatsCollapsed(!open)}>
                   <Card className="border-2 bg-[#E0D3B4] border-[#E0D3B4]">
@@ -510,7 +510,7 @@ const Connaissances = () => {
                 </Collapsible>
 
                 {/* Zone centrale mobile */}
-                <div className="space-y-4">
+                <div className="space-y-4 w-full">
                   {/* Barre de recherche mobile */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -631,11 +631,11 @@ const Connaissances = () => {
                     </div>
                     
                     {filteredTrainings.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-3 w-full">
                         {filteredTrainings.map((training) => (
                           <Card 
                             key={training.id} 
-                            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-palace-navy rounded-lg border border-gray-200"
+                            className="w-full hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy rounded-lg border border-gray-200"
                             onClick={() => handleModuleSelect(training)}
                           >
                             <CardContent className="p-4">
@@ -851,7 +851,7 @@ const Connaissances = () => {
                         {filteredTrainings.map((training) => (
                           <Card 
                             key={training.id} 
-                            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-palace-navy"
+                            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy"
                             onClick={() => handleModuleSelect(training)}
                           >
                             <CardContent className="p-4">
