@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
-import { VoiceCommandButton } from '@/components/VoiceCommandButton';
+import { UploadTraining } from '@/components/UploadTraining';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
 import TrainingTaskCreationModal from '@/components/modals/TrainingTaskCreationModal';
 import PdfViewerModal from '@/components/modals/PdfViewerModal';
@@ -615,8 +615,8 @@ const TrainingManagement = () => {
         title="Training Assessment"
       />
       
-      {/* Floating Voice Command Button */}
-      <VoiceCommandButton />
+      {/* Floating Upload Training Button */}
+      <UploadTraining />
     </div>
   );
 };

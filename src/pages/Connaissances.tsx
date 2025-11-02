@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
+import { UploadTraining } from '@/components/UploadTraining';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1038,6 +1039,9 @@ const Connaissances = () => {
         )}
         </div>
       </div>
+      
+      {/* Floating Upload Training Button */}
+      <UploadTraining />
     </div>
   );
 };
