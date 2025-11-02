@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { useKnowledgeFormations, KnowledgeFormation } from '@/hooks/useKnowledgeFormations';
 
 interface Activity {
   id: string;
@@ -54,6 +55,9 @@ const Connaissances = () => {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
 
+  // Récupération des vraies données depuis Supabase
+  const { data: knowledgeFormations, isLoading, error } = useKnowledgeFormations();
+
   // Variables d'état pour la recherche et les filtres
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -65,8 +69,90 @@ const Connaissances = () => {
   const [isStatsCollapsed, setIsStatsCollapsed] = useState(true); // Par défaut fermé sur mobile
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
-  // Données de test
-  const modules: Module[] = [
+  // Transformation des données knowledge_queries en format Module
+  const transformKnowledgeToModule = (formation: KnowledgeFormation): Module => {
+    // Détermination de l'étape de formation
+    const getFormationStep = (formation: KnowledgeFormation) => {
+      const step = formation.formation_steps.toLowerCase();
+      
+      if (step.includes('qcm généré par ia') || step.includes('qcm genere par ia')) {
+        return 3; // QCM d'évaluation
+      } else if (step.includes('session d\'entraînement générée par ia') || step.includes('session d\'entrainement generee par ia')) {
+        return 2; // Session d'entraînement
+      } else if (step.includes('mise en pratique générée par ia') || step.includes('mise en pratique generee par ia')) {
+        return 4; // Mise en pratique
+      } else if (step.includes('document original')) {
+        return 1; // Formation (document original)
+      } else {
+        return 1; // Par défaut = document original
+      }
+    };
+    
+    const step = getFormationStep(formation);
+    
+    // Génération d'activités basées sur l'étape
+    const getActivitiesForStep = (step: number, kanbanStatus: string): Activity[] => {
+      switch(step) {
+        case 1: // Formation
+          return [
+            { id: '1', title: 'Read document', completed: kanbanStatus !== 'to_process' },
+            { id: '2', title: 'Review key concepts', completed: kanbanStatus === 'completed' },
+            { id: '3', title: 'Take notes', completed: kanbanStatus === 'completed' }
+          ];
+        case 2: // Session d'entraînement
+          return [
+            { id: '1', title: 'Training exercises', completed: kanbanStatus !== 'to_process' },
+            { id: '2', title: 'Practice scenarios', completed: kanbanStatus === 'completed' }
+          ];
+        case 3: // QCM d'évaluation
+          return [
+            { id: '1', title: 'Take assessment', completed: kanbanStatus !== 'to_process' },
+            { id: '2', title: 'Review results', completed: kanbanStatus === 'completed' }
+          ];
+        case 4: // Mise en pratique
+          return [
+            { id: '1', title: 'Practical application', completed: kanbanStatus !== 'to_process' },
+            { id: '2', title: 'Real-world practice', completed: kanbanStatus === 'completed' }
+          ];
+        default:
+          return [{ id: '1', title: 'Complete', completed: kanbanStatus === 'completed' }];
+      }
+    };
+    
+    const activities = getActivitiesForStep(step, formation.kanban_status);
+    const completedCount = activities.filter(a => a.completed).length;
+    const progress = Math.round((completedCount / activities.length) * 100);
+    
+    // Mapping des étapes vers les types d'affichage
+    const getTypeFromStep = (step: number) => {
+      switch(step) {
+        case 1: return 'assimilation'; // Formation
+        case 2: return 'activation';   // Session d'entraînement
+        case 3: return 'retention';    // QCM d'évaluation
+        case 4: return 'application';  // Mise en pratique
+        default: return 'assimilation';
+      }
+    };
+    
+    return {
+      id: formation.id,
+      title: formation.document_title,
+      progress: progress,
+      totalActivities: activities.length,
+      completedActivities: completedCount,
+      activities: activities,
+      category: 'guest_reception', // Par défaut
+      objective: 'better_clients',
+      duration: 10, // Durée par défaut
+      type: getTypeFromStep(step),
+      status: formation.kanban_status === 'completed' ? 'completed' :
+               formation.kanban_status === 'in_progress' ? 'in_learning' : 'in_learning'
+    };
+  };
+
+  // Conversion des formations en modules
+  const modules: Module[] = knowledgeFormations ? knowledgeFormations.map(transformKnowledgeToModule) : [
+    // Données de fallback si pas de données réelles
     {
       id: '1',
       title: 'Adapting Your Behavior to Guest Situations',
@@ -221,10 +307,10 @@ const Connaissances = () => {
   // Fonctions utilitaires pour les badges et labels
   const getTypeLabel = (type: string | undefined) => {
     switch (type) {
-      case 'assimilation': return 'Découvrir';
-      case 'activation': return 'Réfléchir';
-      case 'retention': return 'S\'entraîner';
-      case 'application': return 'Mettre en pratique';
+      case 'assimilation': return 'Formation';
+      case 'activation': return 'Entraînement';
+      case 'retention': return 'QCM Évaluation';
+      case 'application': return 'Mise en pratique';
       default: return 'Formation';
     }
   };
@@ -471,9 +557,7 @@ const Connaissances = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="all">All statuses</SelectItem>
-                                  <SelectItem value="in_learning">In Learning</SelectItem>
-                                  <SelectItem value="qcm_to_do">QCM to do</SelectItem>
-                                  <SelectItem value="to_rework">To rework</SelectItem>
+                                  <SelectItem value="in_learning">In Progress</SelectItem>
                                   <SelectItem value="completed">Completed</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -687,9 +771,7 @@ const Connaissances = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Tous les statuts</SelectItem>
-                                <SelectItem value="in_learning">In Learning</SelectItem>
-                                <SelectItem value="qcm_to_do">QCM to do</SelectItem>
-                                <SelectItem value="to_rework">To rework</SelectItem>
+                                <SelectItem value="in_learning">In Progress</SelectItem>
                                 <SelectItem value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
@@ -823,9 +905,7 @@ const Connaissances = () => {
                                         : "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"
                                     )}
                                   >
-                                    {training.status === 'in_learning' && 'In Learning'}
-                                    {training.status === 'qcm_to_do' && 'QCM to do'}
-                                    {training.status === 'to_rework' && 'To rework'}
+                                    {training.status === 'in_learning' && 'In Progress'}
                                     {training.status === 'completed' && 'Completed'}
                                   </Badge>
                                   
