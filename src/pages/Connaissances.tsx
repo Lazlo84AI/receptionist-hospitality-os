@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useKnowledgeFormations, KnowledgeFormation } from '@/hooks/useKnowledgeFormations';
+import { DocumentViewerModal } from '@/components/modals/DocumentViewerModal';
 
 interface Activity {
   id: string;
@@ -68,6 +69,10 @@ const Connaissances = () => {
   const isMobile = useIsMobile();
   const [isStatsCollapsed, setIsStatsCollapsed] = useState(true); // Par défaut fermé sur mobile
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
+  // États pour le modal de visualisation des documents
+  const [selectedDocument, setSelectedDocument] = useState<KnowledgeFormation | null>(null);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
 
   // Transformation des données knowledge_queries en format Module
   const transformKnowledgeToModule = (formation: KnowledgeFormation): Module => {
@@ -304,6 +309,17 @@ const Connaissances = () => {
     setShowResult(false);
   };
 
+  // Fonctions pour gérer le modal de visualisation
+  const handleDocumentView = (document: KnowledgeFormation) => {
+    setSelectedDocument(document);
+    setIsDocumentModalOpen(true);
+  };
+
+  const handleCloseDocumentModal = () => {
+    setIsDocumentModalOpen(false);
+    setSelectedDocument(null);
+  };
+
   // Fonctions utilitaires pour les badges et labels
   const getTypeLabel = (type: string | undefined) => {
     switch (type) {
@@ -492,7 +508,6 @@ const Connaissances = () => {
                               </div>
                               <Progress value={module.progress} className="h-2" />
                               <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>{module.completedActivities}/{module.totalActivities} activities</span>
                                 <span>{getCategoryLabel(module.category)?.split(' ')[0]}</span>
                               </div>
                             </div>
@@ -632,12 +647,16 @@ const Connaissances = () => {
                     
                     {filteredTrainings.length > 0 ? (
                       <div className="space-y-3 w-full">
-                        {filteredTrainings.map((training) => (
-                          <Card 
-                            key={training.id} 
-                            className="w-full hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy rounded-lg border border-gray-200"
-                            onClick={() => handleModuleSelect(training)}
-                          >
+                        {filteredTrainings.map((training) => {
+                          // Trouver la formation originale correspondante
+                          const originalDocument = knowledgeFormations?.find(f => f.id === training.id);
+                          
+                          return (
+                            <Card 
+                              key={training.id} 
+                              className="w-full hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy rounded-lg border border-gray-200"
+                              onClick={() => originalDocument ? handleDocumentView(originalDocument) : handleModuleSelect(training)}
+                            >
                             <CardContent className="p-4">
                               <div className="space-y-3">
                                 {/* Titre et progression */}
@@ -677,7 +696,8 @@ const Connaissances = () => {
                               </div>
                             </CardContent>
                           </Card>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <Card className="border-dashed border-2 border-gray-300">
@@ -848,12 +868,16 @@ const Connaissances = () => {
                     
                     {filteredTrainings.length > 0 ? (
                       <div className="space-y-3">
-                        {filteredTrainings.map((training) => (
-                          <Card 
-                            key={training.id} 
-                            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy"
-                            onClick={() => handleModuleSelect(training)}
-                          >
+                        {filteredTrainings.map((training) => {
+                          // Trouver la formation originale correspondante
+                          const originalDocument = knowledgeFormations?.find(f => f.id === training.id);
+                          
+                          return (
+                            <Card 
+                              key={training.id} 
+                              className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy"
+                              onClick={() => originalDocument ? handleDocumentView(originalDocument) : handleModuleSelect(training)}
+                            >
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between">
                                 
@@ -917,7 +941,8 @@ const Connaissances = () => {
                               </div>
                             </CardContent>
                           </Card>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       // Message quand aucune formation ne correspond aux filtres
@@ -1122,6 +1147,13 @@ const Connaissances = () => {
       
       {/* Floating Upload Training Button */}
       <UploadTraining />
+
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={isDocumentModalOpen}
+        onClose={handleCloseDocumentModal}
+        document={selectedDocument}
+      />
     </div>
   );
 };
