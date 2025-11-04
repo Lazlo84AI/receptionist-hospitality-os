@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { UploadTraining } from '@/components/UploadTraining';
-import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
+import { DocumentViewerModal } from '@/components/modals/DocumentViewerModal';
 import TrainingTaskCreationModal from '@/components/modals/TrainingTaskCreationModal';
 import PdfViewerModal from '@/components/modals/PdfViewerModal';
 import QuizzModal from '@/components/modals/QuizzModal';
@@ -45,7 +45,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { TaskItem } from '@/types/database';
+import { KnowledgeQuery } from '@/hooks/useKnowledgeQueries';
 
 const getTypeConfig = (formation_steps: string) => {
   switch (formation_steps) {
@@ -91,8 +91,8 @@ const SortableCardFace = ({
   task, 
   onCardClick 
 }: { 
-  task: TaskItem; 
-  onCardClick: (task: TaskItem) => void;
+  task: KnowledgeQuery; 
+  onCardClick: (task: KnowledgeQuery) => void;
 }) => {
   const {
     attributes,
@@ -153,11 +153,11 @@ const KanbanColumn = ({
   draggedFromColumn
 }: { 
   title: string; 
-  tasks: TaskItem[]; 
+  tasks: KnowledgeQuery[]; 
   status: string;
   onStatusChange: (taskId: string, newStatus: string) => void;
-  onCardClick: (task: TaskItem) => void;
-  draggedTask: TaskItem | null;
+  onCardClick: (task: KnowledgeQuery) => void;
+  draggedTask: KnowledgeQuery | null;
   draggedFromColumn: string | null;
 }) => {
   const filteredTasks = tasks.filter(task => {
@@ -167,7 +167,10 @@ const KanbanColumn = ({
     return mappedStatus === status;
   });
   const isDraggedFromThisColumn = draggedFromColumn === status;
-  const isTargetColumn = draggedTask && draggedTask.status !== status;
+  const mappedDraggedStatus = draggedTask ? 
+    (draggedTask.kanban_status === 'to_process' ? 'pending' :
+     draggedTask.kanban_status === 'in_progress' ? 'in_progress' : 'completed') : null;
+  const isTargetColumn = draggedTask && mappedDraggedStatus !== status;
 
   const { setNodeRef, isOver } = useDroppable({
     id: `column-${status}`,
@@ -239,9 +242,9 @@ const TrainingManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: knowledgeQueries, isLoading: loading, error, refetch } = useKnowledgeQueries();
   const trainingTasks = knowledgeQueries || [];
-  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
-  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
-  const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
+  const [selectedTask, setSelectedTask] = useState<KnowledgeQuery | null>(null);
+  const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
+  const [draggedTask, setDraggedTask] = useState<KnowledgeQuery | null>(null);
   const [draggedFromColumn, setDraggedFromColumn] = useState<string | null>(null);
   const [isTrainingCreationOpen, setIsTrainingCreationOpen] = useState(false);
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
@@ -307,9 +310,16 @@ const TrainingManagement = () => {
     };
   }, [draggedTask]);
 
-  const handleCardClick = (task: TaskItem) => {
+  const handleCardClick = (task: KnowledgeQuery) => {
     setSelectedTask(task);
-    setIsTaskDetailOpen(true);
+    
+    if (task.formation_steps === 'qcm') {
+      // Ouvrir QuizzModal avec les données depuis training_questions
+      setIsQuizzOpen(true);
+    } else {
+      // Ouvrir DocumentViewerModal (modal de la page connaissances)
+      setIsDocumentViewerOpen(true);
+    }
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -317,7 +327,9 @@ const TrainingManagement = () => {
     const task = trainingTasks.find(t => t.id === active.id);
     if (task) {
       setDraggedTask(task);
-      setDraggedFromColumn(task.status);
+      const mappedStatus = task.kanban_status === 'to_process' ? 'pending' :
+                           task.kanban_status === 'in_progress' ? 'in_progress' : 'completed';
+      setDraggedFromColumn(mappedStatus);
     }
   };
 
@@ -338,15 +350,19 @@ const TrainingManagement = () => {
     let targetPosition: number = -1;
 
     if (overId.startsWith('column-')) {
-      newStatus = overId.replace('column-', '');
-      const columnTasks = trainingTasks.filter(t => t.status === newStatus);
+      // Map column status to kanban_status
+      const columnStatus = overId.replace('column-', '');
+      const kanbanStatus = columnStatus === 'pending' ? 'to_process' :
+                          columnStatus === 'in_progress' ? 'in_progress' : 'completed';
+      newStatus = kanbanStatus;
+      const columnTasks = trainingTasks.filter(t => t.kanban_status === kanbanStatus);
       targetPosition = columnTasks.length;
     } else {
       const overTask = trainingTasks.find(t => t.id === overId);
       if (overTask) {
-        newStatus = overTask.status;
+        newStatus = overTask.kanban_status;
         const columnTasks = trainingTasks
-          .filter(t => t.status === newStatus)
+          .filter(t => t.kanban_status === newStatus)
           .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
         targetPosition = columnTasks.findIndex(t => t.id === overId);
       } else {
@@ -354,8 +370,8 @@ const TrainingManagement = () => {
       }
     }
 
-    if (activeTask.status === newStatus) {
-      const activeColumnTasks = trainingTasks.filter(t => t.status === activeTask.status);
+    if (activeTask.kanban_status === newStatus) {
+      const activeColumnTasks = trainingTasks.filter(t => t.kanban_status === activeTask.kanban_status);
       const currentPosition = activeColumnTasks.findIndex(t => t.id === activeId);
       if (targetPosition === currentPosition) {
         return;
@@ -364,7 +380,7 @@ const TrainingManagement = () => {
 
     try {
       const columnTasks = trainingTasks
-        .filter(t => t.status === newStatus && t.id !== activeId)
+        .filter(t => t.kanban_status === newStatus && t.id !== activeId)
         .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
       
       const newTaskArray = [...columnTasks];
@@ -376,14 +392,11 @@ const TrainingManagement = () => {
         newTimestamp: new Date(baseTime + (index * 1000)).toISOString()
       }));
       
-      if (activeTask.status !== newStatus) {
-        const { data: { user } } = await supabase.auth.getUser();
-        
+      if (activeTask.kanban_status !== newStatus) {
         const statusUpdate = await supabase
-          .from('task')
+          .from('knowledge_queries')
           .update({ 
-            status: newStatus,
-            updated_by: user?.id
+            kanban_status: newStatus
           })
           .eq('id', activeId);
         
@@ -394,7 +407,7 @@ const TrainingManagement = () => {
       
       for (const update of updates) {
         const positionUpdate = await supabase
-          .from('task')
+          .from('knowledge_queries')
           .update({ updated_at: update.newTimestamp })
           .eq('id', update.id);
         
@@ -405,7 +418,29 @@ const TrainingManagement = () => {
 
       await refetch();
 
-      sendTaskMovedEvent(activeId, activeTask.status, newStatus, activeTask).then(result => {
+      // 🎯 RÈGLES AUTOMATIQUES DU KANBAN
+      // Détecter les transitions spécifiques et ouvrir automatiquement les cartes
+      if (activeTask.kanban_status === 'to_process' && newStatus === 'in_progress') {
+        // Transition To Process → In Progress : Ouvrir pour complétion
+        console.log('🚀 Auto-opening card for completion (To Process → In Progress)');
+        setSelectedTask(activeTask);
+        if (activeTask.formation_steps === 'qcm') {
+          setIsQuizzOpen(true);
+        } else {
+          setIsDocumentViewerOpen(true);
+        }
+      } else if (activeTask.kanban_status === 'in_progress' && newStatus === 'completed') {
+        // Transition In Progress → Completed : Ouvrir pour validation finale
+        console.log('🏁 Auto-opening card for final validation (In Progress → Completed)');
+        setSelectedTask(activeTask);
+        if (activeTask.formation_steps === 'qcm') {
+          setIsQuizzOpen(true);
+        } else {
+          setIsDocumentViewerOpen(true);
+        }
+      }
+
+      sendTaskMovedEvent(activeId, activeTask.kanban_status, newStatus, activeTask).then(result => {
         if (!result.success) {
           console.warn('Webhook failed but task was updated successfully:', result.error);
         }
@@ -435,7 +470,7 @@ const TrainingManagement = () => {
       const task = trainingTasks.find(t => t.id === taskId);
       if (!task) return;
       
-      const oldStatus = task.status;
+      const oldStatus = task.kanban_status;
 
       const { sendTaskStatusChangedEvent } = await import('@/lib/webhookService');
       const result = await sendTaskStatusChangedEvent(taskId, oldStatus, newStatus, task);
@@ -579,17 +614,22 @@ const TrainingManagement = () => {
         </div>
       </main>
       
-      {/* Training Task Detail Modal */}
-      <EnhancedTaskDetailModal
-        task={selectedTask}
-        isOpen={isTaskDetailOpen}
+      {/* Document Viewer Modal for Formation Tasks */}
+      <DocumentViewerModal
+        isOpen={isDocumentViewerOpen}
         onClose={() => {
-          setIsTaskDetailOpen(false);
+          setIsDocumentViewerOpen(false);
           setSelectedTask(null);
         }}
-        onUpdateTask={(updatedTask) => {
-          refetch();
-        }}
+        document={selectedTask ? {
+          id: selectedTask.id,
+          document_title: selectedTask.document_title,
+          document_name: selectedTask.document_name,
+          document_url: selectedTask.document_url,
+          topic: selectedTask.topic,
+          formation_steps: selectedTask.formation_steps,
+          created_at: selectedTask.created_at
+        } : null}
       />
       
       {/* Training Task Creation Modal */}
@@ -617,8 +657,13 @@ const TrainingManagement = () => {
       {/* Quiz Assessment Modal */}
       <QuizzModal
         isOpen={isQuizzOpen}
-        onClose={() => setIsQuizzOpen(false)}
-        title="Training Assessment"
+        onClose={() => {
+          setIsQuizzOpen(false);
+          setSelectedTask(null);
+        }}
+        title={selectedTask?.formation_steps === 'qcm' ? `Quiz: ${selectedTask.topic}` : "Training Assessment"}
+        useDatabase={selectedTask?.formation_steps === 'qcm'}
+        thematic={selectedTask?.topic || null}
       />
       
       {/* Floating Upload Training Button */}
