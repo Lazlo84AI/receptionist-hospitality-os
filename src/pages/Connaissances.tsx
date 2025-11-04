@@ -80,7 +80,8 @@ const Connaissances = () => {
     const getFormationStep = (formation: KnowledgeFormation) => {
       const step = formation.formation_steps.toLowerCase();
       
-      if (step.includes('qcm généré par ia') || step.includes('qcm genere par ia')) {
+      // Si c'est un QCM, retourner 3 pour avoir le type 'retention'
+      if (step.includes('qcm')) {
         return 3; // QCM d'évaluation
       } else if (step.includes('session d\'entraînement générée par ia') || step.includes('session d\'entrainement generee par ia')) {
         return 2; // Session d'entraînement
@@ -333,11 +334,19 @@ const Connaissances = () => {
 
   const getTypeBadgeClass = (type: string | undefined) => {
     switch (type) {
-      case 'assimilation': return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"; // Découvrir
-      case 'activation': return "bg-[#BBA57A] text-white border-[#BBA57A]";        // Réfléchir  
-      case 'retention': return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]";    // S'entraîner
-      case 'application': return "bg-[#BBA57A] text-white border-[#BBA57A]";       // Mettre en pratique
+      case 'assimilation': return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"; // Formation
+      case 'activation': return "bg-[#BBA57A] text-white border-[#BBA57A]";        // Training  
+      case 'retention': return "bg-[#BBA57A] text-white border-[#BBA57A]";         // QCM Évaluation - GOLD
+      case 'application': return "bg-[#BBA57A] text-white border-[#BBA57A]";       // Mise en pratique
       default: return "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]";
+    }
+  };
+
+  // Fonction pour la couleur de fond de toute la carte
+  const getCardBackgroundClass = (type: string | undefined) => {
+    switch (type) {
+      case 'retention': return "bg-[#BBA57A]"; // QCM - Fond Gold complet
+      default: return "bg-white"; // Autres - Fond blanc
     }
   };
 
@@ -414,10 +423,10 @@ const Connaissances = () => {
         {/* Header Section */}
         <div className={cn("text-left mb-8 bg-white rounded-lg shadow-sm border border-champagne-gold/20", isMobile ? "p-4" : "p-6")}>
           <h1 className="text-3xl font-playfair font-semibold text-palace-navy mb-2">
-            Manage Your Training
+            Knowledge base
           </h1>
           <p className="text-gray-600 text-lg">
-            Improve every day on the job
+            The know-how to be more productive
           </p>
         </div>
         
@@ -651,10 +660,24 @@ const Connaissances = () => {
                           // Trouver la formation originale correspondante
                           const originalDocument = knowledgeFormations?.find(f => f.id === training.id);
                           
+                          // Fonction pour déterminer la couleur de la carte selon le type
+                          const getCardColorClass = (training: any) => {
+                            // Si c'est un QCM (type retention), utiliser le fond Gold
+                            if (training.type === 'retention') {
+                              return "bg-[#BBA57A] text-white border-[#BBA57A]"; // Gold pour QCM
+                            }
+                            return "bg-white border border-gray-200"; // Couleur normale
+                          };
+                          
                           return (
                             <Card 
                               key={training.id} 
-                              className="w-full hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy rounded-lg border border-gray-200"
+                              className={cn(
+                                "w-full hover:shadow-md transition-all cursor-pointer border-l-4 rounded-lg",
+                                training.type === 'retention' 
+                                  ? "border-l-[#BBA57A] hover:border-l-[#A89569] bg-[#BBA57A] text-white" 
+                                  : "border-l-[#BBA57A] hover:border-l-palace-navy bg-white"
+                              )}
                               onClick={() => originalDocument ? handleDocumentView(originalDocument) : handleModuleSelect(training)}
                             >
                             <CardContent className="p-4">
@@ -663,9 +686,15 @@ const Connaissances = () => {
                                 <div>
                                   <h3 className="font-semibold text-base mb-2">{training.title}</h3>
                                   <div className="flex items-center gap-2 mb-2">
-                                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className={cn(
+                                      "flex-1 h-2 rounded-full overflow-hidden",
+                                      training.type === 'retention' ? "bg-white/30" : "bg-gray-200"
+                                    )}>
                                       <div 
-                                        className="h-full bg-palace-navy transition-all duration-300"
+                                        className={cn(
+                                          "h-full transition-all duration-300",
+                                          training.type === 'retention' ? "bg-white" : "bg-palace-navy"
+                                        )}
                                         style={{ width: `${training.progress}%` }}
                                       />
                                     </div>
@@ -675,7 +704,10 @@ const Connaissances = () => {
                                 
                                 {/* Métadonnées en ligne */}
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <div className={cn(
+                                    "flex items-center gap-4 text-sm",
+                                    training.type === 'retention' ? "text-white/80" : "text-muted-foreground"
+                                  )}>
                                     <span className="flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
                                       {training.duration || 7}min
@@ -690,7 +722,7 @@ const Connaissances = () => {
                                     <Badge className={cn("text-xs px-2 py-1", getTypeBadgeClass(training.type))}>
                                       {getTypeLabel(training.type)}
                                     </Badge>
-                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                    <ArrowRight className="h-4 w-4 text-[#1E1A37]" />
                                   </div>
                                 </div>
                               </div>
@@ -875,7 +907,12 @@ const Connaissances = () => {
                           return (
                             <Card 
                               key={training.id} 
-                              className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-[#BBA57A] hover:border-l-palace-navy"
+                              className={cn(
+                                "hover:shadow-md transition-all cursor-pointer border-l-4 rounded-lg",
+                                training.type === 'retention' 
+                                  ? "border-l-[#BBA57A] hover:border-l-[#A89569] bg-[#BBA57A] text-white" 
+                                  : "border-l-[#BBA57A] hover:border-l-palace-navy bg-white"
+                              )}
                               onClick={() => originalDocument ? handleDocumentView(originalDocument) : handleModuleSelect(training)}
                             >
                             <CardContent className="p-4">
@@ -884,7 +921,10 @@ const Connaissances = () => {
                                 {/* Informations principales - Gauche */}
                                 <div className="flex-1">
                                   <h3 className="font-semibold text-lg mb-2">{training.title}</h3>
-                                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                                  <div className={cn(
+                                    "flex items-center gap-6 text-sm",
+                                    training.type === 'retention' ? "text-white/80" : "text-muted-foreground"
+                                  )}>
                                     
                                     {/* Thématique */}
                                     <span className="flex items-center gap-1">
@@ -900,9 +940,15 @@ const Connaissances = () => {
                                     
                                     {/* Progression */}
                                     <span className="flex items-center gap-2">
-                                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                      <div className={cn(
+                                        "w-16 h-2 rounded-full overflow-hidden",
+                                        training.type === 'retention' ? "bg-white/30" : "bg-gray-200"
+                                      )}>
                                         <div 
-                                          className="h-full bg-palace-navy transition-all duration-300"
+                                          className={cn(
+                                            "h-full transition-all duration-300",
+                                            training.type === 'retention' ? "bg-white" : "bg-palace-navy"
+                                          )}
                                           style={{ width: `${training.progress}%` }}
                                         />
                                       </div>
@@ -935,7 +981,7 @@ const Connaissances = () => {
                                   
                                   {/* Bouton d'action */}
                                   <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                    <ArrowRight className="h-4 w-4" />
+                                    <ArrowRight className="h-4 w-4 text-[#1E1A37]" />
                                   </Button>
                                 </div>
                               </div>

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useTrainingTasks } from '@/hooks/useTrainingTasks';
+import { useKnowledgeQueries } from '@/hooks/useKnowledgeQueries';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { sendTaskMovedEvent } from '@/lib/webhookService';
@@ -47,42 +47,42 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { TaskItem } from '@/types/database';
 
-const getTypeConfig = (type: string) => {
-  switch (type) {
+const getTypeConfig = (formation_steps: string) => {
+  switch (formation_steps) {
+    case 'qcm':
+      return { 
+        icon: Brain,
+        color: 'bg-[#DEAE35] text-white',
+        label: 'QCM' 
+      };
     case 'training':
       return { 
-        icon: BookOpen, 
-        color: 'bg-blue-100 text-blue-600',
+        icon: BookOpen,
+        color: 'bg-[#BBA57A] text-white',
         label: 'Training' 
       };
-    default:
+    default: // formation
       return { 
-        icon: Brain, 
-        color: 'bg-purple-100 text-purple-600',
-        label: 'Learning' 
+        icon: BookOpen,
+        color: 'bg-blue-100 text-blue-600',
+        label: 'Formation' 
       };
   }
 };
 
-// Transform TaskItem to CardFaceModal format for training
-const transformTaskForCard = (task: TaskItem) => {
-  const getStatus = (status: string) => {
-    switch (status) {
-      case 'pending': return 'To Process' as const;
-      case 'in_progress': return 'In Progress' as const;
-      case 'completed': return 'Completed' as const;
-      default: return 'Cancelled' as const;
-    }
-  };
-
+// Transform KnowledgeQuery to CardFaceModal format for training
+const transformTaskForCard = (task: any) => {
   return {
     id: task.id,
-    title: task.title,
-    location: task.location || 'Online Training',
-    clientName: undefined, // N/A pour les trainings
-    status: getStatus(task.status),
-    priority: task.priority === 'urgent' ? 'URGENCE' as const : 'NORMAL' as const,
-    assignedTo: task.assignedTo || 'Self-paced',
+    title: task.document_title,  // Nom du document
+    location: task.topic,        // Thématique
+    clientName: undefined,
+    status: task.kanban_status === 'to_process' ? 'To Process' : 
+           task.kanban_status === 'in_progress' ? 'In Progress' : 'Completed',
+    priority: 'NORMAL',
+    assignedTo: task.formation_steps === 'formation' ? 'Formation' :
+               task.formation_steps === 'qcm' ? 'QCM' :
+               task.formation_steps === 'training' ? 'Training' : 'Content',
     timeElapsed: formatTimeElapsed(task.created_at)
   };
 };
@@ -160,7 +160,12 @@ const KanbanColumn = ({
   draggedTask: TaskItem | null;
   draggedFromColumn: string | null;
 }) => {
-  const filteredTasks = tasks.filter(task => task.status === status);
+  const filteredTasks = tasks.filter(task => {
+    // Mapper kanban_status vers les statuts des colonnes
+    const mappedStatus = task.kanban_status === 'to_process' ? 'pending' :
+                        task.kanban_status === 'in_progress' ? 'in_progress' : 'completed';
+    return mappedStatus === status;
+  });
   const isDraggedFromThisColumn = draggedFromColumn === status;
   const isTargetColumn = draggedTask && draggedTask.status !== status;
 
@@ -232,7 +237,8 @@ const KanbanColumn = ({
 
 const TrainingManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { trainingTasks, loading, error, refetch } = useTrainingTasks();
+  const { data: knowledgeQueries, isLoading: loading, error, refetch } = useKnowledgeQueries();
+  const trainingTasks = knowledgeQueries || [];
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
@@ -503,7 +509,7 @@ const TrainingManagement = () => {
           {/* Page Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-playfair font-bold text-foreground mb-2">
-              Manage Your Training
+              Manage your training
             </h1>
             <p className="text-muted-foreground">
               Improve every day on the job
