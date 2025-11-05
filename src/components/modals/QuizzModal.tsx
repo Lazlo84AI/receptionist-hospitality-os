@@ -4,44 +4,58 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { X, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { trainingQuestions, type TrainingQuestion } from '@/data/trainingQuestions';
+
 import { useQuizQuestions, type TrainingQuestionCompatible } from '@/hooks/useQuizQuestions';
 
 interface QuizzModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  questions?: TrainingQuestion[];
-  thematic?: string | null; // Nouvelle prop pour Supabase
-  useDatabase?: boolean; // Flag pour utiliser Supabase ou questions statiques
+  selectedTask?: any; // Task avec related_item_ids
+  onQuizCompleted?: (score: number) => void;
 }
-
-// Utilisation par défaut des questions de formation
 
 const QuizzModal = ({ 
   isOpen, 
   onClose, 
   title = "Training Assessment",
-  questions = trainingQuestions,
-  thematic = null,
-  useDatabase = false
+  selectedTask = null,
+  onQuizCompleted
 }: QuizzModalProps) => {
-  // Hook pour récupérer les questions depuis Supabase
+  // Hook pour récupérer les questions depuis Supabase via related_item_ids
+  const questionIds = selectedTask?.related_item_ids || null;
+  
+  // 🔍 DEBUG - Voir ce qui est passé
+  console.log('🔍 QuizzModal DEBUG:');
+  console.log('- selectedTask:', selectedTask);
+  console.log('- questionIds:', questionIds);
+  console.log('- questionIds length:', questionIds?.length);
+  
   const { data: dbQuestions, isLoading: isLoadingQuestions, error: questionsError } = useQuizQuestions(
-    thematic,
-    null, // document filter (optionnel)
-    useDatabase && !!thematic // enabled seulement si useDatabase = true et thematic existe
+    questionIds,
+    !!questionIds // enabled si on a des IDs
   );
   
-  // Déterminer quelles questions utiliser
-  const questionsToUse = useDatabase && dbQuestions ? dbQuestions : questions;
+  // Questions depuis Supabase uniquement
+  const finalQuestions = dbQuestions || [];
+  
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string }>({});
   const [showResult, setShowResult] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
+  // 🏆 SI LE QCM EST DÉJÀ COMPLETED, AFFICHER DIRECTEMENT LE SCORE
+  useEffect(() => {
+    if (selectedTask?.kanban_status === 'completed' && selectedTask?.last_score) {
+      console.log('🎯 QCM already completed! Showing score:', selectedTask.last_score);
+      setQuizCompleted(true);
+    } else {
+      setQuizCompleted(false);
+    }
+  }, [selectedTask]);
+
   // Affichage de chargement si on attend les questions de la DB
-  if (useDatabase && isLoadingQuestions) {
+  if (questionIds && isLoadingQuestions) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
@@ -49,7 +63,7 @@ const QuizzModal = ({
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
               <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-champagne-gold" />
               <h3 className="text-xl font-semibold mb-2">Chargement du quiz</h3>
-              <p className="text-muted-foreground">Récupération des questions pour "{thematic}"...</p>
+              <p className="text-muted-foreground">Récupération des questions du QCM...</p>
             </div>
           </div>
         </DialogContent>
@@ -58,7 +72,7 @@ const QuizzModal = ({
   }
 
   // Affichage d'erreur si problème de chargement
-  if (useDatabase && questionsError) {
+  if (questionIds && questionsError) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
@@ -66,7 +80,7 @@ const QuizzModal = ({
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
               <XCircle className="h-12 w-12 mx-auto mb-4 text-red-600" />
               <h3 className="text-xl font-semibold mb-2">Erreur de chargement</h3>
-              <p className="text-muted-foreground mb-4">Impossible de charger les questions pour "{thematic}"</p>
+              <p className="text-muted-foreground mb-4">Impossible de charger les questions du QCM</p>
               <Button onClick={onClose}>Fermer</Button>
             </div>
           </div>
@@ -75,8 +89,28 @@ const QuizzModal = ({
     );
   }
 
-  const currentQuestion = questionsToUse[currentQuestionIndex];
-  const totalQuestions = questionsToUse.length;
+  // 🚨 PROTECTION : Si pas de questions, afficher un message
+  if (!finalQuestions || finalQuestions.length === 0) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
+          <div className="flex flex-col h-full items-center justify-center">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+              <XCircle className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+              <h3 className="text-xl font-semibold mb-2">Aucune question disponible</h3>
+              <p className="text-muted-foreground mb-4">
+                Ce QCM n'a pas encore de questions associées.
+              </p>
+              <Button onClick={onClose}>Fermer</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const currentQuestion = finalQuestions[currentQuestionIndex];
+  const totalQuestions = finalQuestions.length;
   const progressPercentage = ((currentQuestionIndex + 1) / totalQuestions) * 100;
 
   const handleAnswerSelect = (answerIndex: number) => {
@@ -116,7 +150,7 @@ const QuizzModal = ({
 
   const calculateScore = () => {
     let correct = 0;
-    questionsToUse.forEach(question => {
+    finalQuestions.forEach(question => {
       if (selectedAnswers[question.id] === question.correct_answer) {
         correct++;
       }
@@ -132,8 +166,10 @@ const QuizzModal = ({
   };
 
   if (quizCompleted) {
-    const score = calculateScore();
+    // 🎯 UTILISER LE SCORE SAUVEGARDÉ OU LE SCORE CALCULÉ
+    const score = selectedTask?.last_score || calculateScore();
     const passed = score >= 70;
+    const isAlreadyCompleted = selectedTask?.kanban_status === 'completed' && selectedTask?.last_score;
 
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -186,7 +222,13 @@ const QuizzModal = ({
                       Recommencer
                     </Button>
                     <Button 
-                      onClick={onClose}
+                      onClick={() => {
+                        // 🏆 APPELER LE CALLBACK SI QUIZ RÉUSSI
+                        if (passed && onQuizCompleted) {
+                          onQuizCompleted(score);
+                        }
+                        onClose();
+                      }}
                       className="flex-1"
                       variant={passed ? "default" : "secondary"}
                     >
@@ -207,11 +249,18 @@ const QuizzModal = ({
       <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-white border-0">
         <div className="flex flex-col h-full">
           {/* Header avec progression et navigation */}
-          <div className="bg-white border-b px-6 py-4">
+          <div className={cn(
+            "bg-white border-b px-6",
+            "py-4 md:py-4" // Réduire le padding vertical sur mobile
+          )}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-palace-navy">{title}</h2>
-                <span className="text-sm text-muted-foreground">
+                <h2 className={cn(
+                  "font-semibold text-palace-navy",
+                  "text-lg md:text-xl" // Plus petit sur mobile
+                )}>{title}</h2>
+                {/* Masquer "Question X sur Y" sur mobile */}
+                <span className="hidden md:block text-sm text-muted-foreground">
                   Question {currentQuestionIndex + 1} sur {totalQuestions}
                 </span>
               </div>
@@ -241,9 +290,15 @@ const QuizzModal = ({
                 <Button
                   onClick={handleSubmitAnswer}
                   disabled={!hasSelectedAnswer}
-                  className="bg-champagne-gold hover:bg-champagne-gold/80 text-palace-navy"
+                  className={cn(
+                    "transition-all duration-300 px-6 py-3 rounded-full font-medium flex items-center gap-2",
+                    hasSelectedAnswer 
+                      ? "bg-[#1E1A37] hover:bg-[#1E1A37]/90 text-white shadow-lg" 
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50"
+                  )}
                 >
-                  Valider
+                  {hasSelectedAnswer ? "Valider" : "Sélectionnez une réponse"}
+                  {hasSelectedAnswer && <ChevronRight className="h-4 w-4" />}
                 </Button>
               ) : (
                 <Button
@@ -267,24 +322,38 @@ const QuizzModal = ({
           </div>
 
           {/* Question */}
-          <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
-            <div className="bg-white rounded-lg shadow-sm border max-w-3xl w-full p-8">
+          <div className={cn(
+            "flex-1 overflow-y-auto",
+            "p-4 md:p-8 bg-gray-50" // Moins de padding sur mobile
+          )}>
+            <div className={cn(
+              "bg-white rounded-lg shadow-sm border max-w-3xl w-full mx-auto",
+              "p-4 md:p-8" // Moins de padding interne sur mobile
+            )}>
               <div className="space-y-8">
                 {/* Question */}
                 <div className="text-center">
-                  <h3 className="text-2xl font-medium text-palace-navy mb-4">
+                  <h3 className={cn(
+                    "font-medium text-palace-navy mb-4",
+                    "text-xl md:text-2xl" // Plus petit sur mobile
+                  )}>
                     {currentQuestion.question}
                   </h3>
                 </div>
 
                 {/* Options de réponse */}
-                <div className="space-y-4">
+                <div className={cn(
+                  "space-y-3 md:space-y-4" // Moins d'espace entre les options sur mobile
+                )}>
                   {currentQuestion.answers.map((option, index) => {
                     const answerLetter = String.fromCharCode(65 + index); // A, B, C, D
                     const isSelected = selectedAnswer === answerLetter;
                     const isCorrectAnswer = answerLetter === currentQuestion.correct_answer;
                     
-                    let buttonClass = "w-full p-6 text-left border-2 rounded-lg transition-all duration-200 hover:bg-gray-50";
+                    let buttonClass = cn(
+                      "w-full text-left border-2 rounded-lg transition-all duration-200 hover:bg-gray-50",
+                      "p-4 md:p-6" // Moins de padding sur mobile
+                    );
                     
                     if (showResult) {
                       if (isCorrectAnswer) {
@@ -335,7 +404,8 @@ const QuizzModal = ({
                 {/* Explication après réponse */}
                 {showResult && currentQuestion.explanation && (
                   <div className={cn(
-                    "p-4 rounded-lg border",
+                    "rounded-lg border",
+                    "p-3 md:p-4", // Moins de padding sur mobile
                     isCorrect 
                       ? "border-green-200 bg-green-50" 
                       : "border-orange-200 bg-orange-50"

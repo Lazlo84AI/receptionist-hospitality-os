@@ -499,6 +499,46 @@ const TrainingManagement = () => {
   };
 
   // Training-specific actions
+  const handleStartTraining = () => {
+    // 🎯 LOGIQUE SMART START TRAINING - SEULEMENT LES FORMATIONS (PAS LES QCM)
+    console.log('🚀 Smart Start Training: Searching for FORMATION documents only...');
+    
+    // 1. Chercher la première FORMATION "In Progress" (exclure les QCM)
+    const inProgressFormations = trainingTasks.filter(task => 
+      task.kanban_status === 'in_progress' && task.formation_steps !== 'qcm'
+    );
+    let nextTask = null;
+    
+    if (inProgressFormations.length > 0) {
+      // Prendre la première formation "In Progress" (triée par date de création)
+      nextTask = inProgressFormations.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+      console.log('🟡 Found In Progress FORMATION:', nextTask.document_title);
+    } else {
+      // 2. Si aucune formation "In Progress", prendre la première formation "To Process" (exclure les QCM)
+      const toProcessFormations = trainingTasks.filter(task => 
+        task.kanban_status === 'to_process' && task.formation_steps !== 'qcm'
+      );
+      if (toProcessFormations.length > 0) {
+        nextTask = toProcessFormations.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        console.log('🔴 Found To Process FORMATION:', nextTask.document_title);
+      }
+    }
+    
+    if (nextTask) {
+      // 3. Ouvrir automatiquement la FORMATION trouvée (TOUJOURS DocumentViewerModal)
+      console.log('📚 Auto-opening FORMATION:', nextTask.document_title, 'Type:', nextTask.formation_steps);
+      setSelectedTask(nextTask);
+      setIsDocumentViewerOpen(true); // TOUJOURS DocumentViewerModal pour les formations
+    } else {
+      // Aucune formation disponible
+      toast({
+        title: "No formation available",
+        description: "All formations have been completed! 🎉",
+        variant: "default",
+      });
+    }
+  };
+
   const handleLearnANewKnowledge = () => {
     setIsPdfViewerOpen(true);
     console.log("🎓 Opening PDF training viewer...");
@@ -515,8 +555,43 @@ const TrainingManagement = () => {
   };
 
   const handleMakeYourQuizz = () => {
-    setIsQuizzOpen(true);
-    console.log("🧠 Opening training quiz...");
+    // 🎯 LOGIQUE SMART COMPLETE QUIZZ - OUVRIR LE PROCHAIN QCM
+    console.log('🧠 Smart Complete Quizz: Searching for QCM...');
+    
+    // 1. Chercher un QCM "In Progress"
+    const inProgressQCMs = trainingTasks.filter(task => 
+      task.kanban_status === 'in_progress' && task.formation_steps === 'qcm'
+    );
+    let nextQCM = null;
+    
+    if (inProgressQCMs.length > 0) {
+      // Prendre le premier QCM "In Progress" (trié par date de création)
+      nextQCM = inProgressQCMs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+      console.log('🟡 Found In Progress QCM:', nextQCM.document_title);
+    } else {
+      // 2. Si aucun QCM "In Progress", prendre le premier QCM "To Process"
+      const toProcessQCMs = trainingTasks.filter(task => 
+        task.kanban_status === 'to_process' && task.formation_steps === 'qcm'
+      );
+      if (toProcessQCMs.length > 0) {
+        nextQCM = toProcessQCMs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        console.log('🔴 Found To Process QCM:', nextQCM.document_title);
+      }
+    }
+    
+    if (nextQCM) {
+      // 3. Ouvrir automatiquement le QCM trouvé
+      console.log('📝 Auto-opening QCM:', nextQCM.document_title);
+      setSelectedTask(nextQCM);
+      setIsQuizzOpen(true);
+    } else {
+      // Aucun QCM disponible
+      toast({
+        title: "No QCM available",
+        description: "All QCMs have been completed! 🎉",
+        variant: "default",
+      });
+    }
   };
 
   const handleTestLearn = () => {
@@ -553,7 +628,7 @@ const TrainingManagement = () => {
 
           {/* Training Action Selector - Responsive */}
           <TrainingActionSelector
-            onStartTraining={handleLearnANewKnowledge}
+            onStartTraining={handleStartTraining}
             onMyProgress={handleMyProgress}
             onCompleteQuizz={handleMakeYourQuizz}
           />
@@ -662,8 +737,39 @@ const TrainingManagement = () => {
           setSelectedTask(null);
         }}
         title={selectedTask?.formation_steps === 'qcm' ? `Quiz: ${selectedTask.topic}` : "Training Assessment"}
-        useDatabase={selectedTask?.formation_steps === 'qcm'}
-        thematic={selectedTask?.topic || null}
+        selectedTask={selectedTask}
+        onQuizCompleted={async (score: number) => {
+          // 🏆 QCM TERMINÉ - MARQUER COMPLETED ET SAUVEGARDER LE SCORE
+          if (selectedTask && score >= 70) {
+            console.log('🎆 Quiz passed! Marking as completed:', selectedTask.document_title, 'Score:', score);
+            try {
+              const { error } = await supabase
+                .from('knowledge_queries')
+                .update({ 
+                  kanban_status: 'completed',
+                  last_score: score
+                })
+                .eq('id', selectedTask.id);
+                
+              if (error) throw error;
+              
+              await refetch(); // Rafraîchir les données
+              
+              toast({
+                title: "Formation completed! 🎉",
+                description: `${selectedTask.document_title} has been marked as completed with ${score}%.`,
+                variant: "default",
+              });
+            } catch (error) {
+              console.error('Error marking formation as completed:', error);
+              toast({
+                title: "Error",
+                description: "Failed to update formation status.",
+                variant: "destructive",
+              });
+            }
+          }
+        }}
       />
       
       {/* Floating Upload Training Button */}

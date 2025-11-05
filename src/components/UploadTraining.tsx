@@ -200,7 +200,7 @@ export function UploadTraining() {
 
   return (
     <>
-      {/* Main Button - Same style as VoiceCommandButton */}
+      {/* Main Button - Remis en bas à droite */}
       <div className="fixed bottom-6 right-6 z-[9999]">
         <Button
           onClick={() => setIsOpen(true)}
@@ -216,7 +216,7 @@ export function UploadTraining() {
           </div>
         </Button>
         
-        {/* Pulsing animation */}
+        {/* Animation pulsante remise à droite */}
         <div className="absolute -bottom-12 -right-12 h-48 w-48 rounded-full border-2 border-hotel-yellow/20 animate-ping pointer-events-none" />
       </div>
 

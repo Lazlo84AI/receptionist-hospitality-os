@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useKnowledgeFormations, KnowledgeFormation } from '@/hooks/useKnowledgeFormations';
 import { DocumentViewerModal } from '@/components/modals/DocumentViewerModal';
+import QuizzModal from '@/components/modals/QuizzModal';
 
 interface Activity {
   id: string;
@@ -73,6 +74,7 @@ const Connaissances = () => {
   // États pour le modal de visualisation des documents
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeFormation | null>(null);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [isQuizzOpen, setIsQuizzOpen] = useState(false);
 
   // Transformation des données knowledge_queries en format Module
   const transformKnowledgeToModule = (formation: KnowledgeFormation): Module => {
@@ -310,14 +312,29 @@ const Connaissances = () => {
     setShowResult(false);
   };
 
-  // Fonctions pour gérer le modal de visualisation
+  // Fonctions pour gérer les modaux
   const handleDocumentView = (document: KnowledgeFormation) => {
     setSelectedDocument(document);
-    setIsDocumentModalOpen(true);
+    
+    // 🎯 LOGIQUE CONDITIONNELLE : QCM vs Formation
+    if (document.formation_steps === 'qcm') {
+      // Carte QCM → Ouvrir QuizzModal avec les données de training_questions
+      console.log('🧠 Opening QuizzModal for QCM:', document.topic);
+      setIsQuizzOpen(true);
+    } else {
+      // Carte Formation → Ouvrir DocumentViewerModal
+      console.log('📚 Opening DocumentViewerModal for Formation:', document.document_title);
+      setIsDocumentModalOpen(true);
+    }
   };
 
   const handleCloseDocumentModal = () => {
     setIsDocumentModalOpen(false);
+    setSelectedDocument(null);
+  };
+
+  const handleCloseQuizzModal = () => {
+    setIsQuizzOpen(false);
     setSelectedDocument(null);
   };
 
@@ -1199,6 +1216,14 @@ const Connaissances = () => {
         isOpen={isDocumentModalOpen}
         onClose={handleCloseDocumentModal}
         document={selectedDocument}
+      />
+
+      {/* Quiz Assessment Modal */}
+      <QuizzModal
+        isOpen={isQuizzOpen}
+        onClose={handleCloseQuizzModal}
+        title={selectedDocument?.formation_steps === 'qcm' ? `Quiz: ${selectedDocument.topic}` : "Knowledge Assessment"}
+        selectedTask={selectedDocument}
       />
     </div>
   );

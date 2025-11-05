@@ -15,6 +15,8 @@ export interface KnowledgeQuery {
   status: string;
   formation_steps: string;
   kanban_status: string;
+  related_item_ids: string[] | null;
+  last_score: number | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;

@@ -28,38 +28,29 @@ export interface TrainingQuestionCompatible {
 
 /**
  * Hook pour récupérer les questions de formation depuis Supabase
- * @param thematic - Thématique des questions (ex: "petit-dejeuner-hotel")
- * @param document - Document source (optionnel, pour filtrer davantage)
+ * @param questionIds - Liste des IDs des questions à récupérer
  * @param enabled - Activer/désactiver la requête
  */
 export const useQuizQuestions = (
-  thematic: string | null,
-  document?: string | null,
+  questionIds: string[] | null,
   enabled: boolean = true
 ) => {
   const { toast } = useToast();
 
   return useQuery({
-    queryKey: ['quiz-questions', thematic, document],
+    queryKey: ['quiz-questions', questionIds],
     queryFn: async (): Promise<TrainingQuestionCompatible[]> => {
-      if (!thematic) {
-        throw new Error('Thematic is required');
+      if (!questionIds || questionIds.length === 0) {
+        throw new Error('Question IDs are required');
       }
 
-      console.log(`🔍 Fetching questions for thematic: ${thematic}${document ? `, document: ${document}` : ''}`);
+      console.log(`🔍 Fetching ${questionIds.length} questions by IDs`);
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('training_questions')
         .select('*')
-        .eq('thematic', thematic)
+        .in('id', questionIds)
         .order('created_at', { ascending: true });
-
-      // Filtrer par document si spécifié
-      if (document) {
-        query = query.eq('document', document);
-      }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('❌ Error fetching training questions:', error);
@@ -72,16 +63,11 @@ export const useQuizQuestions = (
       }
 
       if (!data || data.length === 0) {
-        console.warn('⚠️ No training questions found for thematic:', thematic);
-        toast({
-          title: "Aucune question trouvée",
-          description: `Aucune question disponible pour la thématique "${thematic}"`,
-          variant: "default",
-        });
+        console.warn('⚠️ No training questions found for provided IDs');
         return [];
       }
 
-      console.log(`✅ Found ${data.length} questions for thematic: ${thematic}`);
+      console.log(`✅ Found ${data.length} questions`);
 
       // Transformer au format compatible avec QuizzModal
       const transformedQuestions: TrainingQuestionCompatible[] = data.map((dbQuestion: TrainingQuestionFromDB) => ({
@@ -96,17 +82,12 @@ export const useQuizQuestions = (
 
       return transformedQuestions;
     },
-    enabled: enabled && !!thematic,
-    staleTime: 5 * 60 * 1000, // 5 minutes - questions ne changent pas souvent
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    enabled: enabled && !!questionIds && questionIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
     retry: 2,
     onError: (error) => {
       console.error('❌ useQuizQuestions error:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les questions de formation",
-        variant: "destructive",
-      });
     },
     onSuccess: (data) => {
       console.log(`✅ Successfully loaded ${data.length} training questions`);
