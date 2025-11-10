@@ -207,32 +207,36 @@ const QuizzModal = ({
 
                 <div className="space-y-4">
                   <p className="text-sm">
-                    {passed 
-                      ? "Vous avez réussi l'évaluation ! Votre formation est validée."
-                      : "Un score minimum de 70% est requis. Révisez le contenu et essayez à nouveau."
+                    {isAlreadyCompleted
+                      ? `Vous avez réussi ce QCM avec un score de ${score}%.`
+                      : passed 
+                        ? "Vous avez réussi l'évaluation ! Votre formation est validée."
+                        : "Un score minimum de 70% est requis. Révisez le contenu et essayez à nouveau."
                     }
                   </p>
 
                   <div className="flex gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={resetQuiz}
-                      className="flex-1"
-                    >
-                      Recommencer
-                    </Button>
+                    {!isAlreadyCompleted && (
+                      <Button 
+                        variant="outline" 
+                        onClick={resetQuiz}
+                        className="flex-1"
+                      >
+                        Recommencer
+                      </Button>
+                    )}
                     <Button 
                       onClick={() => {
-                        // 🏆 APPELER LE CALLBACK SI QUIZ RÉUSSI
-                        if (passed && onQuizCompleted) {
+                        // 🏆 APPELER LE CALLBACK SI QUIZ RÉUSSI (ET PAS DÉJÀ COMPLETED)
+                        if (passed && onQuizCompleted && !isAlreadyCompleted) {
                           onQuizCompleted(score);
                         }
                         onClose();
                       }}
-                      className="flex-1"
+                      className={isAlreadyCompleted ? "w-full" : "flex-1"}
                       variant={passed ? "default" : "secondary"}
                     >
-                      {passed ? "Terminer" : "Réviser"}
+                      {isAlreadyCompleted ? "Fermer" : passed ? "Terminer" : "Réviser"}
                     </Button>
                   </div>
                 </div>
