@@ -14,7 +14,7 @@ export function UploadTraining() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    topic: '',
+    thematic: '',
     file: null as File | null
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +94,7 @@ export function UploadTraining() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title.trim() || !formData.topic.trim() || !formData.file) {
+    if (!formData.title.trim() || !formData.thematic.trim() || !formData.file) {
       toast({
         title: "Missing fields",
         description: "Please fill in all fields and select a file",
@@ -129,10 +129,11 @@ export function UploadTraining() {
       const { data: insertData, error: insertError } = await supabase
         .from('knowledge_queries')
         .insert([{
-          document_title: formData.title.trim(),
-          document_name: uniqueFileName,
+          document_title: formData.title.trim() + ' - formation',
+          document_name: formData.title.trim(),
+          file_name: uniqueFileName,
           document_url: publicUrl,
-          topic: formData.topic.trim(),
+          thematic: formData.thematic.trim(),
           status: 'pending'
         }])
         .select()
@@ -144,14 +145,14 @@ export function UploadTraining() {
 
       // 4. Call N8N webhook
       try {
-        const webhookResponse = await fetch('https://catapulz.app.n8n.cloud/webhook-test/new-training-to-record', {
+        const webhookResponse = await fetch('https://sokle.app.n8n.cloud/webhook/new-training-to-record', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            document_name: uniqueFileName,
-            topic: formData.topic.trim(),
+            document_name: formData.title.trim(),
+            thematic: formData.thematic.trim(),
             file_url: publicUrl
           })
         });
@@ -170,7 +171,7 @@ export function UploadTraining() {
         variant: "default",
       });
 
-      setFormData({ title: '', topic: '', file: null });
+      setFormData({ title: '', thematic: '', file: null });
       setIsOpen(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -191,7 +192,7 @@ export function UploadTraining() {
   const handleClose = () => {
     if (!isUploading) {
       setIsOpen(false);
-      setFormData({ title: '', topic: '', file: null });
+      setFormData({ title: '', thematic: '', file: null });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -247,17 +248,17 @@ export function UploadTraining() {
               />
             </div>
 
-            {/* Topic */}
+            {/* Thematic */}
             <div className="space-y-2">
-              <Label htmlFor="topic" className="text-sm font-medium text-foreground">
-                Topic *
+              <Label htmlFor="thematic" className="text-sm font-medium text-foreground">
+                Thematic *
               </Label>
               <Input
-                id="topic"
+                id="thematic"
                 type="text"
                 placeholder="e.g., Guest Reception, Housekeeping, Maintenance..."
-                value={formData.topic}
-                onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                value={formData.thematic}
+                onChange={(e) => setFormData(prev => ({ ...prev, thematic: e.target.value }))}
                 disabled={isUploading}
                 className="transition-all duration-200 hover:border-hotel-yellow focus:border-hotel-yellow focus:ring-2 focus:ring-hotel-yellow/20"
               />
@@ -356,7 +357,7 @@ export function UploadTraining() {
               </Button>
               <Button
                 type="submit"
-                disabled={isUploading || !formData.title.trim() || !formData.topic.trim() || !formData.file}
+                disabled={isUploading || !formData.title.trim() || !formData.thematic.trim() || !formData.file}
                 className="min-w-[160px] bg-hotel-navy hover:bg-hotel-navy/90 text-white"
               >
                 {isUploading ? (
