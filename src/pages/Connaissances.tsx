@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { UploadTraining } from '@/components/UploadTraining';
@@ -13,9 +13,12 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useKnowledgeFormations, KnowledgeFormation } from '@/hooks/useKnowledgeFormations';
 import { DocumentViewerModal } from '@/components/modals/DocumentViewerModal';
 import QuizzModal from '@/components/modals/QuizzModal';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Activity {
   id: string;
@@ -49,6 +52,56 @@ interface Question {
   explanation?: string;
 }
 
+// 📚 CATÉGORIES DE FORMATION EN ANGLAIS
+const FORMATION_CATEGORIES = [
+  {
+    id: 1,
+    name: 'Housekeeping',
+    definition: 'Quality of room cleaning, bed setup, bathroom upkeep, and overall maintenance of guest areas.'
+  },
+  {
+    id: 2,
+    name: 'Hygiene',
+    definition: 'Strict respect of sanitary standards in rooms and food areas, proper handling of linens, products, and cleaning materials.'
+  },
+  {
+    id: 3,
+    name: 'Customer Service',
+    definition: 'Ability to clearly answer requests, give accurate information, guide guests, and resolve situations professionally.'
+  },
+  {
+    id: 4,
+    name: 'Service Attitude',
+    definition: 'Overall behavior and manner: politeness, empathy, calm, professionalism with guests and internal team members.'
+  },
+  {
+    id: 5,
+    name: 'Operations Management',
+    definition: 'Correct application of procedures such as minibar control, inventories, equipment use, and cost awareness.'
+  },
+  {
+    id: 6,
+    name: 'Safety',
+    definition: 'Application of safety protocols: fire procedures, chemical handling, risk prevention, and emergency reporting.'
+  },
+  {
+    id: 7,
+    name: 'Organization',
+    definition: 'Time and task management: respecting schedules, priorities, assigned areas, and operational procedures.'
+  }
+];
+
+// 📊 DONNÉES DE STATS (Codées en dur pour l'instant)
+const STANDOUT_STATS = [
+  { category: 'Housekeeping', score: 85, fullMark: 100, definition: 'Quality of room cleaning, bed setup, bathroom upkeep, and overall maintenance of guest areas.' },
+  { category: 'Hygiene', score: 92, fullMark: 100, definition: 'Strict respect of sanitary standards in rooms and food areas, proper handling of linens, products, and cleaning materials.' },
+  { category: 'Customer Service', score: 88, fullMark: 100, definition: 'Ability to clearly answer requests, give accurate information, guide guests, and resolve situations professionally.' },
+  { category: 'Service Attitude', score: 95, fullMark: 100, definition: 'Overall behavior and manner: politeness, empathy, calm, professionalism with guests and internal team members.' },
+  { category: 'Operations Management', score: 78, fullMark: 100, definition: 'Correct application of procedures such as minibar control, inventories, equipment use, and cost awareness.' },
+  { category: 'Safety', score: 90, fullMark: 100, definition: 'Application of safety protocols: fire procedures, chemical handling, risk prevention, and emergency reporting.' },
+  { category: 'Organization', score: 87, fullMark: 100, definition: 'Time and task management: respecting schedules, priorities, assigned areas, and operational procedures.' }
+];
+
 const Connaissances = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
@@ -75,6 +128,38 @@ const Connaissances = () => {
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeFormation | null>(null);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [isQuizzOpen, setIsQuizzOpen] = useState(false);
+
+  // 👤 États pour les données utilisateur
+  const [userFirstName, setUserFirstName] = useState<string>('User');
+  const [userLastName, setUserLastName] = useState<string>('');
+
+  // 🚀 Récupération du nom de l'utilisateur connecté
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Récupérer l'utilisateur connecté
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Récupérer les infos depuis staff_directory
+          const { data: staffData, error } = await supabase
+            .from('staff_directory')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .single();
+          
+          if (staffData && !error) {
+            setUserFirstName(staffData.first_name || 'User');
+            setUserLastName(staffData.last_name || '');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
 
   // Transformation des données knowledge_queries en format Module
   const transformKnowledgeToModule = (formation: KnowledgeFormation): Module => {
@@ -454,97 +539,66 @@ const Connaissances = () => {
             {isMobile ? (
               // Layout mobile avec bloc supérieur repliable
               <div className="space-y-4 w-full max-w-full">
-                {/* Bloc statistiques repliable en haut */}
+                {/* Bloc stats repliable en haut (mobile) */}
                 <Collapsible open={!isStatsCollapsed} onOpenChange={(open) => setIsStatsCollapsed(!open)}>
-                  <Card className="border-2 bg-[#E0D3B4] border-[#E0D3B4]">
-                    <CollapsibleTrigger className="w-full hover:bg-[#D5C8A1] transition-colors">
+                  <Card className="border-2 bg-[#1E1A37] border-[#1E1A37]">
+                    <CollapsibleTrigger className="w-full hover:bg-[#2A2448] transition-colors">
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-palace-navy">Your Statistics</h3>
+                          <div>
+                            <h3 className="text-xl font-semibold text-white">{userFirstName} {userLastName}</h3>
+                            <p className="text-sm text-[#BBA57A] font-medium">STANDOUT STATS</p>
+                          </div>
                           <div className="flex items-center gap-2">
                             {isStatsCollapsed ? (
-                              <ChevronDown className="h-5 w-5 text-palace-navy" />
+                              <ChevronDown className="h-5 w-5 text-white" />
                             ) : (
-                              <ChevronUp className="h-5 w-5 text-palace-navy" />
+                              <ChevronUp className="h-5 w-5 text-white" />
                             )}
                           </div>
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <CardContent className="pt-0 bg-[#E0D3B4]">
-                        {/* Profil utilisateur */}
-                        <div className="flex items-center gap-3 mb-4 p-3 bg-white/50 rounded-lg">
-                          <div className="w-12 h-12 bg-[#BBA57A]/20 rounded-full flex items-center justify-center">
-                            <User className="h-6 w-6 text-[#BBA57A]" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-base text-palace-navy">Marie Dubois</h4>
-                            <p className="text-sm text-gray-600">Receptionist</p>
-                          </div>
+                      <CardContent className="pt-0 bg-[#1E1A37] pb-6">
+                        {/* Graphique Radar */}
+                        <div className="mb-6 bg-[#2A2448] rounded-lg p-4">
+                          <ResponsiveContainer width="100%" height={250}>
+                            <RadarChart data={STANDOUT_STATS}>
+                              <PolarGrid stroke="#BBA57A" opacity={0.3} />
+                              <PolarAngleAxis 
+                                dataKey="category" 
+                                tick={{ fill: '#BBA57A', fontSize: 11 }}
+                              />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#BBA57A' }} />
+                              <Radar 
+                                name="Score" 
+                                dataKey="score" 
+                                stroke="#BBA57A" 
+                                fill="#BBA57A" 
+                                fillOpacity={0.6} 
+                              />
+                            </RadarChart>
+                          </ResponsiveContainer>
                         </div>
 
-                        {/* Statistiques globales */}
-                        <div className="mb-4 p-3 bg-white/50 rounded-lg">
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div>
-                              <div className="text-lg font-semibold text-palace-navy">
-                                {modules.filter(m => m.status === 'completed').length}
+                        {/* Barres de stats */}
+                        <div className="space-y-4">
+                          {STANDOUT_STATS.map((stat) => (
+                            <div key={stat.category} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white font-medium text-sm">{stat.category.toUpperCase()}</span>
+                                <span className="text-[#BBA57A] font-bold text-2xl">{stat.score}</span>
                               </div>
-                              <div className="text-xs text-muted-foreground">Completed</div>
-                            </div>
-                            <div>
-                              <div className="text-lg font-semibold text-palace-navy">
-                                {modules.filter(m => m.status === 'in_learning').length}
-                              </div>
-                              <div className="text-xs text-muted-foreground">In Progress</div>
-                            </div>
-                            <div>
-                              <div className="text-lg font-semibold text-palace-navy">
-                                {Math.round(modules.reduce((acc, m) => acc + m.progress, 0) / modules.length)}%
-                              </div>
-                              <div className="text-xs text-muted-foreground">Average</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Progression détaillée par module */}
-                        <div className="space-y-3 mb-4">
-                          <h4 className="font-medium text-sm text-gray-700">Progress by Module:</h4>
-                          {modules.map((module) => (
-                            <div key={module.id} className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-muted-foreground font-medium">
-                                  {module.title.length > 25 ? module.title.substring(0, 25) + '...' : module.title}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <Badge 
-                                    className={cn(
-                                      "text-xs px-2 py-0.5",
-                                      module.status === 'completed' 
-                                        ? "bg-green-100 text-green-700" 
-                                        : module.status === 'in_learning'
-                                        ? "bg-blue-100 text-blue-700"
-                                        : "bg-gray-100 text-gray-700"
-                                    )}
-                                  >
-                                    {module.progress}%
-                                  </Badge>
-                                </div>
-                              </div>
-                              <Progress value={module.progress} className="h-2" />
-                              <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>{getCategoryLabel(module.category)?.split(' ')[0]}</span>
+                              <div className="h-3 bg-[#2A2448] rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-[#BBA57A] to-[#DEAE35] transition-all duration-500"
+                                  style={{ width: `${stat.score}%` }}
+                                />
                               </div>
                             </div>
                           ))}
                         </div>
-
-                        {/* Bouton d'action */}
-                        <Button size="sm" className="w-full h-9">
-                          <Award className="h-4 w-4 mr-2" />
-                          View Detailed Progress
-                        </Button>
                       </CardContent>
                     </CollapsibleContent>
                   </Card>
@@ -774,38 +828,52 @@ const Connaissances = () => {
             ) : (
               // Layout desktop existant
               <>
-                {/* Barre latérale gauche - Profil & Suivi */}
-                <div className="w-1/4 space-y-6">
-                  {/* Profil apprenant */}
-                  <Card>
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-champagne-gold/20 rounded-full flex items-center justify-center">
-                          <User className="h-6 w-6 text-champagne-gold" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm">Marie Dubois</CardTitle>
-                          <p className="text-xs text-muted-foreground">Receptionist</p>
-                        </div>
-                      </div>
+                {/* Barre latérale gauche - Standout Stats */}
+                <div className="w-1/4">
+                  <Card className="border-2 bg-[#1E1A37] border-[#1E1A37]">
+                    <CardHeader className="bg-[#1E1A37] pb-4 border-b border-[#BBA57A]/20">
+                      <h3 className="text-2xl font-bold text-white">{userFirstName} {userLastName}</h3>
+                      <p className="text-sm text-[#BBA57A] font-semibold tracking-wide">STANDOUT STATS</p>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-sm mb-3">Progress by Module:</h4>
-                        {modules.map((module) => (
-                          <div key={module.id} className="space-y-2 mb-4">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-muted-foreground">{module.title}</span>
-                              <span className="text-xs font-medium">{module.progress}%</span>
+                    <CardContent className="pt-6 bg-[#1E1A37] pb-6">
+                      {/* Graphique Radar */}
+                      <div className="mb-6 bg-[#2A2448] rounded-lg p-4">
+                        <ResponsiveContainer width="100%" height={280}>
+                          <RadarChart data={STANDOUT_STATS}>
+                            <PolarGrid stroke="#BBA57A" opacity={0.3} />
+                            <PolarAngleAxis 
+                              dataKey="category" 
+                              tick={{ fill: '#BBA57A', fontSize: 11 }}
+                            />
+                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#BBA57A' }} />
+                            <Radar 
+                              name="Score" 
+                              dataKey="score" 
+                              stroke="#BBA57A" 
+                              fill="#BBA57A" 
+                              fillOpacity={0.6} 
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Barres de stats */}
+                      <div className="space-y-4">
+                        {STANDOUT_STATS.map((stat) => (
+                          <div key={stat.category} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-white font-medium text-sm">{stat.category.toUpperCase()}</span>
+                              <span className="text-[#BBA57A] font-bold text-2xl">{stat.score}</span>
                             </div>
-                            <Progress value={module.progress} className="h-2" />
+                            <div className="h-3 bg-[#2A2448] rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-[#BBA57A] to-[#DEAE35] transition-all duration-500"
+                                style={{ width: `${stat.score}%` }}
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
-                      <Button className="w-full" size="sm">
-                        <Award className="h-4 w-4 mr-2" />
-                        View My Progress
-                      </Button>
                     </CardContent>
                   </Card>
                 </div>
