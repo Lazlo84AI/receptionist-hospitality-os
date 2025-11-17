@@ -34,33 +34,45 @@ export const useTasks = () => {
         return;
       }
       
-      // Get active shift
+      // Get MY active shift (filtered by user_id)
       const { data: activeShift } = await supabase
         .from('shifts')
-        .select('id')
+        .select('id, service')
+        .eq('user_id', user.id)  // ✅ Filter by current user
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
       
       // If no active shift, return empty tasks
       if (!activeShift) {
-        console.log('⚠️ No active shift found');
+        console.log('⚠️ No active shift found for current user');
         setTasks([]);
         setLoading(false);
         return;
       }
       
       console.log('✅ Active shift:', activeShift.id);
+      console.log('📋 User service:', activeShift.service);
+      
+      // Get all staff members from MY service
+      const { data: myServiceStaff } = await supabase
+        .from('staff_directory')
+        .select('id')
+        .eq('service', activeShift.service);
+      
+      const myServiceUserIds = (myServiceStaff || []).map(staff => staff.id);
+      console.log(`👥 Found ${myServiceUserIds.length} members in ${activeShift.service} service`);
       
       // Read tasks, staff_directory AND profiles separately, then join on client side
+      // Fetch ALL active tasks (we'll filter by service on client side for complex logic)
       const [tasksResponse, staffResponse, profilesResponse] = await Promise.all([
         supabase
           .from('task')
           .select('*')
-          .eq('shift_id', activeShift.id)
+          .in('status', ['pending', 'in_progress', 'completed'])  // Active tasks
           .order('created_at', { ascending: false }),
         supabase
           .from('staff_directory')
-          .select('id, first_name, last_name, full_name, email'),
+          .select('id, first_name, last_name, full_name, email, service'),
         supabase
           .from('profiles')
           .select('id, first_name, last_name, email')
@@ -83,6 +95,33 @@ export const useTasks = () => {
 
       console.log('📊 Staff directory chargé:', staffResponse.data?.length, 'membres');
       console.log('👤 Profiles chargés:', profilesResponse.data?.length, 'utilisateurs');
+      
+      // ✅ FILTER TASKS BY SERVICE (2 criteria from documentation)
+      const rawTasks = tasksResponse.data || [];
+      const filteredTasks = rawTasks.filter((task: any) => {
+        // Criterion 1: Task created by someone from MY service
+        if (task.created_by && myServiceUserIds.includes(task.created_by)) {
+          console.log(`✅ Task ${task.id} included: created by my service`);
+          return true;
+        }
+        
+        // Criterion 2: Task assigned to someone from MY service
+        if (task.assigned_to && Array.isArray(task.assigned_to)) {
+          const hasMyServiceMember = task.assigned_to.some((assignedId: string) => 
+            myServiceUserIds.includes(assignedId)
+          );
+          if (hasMyServiceMember) {
+            console.log(`✅ Task ${task.id} included: assigned to my service`);
+            return true;
+          }
+        }
+        
+        // Task doesn't match any criteria
+        console.log(`❌ Task ${task.id} filtered out: not related to my service`);
+        return false;
+      });
+      
+      console.log(`🎯 Filtered ${filteredTasks.length}/${rawTasks.length} tasks for ${activeShift.service} service`);
 
       // Helper functions to get display name from different table structures
       const getDisplayNameFromStaff = (staffData: any) => {
@@ -103,8 +142,8 @@ export const useTasks = () => {
         return null;
       };
 
-      // Transform internal tasks to TaskItem format with dual name lookup
-      const allTasks: TaskItem[] = (tasksResponse.data || []).map((task: any) => {
+      // Transform filtered tasks to TaskItem format with dual name lookup
+      const allTasks: TaskItem[] = filteredTasks.map((task: any) => {
         // 1. CRÉATEUR (created_by) - chercher dans staff_directory puis profiles
         let creatorDisplay = 'Inconnu';
         if (task.created_by) {

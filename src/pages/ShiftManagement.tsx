@@ -276,11 +276,20 @@ const ShiftManagement = () => {
   // Check for active shift on mount
   useEffect(() => {
     const checkActiveShift = async () => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setShiftStatus('not_started');
+        return;
+      }
+      
+      // Check if THIS user has an active shift
       const { data: activeShift } = await supabase
         .from('shifts')
         .select('id')
+        .eq('user_id', user.id)  // ✅ Filter by current user
         .eq('status', 'active')
-        .single();
+        .maybeSingle();  // Can return null if no shift
       
       if (activeShift) {
         setShiftStatus('active');
