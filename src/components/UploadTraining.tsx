@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { QCMCreationModal } from '@/components/modals/QCMCreationModal';
 
 export function UploadTraining() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isQCMModalOpen, setIsQCMModalOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -226,7 +228,7 @@ export function UploadTraining() {
         {/* Bouton "?" - Création de QCM */}
         <Button
           onClick={() => {
-            console.log("QCM creation - À implémenter");
+            setIsQCMModalOpen(true);
             setIsExpanded(false);
           }}
           className={cn(
@@ -418,6 +420,12 @@ export function UploadTraining() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* QCM Creation Modal */}
+      <QCMCreationModal
+        isOpen={isQCMModalOpen}
+        onClose={() => setIsQCMModalOpen(false)}
+      />
     </>
   );
 }
