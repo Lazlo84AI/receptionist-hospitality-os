@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 export function UploadTraining() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [formData, setFormData] = useState({
@@ -201,23 +202,67 @@ export function UploadTraining() {
 
   return (
     <>
-      {/* Main Button - Remis en bas à droite */}
+      {/* Floating Action Buttons - Brain System */}
       <div className="fixed bottom-6 right-6 z-[9999]">
+        
+        {/* Bouton "+" - Création de formation */}
         <Button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setIsExpanded(false);
+          }}
+          className={cn(
+            "absolute h-16 w-16 rounded-full transition-all duration-300",
+            "bg-hotel-navy hover:bg-hotel-navy/90 border-2 border-hotel-yellow/50 hover:border-hotel-yellow",
+            "shadow-lg",
+            isExpanded 
+              ? "bottom-[170px] opacity-100 translate-y-0" 
+              : "bottom-0 opacity-0 translate-y-20 pointer-events-none"
+          )}
+        >
+          <Plus className="text-hotel-gold-dark" style={{ width: '24px', height: '24px' }} />
+        </Button>
+
+        {/* Bouton "?" - Création de QCM */}
+        <Button
+          onClick={() => {
+            console.log("QCM creation - À implémenter");
+            setIsExpanded(false);
+          }}
+          className={cn(
+            "absolute h-16 w-16 rounded-full transition-all duration-300",
+            "bg-hotel-navy hover:bg-hotel-navy/90 border-2 border-hotel-yellow/50 hover:border-hotel-yellow",
+            "shadow-lg",
+            isExpanded 
+              ? "bottom-[90px] opacity-100 translate-y-0" 
+              : "bottom-0 opacity-0 translate-y-20 pointer-events-none"
+          )}
+        >
+          <span className="text-hotel-gold-dark text-2xl font-bold">?</span>
+        </Button>
+
+        {/* Main Button - Brain / Close */}
+        <Button
+          onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
             "h-24 w-24 rounded-full transition-all duration-500",
             "bg-hotel-navy hover:bg-hotel-navy/90 border-2 border-hotel-yellow/50 hover:border-hotel-yellow",
-            "shadow-lg"
+            "shadow-lg relative"
           )}
         >
           <div className="relative flex items-center justify-center">
-            <Brain className="text-hotel-gold-dark" style={{ width: '28px', height: '28px' }} />
-            <Plus className="absolute text-hotel-gold-dark" style={{ width: '14px', height: '14px' }} />
+            {isExpanded ? (
+              <X className="text-hotel-gold-dark" style={{ width: '28px', height: '28px' }} />
+            ) : (
+              <>
+                <Brain className="text-hotel-gold-dark" style={{ width: '28px', height: '28px' }} />
+                <Plus className="absolute text-hotel-gold-dark" style={{ width: '14px', height: '14px' }} />
+              </>
+            )}
           </div>
         </Button>
         
-        {/* Animation pulsante remise à droite */}
+        {/* Animation pulsante */}
         <div className="absolute -bottom-12 -right-12 h-48 w-48 rounded-full border-2 border-hotel-yellow/20 animate-ping pointer-events-none" />
       </div>
 
