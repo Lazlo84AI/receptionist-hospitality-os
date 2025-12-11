@@ -302,11 +302,21 @@ const ServiceControl2 = () => {
   useEffect(() => {
     const checkActiveShift = async () => {
       try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setShiftStatus('not_started');
+          setIsCheckingShift(false);
+          return;
+        }
+        
+        // Check if THIS user has an active shift
         const { data: activeShift } = await supabase
           .from('shifts')
           .select('id')
+          .eq('user_id', user.id)  // ✅ Filter by current user
           .eq('status', 'active')
-          .single();
+          .maybeSingle();
         
         if (activeShift) {
           setShiftStatus('active');

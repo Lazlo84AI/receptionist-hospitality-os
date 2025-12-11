@@ -6,6 +6,9 @@ import { X, ChevronLeft, ChevronRight, CheckCircle, XCircle, Loader2 } from 'luc
 import { cn } from '@/lib/utils';
 
 import { useQuizQuestions, type TrainingQuestionCompatible } from '@/hooks/useQuizQuestions';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuizzModalProps {
   isOpen: boolean;
@@ -35,6 +38,9 @@ const QuizzModal = ({
     questionIds,
     !!questionIds // enabled si on a des IDs
   );
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Questions depuis Supabase uniquement
   const finalQuestions = dbQuestions || [];
@@ -165,6 +171,40 @@ const QuizzModal = ({
     setQuizCompleted(false);
   };
 
+  const handleDeleteQuestion = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette question ?')) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('delete_training_question', {
+        question_id: currentQuestion.id
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Question supprimée",
+        description: "La question a été supprimée avec succès",
+      });
+
+      // Recharger les questions
+      await queryClient.invalidateQueries(['quiz-questions', questionIds]);
+      
+      // Ajuster l'index si on était sur la dernière question
+      if (currentQuestionIndex >= totalQuestions - 1 && currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(prev => prev - 1);
+      }
+    } catch (error) {
+      console.error('Error deleting question:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la question",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (quizCompleted) {
     // 🎯 UTILISER LE SCORE SAUVEGARDÉ OU LE SCORE CALCULÉ
     const score = selectedTask?.last_score || calculateScore();
@@ -268,10 +308,6 @@ const QuizzModal = ({
                   Question {currentQuestionIndex + 1} sur {totalQuestions}
                 </span>
               </div>
-              
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-5 w-5" />
-              </Button>
             </div>
             
             {/* Navigation en haut */}
@@ -291,19 +327,27 @@ const QuizzModal = ({
               </span>
 
               {!showResult ? (
-                <Button
-                  onClick={handleSubmitAnswer}
-                  disabled={!hasSelectedAnswer}
-                  className={cn(
-                    "transition-all duration-300 px-6 py-3 rounded-full font-medium flex items-center gap-2",
-                    hasSelectedAnswer 
-                      ? "bg-[#1E1A37] hover:bg-[#1E1A37]/90 text-white shadow-lg" 
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50"
-                  )}
-                >
-                  {hasSelectedAnswer ? "Valider" : "Sélectionnez une réponse"}
-                  {hasSelectedAnswer && <ChevronRight className="h-4 w-4" />}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleDeleteQuestion}
+                    className="text-xs italic underline text-gray-500 hover:text-red-600 transition-colors"
+                  >
+                    delete this question
+                  </button>
+                  <Button
+                    onClick={handleSubmitAnswer}
+                    disabled={!hasSelectedAnswer}
+                    className={cn(
+                      "transition-all duration-300 px-6 py-3 rounded-full font-medium flex items-center gap-2",
+                      hasSelectedAnswer 
+                        ? "bg-[#1E1A37] hover:bg-[#1E1A37]/90 text-white shadow-lg" 
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50"
+                    )}
+                  >
+                    {hasSelectedAnswer ? "Valider" : "Sélectionnez une réponse"}
+                    {hasSelectedAnswer && <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                </div>
               ) : (
                 <Button
                   onClick={handleNext}
