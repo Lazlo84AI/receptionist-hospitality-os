@@ -1,0 +1,23 @@
+{
+  "name": "mcp-hospitality",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP Server for HospitalityOS Voice Activity Reports",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@supabase/supabase-js": "^2.39.0",
+    "agents": "latest",
+    "ai": "^6.0.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^4.51.0"
+  }
+}

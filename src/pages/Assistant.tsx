@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { AssistantFloatingRAGUpload } from '@/components/AssistantFloatingRAGUpload';
 
 const Assistant = () => {
   const { user } = useAuth();
@@ -306,6 +307,9 @@ const Assistant = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bouton flottant RAG Upload */}
+      <AssistantFloatingRAGUpload />
     </div>
   );
 };

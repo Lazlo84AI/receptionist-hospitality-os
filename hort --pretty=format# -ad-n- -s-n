@@ -1,0 +1,40 @@
+2025-12-15 | 93a5d4a | interface de chat question et reponse en lien avec N8N juste la partie interaction pas RAG
+
+src/pages/Assistant.tsx
+
+2025-12-11 | 17a5d0c | Ajout d'un bouton suppression de question sur les quizzs
+
+SHIFT_FIX_SUMMARY.md
+delete_training_question_function.sql
+src/components/modals/QuizzModal.tsx
+src/pages/ServiceControl2.tsx
+
+2025-11-17 | cdf50cf | feat: Add QCM creation modal with training selection - question mark button opens modal to select existing trainings and send to N8N webhook for QCM generation
+
+src/components/UploadTraining.tsx
+src/components/modals/QCMCreationModal.tsx
+
+2025-11-17 | 9795f95 | feat: Transform creation button into expandable vertical menu with QCM and new training options
+
+src/components/UploadTraining.tsx
+
+2025-11-17 | 5205b19 | Individual shift management with service-based task filtering - Each user manages their own shift independently - Multiple shifts can be active simultaneously (reception + housekeeping + maintenance) - Tasks filtered by service using 2 criteria: 1. Created by someone from my service → I see it 2. Assigned to someone from my service → I see it - Cross-service tasks visible to both services - Button states reflect current user's shift (not other users) Modified: - ShiftManagement.tsx: Check shift by user_id - useSupabaseData.ts: Filter tasks by service
+
+src/hooks/useSupabaseData.ts
+src/pages/ShiftManagement.tsx
+
+2025-11-16 | 9118384 | Updated the sync_training_questions_to_knowledge_queries function, added the trigger_auto_refill_qcm function, and modified the 'Standout Stats' block: added 7 domains and linked it to the logged session
+
+src/pages/Connaissances.tsx
+
+2025-11-14 | 6cfc44e | Resolved a function issue between the Training Questions table and Knowledge Queries — wrong naming, mismapping, and problems affecting the production of the AIs in n8n.
+
+src/components/UploadTraining.tsx
+
+2025-11-10 | 52bf01e | Updated changelog with the new knowledge management section and modified the quiz modal, replacing the 'SupplyBase topic' column with the 'theme' column, and updated the rewarding system accordingly.
+
+"= git show --name-only --pretty=format\357\200\272\357\200\242\357\200\242 $commit \357\201\274 Where-Object { $_ -ne \357\200\242\357\200\242 }_"
+CHANGELOG.md
+"ago\357\200\242 --pretty=format\357\200\272\357\200\242- -s (-ad, -an)\357\200\242 --date=short \357\200\276 changelog_temp.md"
+src/components/modals/QuizzModal.tsx
+update-changelog.ps1.md
