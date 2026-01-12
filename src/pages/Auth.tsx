@@ -215,7 +215,7 @@ const Auth = () => {
                               <AlertDescription>{resetMessage}</AlertDescription>
                             </Alert>
                           )}
-                          <Button type="submit" className="w-full gold-metallic-gradient text-hotel-navy hover:shadow-xl border border-hotel-gold-dark/30 shadow-lg" disabled={resetLoading}>
+                          <Button type="submit" className="w-full bg-[#BBA57A] text-white border border-hotel-gold-dark/30 shadow-lg transition-all duration-300 hover:!bg-[#DEAE35] hover:text-[#1E1A37] hover:shadow-2xl hover:border-[#BBA57A] hover:scale-[1.02]" disabled={resetLoading}>
                             {resetLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Reset Password
                           </Button>
