@@ -96,16 +96,12 @@ const Auth = () => {
     setResetError('');
     setResetMessage('');
     
-    // Detect current environment and set appropriate redirect URL
-    const currentOrigin = window.location.origin; // http://localhost:8080 or https://vercel.app
-    const redirectUrl = `${currentOrigin}/reset-password`;
+    console.log('🔄 Reset password request');
+    console.log('📧 Using Supabase email template configuration');
     
-    console.log('🔄 Reset password request from:', currentOrigin);
-    console.log('📧 Email will redirect to:', redirectUrl);
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: redirectUrl
-    });
+    // Don't specify redirectTo - let Supabase use the email template
+    // The email template already includes: {{ .SiteURL }}/reset-password?token={{ .TokenHash }}&type=recovery
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail);
     
     if (error) {
       setResetError(error.message);
