@@ -47,6 +47,7 @@ interface Document {
 }
 
 export function AssistantFloatingRAGUpload() {
+  // États existants
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -183,7 +184,6 @@ export function AssistantFloatingRAGUpload() {
     setIsUploading(true);
 
     try {
-      // ÉTAPE 1: Upload du fichier dans Supabase Storage
       toast({
         title: "📤 Étape 1/3",
         description: "Upload du fichier dans Supabase...",
@@ -203,7 +203,6 @@ export function AssistantFloatingRAGUpload() {
         throw new Error(`Erreur upload Supabase: ${uploadError.message}`);
       }
 
-      // ÉTAPE 2: Récupérer l'URL publique
       const { data: { publicUrl } } = supabase.storage
         .from('assistant')
         .getPublicUrl(uniqueFileName);
@@ -213,7 +212,6 @@ export function AssistantFloatingRAGUpload() {
         description: "Enregistrement dans la base de données...",
       });
 
-      // ÉTAPE 3: Insérer dans assistant_documents
       const { data: docData, error: insertError } = await supabase
         .from('assistant_documents')
         .insert([{
@@ -235,13 +233,13 @@ export function AssistantFloatingRAGUpload() {
         description: "Envoi au moteur de vectorisation...",
       });
 
-      // ÉTAPE 4: Appel webhook N8N avec les métadonnées
       const response = await fetch('https://sokle.app.n8n.cloud/webhook/assitant-rag-loading', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          mode: 'new',
           document_id: docData.id,
           document_name: documentName.trim(),
           document_url: publicUrl,
@@ -267,11 +265,117 @@ export function AssistantFloatingRAGUpload() {
         fileInputRef.current.value = '';
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur upload:', error);
       toast({
         title: "❌ Erreur",
         description: error.message || "Impossible de charger le fichier dans le RAG",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // NOUVELLE FONCTION : Gestion de la mise à jour
+  const handleUpdate = async () => {
+    if (!selectedDocument || !selectedFile) {
+      toast({
+        title: "Sélection incomplète",
+        description: "Veuillez sélectionner un document et un nouveau fichier",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      toast({
+        title: "📤 Étape 1/4",
+        description: "Écrasement du fichier dans Storage...",
+      });
+
+      // Écraser le fichier existant avec le nouveau (même nom)
+      const { error: uploadError } = await supabase.storage
+        .from('assistant')
+        .upload(selectedDocument.file_name, selectedFile, {
+          upsert: true,
+          cacheControl: '3600'
+        });
+
+      if (uploadError) {
+        throw new Error(`Erreur écrasement fichier: ${uploadError.message}`);
+      }
+
+      // Récupérer l'URL publique (reste la même)
+      const { data: { publicUrl } } = supabase.storage
+        .from('assistant')
+        .getPublicUrl(selectedDocument.file_name);
+
+      toast({
+        title: "💾 Étape 2/4",
+        description: "Mise à jour du status en processing...",
+      });
+
+      // Update status en processing
+      const { error: updateError } = await supabase
+        .from('assistant_documents')
+        .update({ 
+          status: 'processing',
+          processed_at: null,
+          error_message: null
+        })
+        .eq('id', selectedDocument.id);
+
+      if (updateError) {
+        throw new Error(`Erreur update status: ${updateError.message}`);
+      }
+
+      toast({
+        title: "⚡ Étape 3/4",
+        description: "Envoi au moteur de vectorisation...",
+      });
+
+      // Appel webhook N8N avec mode update
+      const response = await fetch('https://sokle.app.n8n.cloud/webhook/assitant-rag-loading', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mode: 'update',
+          document_id: selectedDocument.id,
+          document_name: selectedDocument.document_name,
+          file_name: selectedDocument.file_name,
+          document_url: publicUrl,
+          thematic: selectedDocument.thematic
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur webhook N8N: ${response.status}`);
+      }
+
+      toast({
+        title: "✅ Mise à jour lancée !",
+        description: `"${selectedDocument.document_name}" est en cours de retraitement`,
+      });
+
+      // Reset
+      setIsOpen(false);
+      setSelectedDocument(null);
+      setSelectedFile(null);
+      setSearchQuery('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+    } catch (error: any) {
+      console.error('Erreur update:', error);
+      toast({
+        title: "❌ Erreur",
+        description: error.message || "Impossible de mettre à jour le document",
         variant: "destructive",
       });
     } finally {
@@ -285,6 +389,9 @@ export function AssistantFloatingRAGUpload() {
       setSelectedFile(null);
       setDocumentName('');
       setThematic('');
+      setSelectedDocument(null);
+      setSearchQuery('');
+      setMode('new');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -319,171 +426,384 @@ export function AssistantFloatingRAGUpload() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-semibold">
               <PrayingHandsIcon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: '#BBA57A' }} />
-              <span className="line-clamp-2 sm:line-clamp-1">Charger un nouveau document dans le RAG</span>
+              <span className="line-clamp-2 sm:line-clamp-1">Charger un document dans le RAG</span>
             </DialogTitle>
           </DialogHeader>
 
-          {/* Encart règle importante */}
-          <div className="bg-[#BBA57A]/10 border-2 border-[#BBA57A] rounded-lg p-3 sm:p-4 mt-2 sm:mt-4">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <span className="text-xl sm:text-2xl flex-shrink-0">🟨</span>
-              <div>
-                <p className="font-semibold text-[#1E1A37] mb-1 sm:mb-2 text-sm sm:text-base">
-                  Règle importante — à respecter absolument <span className="text-red-500">*</span>
-                </p>
-                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-                  Si vous souhaitez mettre à jour un document dans le RAG, vous devez impérativement conserver exactement le même nom de fichier que celui utilisé lors de l'ajout initial. Le plus simple est de nommer le PDF dès le départ avec le nom définitif du document dans le RAG.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 sm:space-y-6 pt-3 sm:pt-4">
-            {/* Document Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="document" className="text-sm sm:text-base font-medium text-foreground">
-                Document <span className="text-red-500">*</span>
-              </Label>
-              <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+          {/* TOGGLE MODES */}
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant={mode === 'new' ? 'default' : 'outline'}
+              onClick={() => {
+                setMode('new');
+                setSelectedDocument(null);
+                setSearchQuery('');
+              }}
+              disabled={isUploading}
               className={cn(
-                "border-2 border-dashed rounded-lg p-4 sm:p-6 md:p-8 text-center transition-all duration-200",
-                isDragOver 
-                  ? "border-[#BBA57A] bg-[#BBA57A]/10 scale-105" 
-                  : "border-gray-300 hover:border-[#BBA57A]/50",
-                isUploading && "opacity-50 cursor-not-allowed"
+                "flex-1",
+                mode === 'new' && 'bg-[#BBA57A] hover:bg-[#BBA57A]/90 text-white'
               )}
             >
-              {selectedFile ? (
-                /* Fichier sélectionné */
-                <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-[#1E1A37] flex-shrink-0" />
-                    <div className="text-center sm:text-left flex-1 min-w-0">
-                      <p className="font-medium text-xs sm:text-sm text-gray-900 truncate px-2 sm:px-0">{selectedFile.name}</p>
+              Nouveau document
+            </Button>
+            <Button
+              variant={mode === 'update' ? 'default' : 'outline'}
+              onClick={() => {
+                setMode('update');
+                setDocumentName('');
+                setThematic('');
+                setSelectedFile(null);
+              }}
+              disabled={isUploading}
+              className={cn(
+                "flex-1",
+                mode === 'update' && 'bg-[#BBA57A] hover:bg-[#BBA57A]/90 text-white'
+              )}
+            >
+              Mettre à jour un document existant
+            </Button>
+          </div>
+
+          {/* CONTENU CONDITIONNEL SELON MODE */}
+          {mode === 'new' ? (
+            // ========== MODE NEW ==========
+            <div className="space-y-4 sm:space-y-6 pt-3 sm:pt-4">
+              {/* Encart conseil important */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 sm:p-4">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl flex-shrink-0">💡</span>
+                  <div>
+                    <p className="font-semibold text-blue-900 mb-1 sm:mb-2 text-sm sm:text-base">
+                      Conseil important
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                      Réfléchissez bien au titre que vous allez donner au document (connaissance sur l'établissement) que vous allez charger - c'est ce titre qui sera utilisé pour les mises à jour.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="document" className="text-sm sm:text-base font-medium text-foreground">
+                  Document <span className="text-red-500">*</span>
+                </Label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={cn(
+                    "border-2 border-dashed rounded-lg p-4 sm:p-6 md:p-8 text-center transition-all duration-200",
+                    isDragOver 
+                      ? "border-[#BBA57A] bg-[#BBA57A]/10 scale-105" 
+                      : "border-gray-300 hover:border-[#BBA57A]/50",
+                    isUploading && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  {selectedFile ? (
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-[#1E1A37] flex-shrink-0" />
+                        <div className="text-center sm:text-left flex-1 min-w-0">
+                          <p className="font-medium text-xs sm:text-sm text-gray-900 truncate px-2 sm:px-0">{selectedFile.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeFile}
+                          disabled={isUploading}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <p className="text-xs text-gray-500">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        Fichier prêt. Cliquez sur "Charger" pour l'envoyer au RAG.
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeFile}
-                      disabled={isUploading}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Fichier prêt. Cliquez sur "Charger" pour l'envoyer au RAG.
+                  ) : (
+                    <div className="space-y-3 sm:space-y-4">
+                      <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-[#BBA57A] mx-auto" />
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-gray-900 mb-1">
+                          Glissez-déposez votre fichier ici
+                        </p>
+                        <p className="text-xs text-gray-500 mb-3">
+                          ou cliquez pour parcourir (PDF, DOC, DOCX, TXT)
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="hover:border-[#BBA57A] hover:text-[#BBA57A] text-xs sm:text-sm"
+                        >
+                          Parcourir les fichiers
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
+                  disabled={isUploading}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Nom du document */}
+              <div className="space-y-2">
+                <Label htmlFor="documentName" className="text-sm sm:text-base font-medium text-foreground">
+                  Nom du document <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="documentName"
+                  type="text"
+                  placeholder="Saisissez le nom du document"
+                  value={documentName}
+                  onChange={(e) => setDocumentName(e.target.value)}
+                  disabled={isUploading}
+                  className="transition-all duration-200 hover:border-[#BBA57A] focus:border-[#BBA57A] focus:ring-2 focus:ring-[#BBA57A]/20 text-sm sm:text-base"
+                />
+              </div>
+
+              {/* Thématique */}
+              <div className="space-y-2">
+                <Label htmlFor="thematic" className="text-sm sm:text-base font-medium text-foreground">
+                  Thématique
+                </Label>
+                <Select value={thematic} onValueChange={setThematic} disabled={isUploading}>
+                  <SelectTrigger className="transition-all duration-200 hover:border-[#BBA57A] focus:border-[#BBA57A] focus:ring-2 focus:ring-[#BBA57A]/20 text-sm sm:text-base">
+                    <SelectValue placeholder="Select an option ..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="housekeeping">Housekeeping (Gouvernance)</SelectItem>
+                    <SelectItem value="reception">Reception (Accueil)</SelectItem>
+                    <SelectItem value="maintenance">Maintenance (Maintenance)</SelectItem>
+                    <SelectItem value="security">Security (Sécurité)</SelectItem>
+                    <SelectItem value="fb">F&B (Restauration)</SelectItem>
+                    <SelectItem value="customer_experience">Customer experience (expérience client)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Boutons d'action */}
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t sticky bottom-0 bg-white pb-2 sm:pb-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isUploading}
+                  className="w-full sm:w-auto order-2 sm:order-1"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleUpload}
+                  disabled={!selectedFile || !documentName.trim() || !thematic || isUploading}
+                  className="min-w-full sm:min-w-[140px] bg-[#BBA57A] hover:bg-[#BBA57A]/90 text-white order-1 sm:order-2"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Charger
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            // ========== MODE UPDATE ==========
+            <div className="space-y-4 pt-3">
+              {/* Encart avertissement */}
+              <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl flex-shrink-0">⚠️</span>
+                  <p className="text-sm text-gray-700">
+                    Pour mettre à jour un document, vous devez sélectionner le fichier à remplacer. 
+                    Le remplacement écrasera toutes les données vectorisées du document précédent.
                   </p>
                 </div>
+              </div>
+
+              {!selectedDocument ? (
+                // Liste des documents
+                <>
+                  {/* Search bar */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Rechercher un document..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+
+                  {/* Liste scrollable */}
+                  <div className="max-h-[400px] overflow-y-auto space-y-2 border rounded-lg p-2">
+                    {filteredDocuments.length === 0 ? (
+                      <p className="text-center text-gray-500 py-8">
+                        {searchQuery ? 'Aucun document trouvé' : 'Aucun document disponible'}
+                      </p>
+                    ) : (
+                      filteredDocuments.map((doc) => (
+                        <div
+                          key={doc.id}
+                          onClick={() => setSelectedDocument(doc)}
+                          className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 hover:border-[#BBA57A] transition"
+                        >
+                          <p className="font-medium text-gray-900">📄 {doc.document_name}</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            📎 {doc.thematic}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
               ) : (
-                /* Zone d'upload vide */
-                <div className="space-y-3 sm:space-y-4">
-                  <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-[#BBA57A] mx-auto" />
-                  <div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 mb-1">
-                      Glissez-déposez votre fichier ici
-                    </p>
-                    <p className="text-xs text-gray-500 mb-3">
-                      ou cliquez pour parcourir (PDF, DOC, DOCX, TXT)
-                    </p>
+                // Document sélectionné + zone upload
+                <div className="space-y-4">
+                  {/* Détails document sélectionné */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="font-semibold mb-2 text-blue-900">Document sélectionné :</p>
+                    <p className="text-gray-900">📄 {selectedDocument.document_name}</p>
+                    <p className="text-sm text-gray-600 mt-1">Thématique: {selectedDocument.thematic}</p>
+                  </div>
+
+                  {/* Zone drag & drop pour nouveau fichier */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Nouveau fichier <span className="text-red-500">*</span>
+                    </Label>
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={cn(
+                        "border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200",
+                        isDragOver 
+                          ? "border-[#BBA57A] bg-[#BBA57A]/10 scale-105" 
+                          : "border-gray-300 hover:border-[#BBA57A]/50",
+                        isUploading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {selectedFile ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center gap-3">
+                            <FileText className="h-8 w-8 text-[#1E1A37]" />
+                            <div className="text-left">
+                              <p className="font-medium text-sm text-gray-900">{selectedFile.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeFile}
+                              disabled={isUploading}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <Upload className="h-12 w-12 text-[#BBA57A] mx-auto" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 mb-1">
+                              Glissez-déposez le nouveau fichier
+                            </p>
+                            <p className="text-xs text-gray-500 mb-3">
+                              ou cliquez pour parcourir
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isUploading}
+                              className="hover:border-[#BBA57A] hover:text-[#BBA57A]"
+                            >
+                              Parcourir
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileSelect}
+                      disabled={isUploading}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* Bouton retour */}
+                  <Button 
+                    onClick={() => {
+                      setSelectedDocument(null);
+                      setSelectedFile(null);
+                    }} 
+                    variant="outline"
+                    disabled={isUploading}
+                    className="w-full"
+                  >
+                    ← Choisir un autre document
+                  </Button>
+
+                  {/* Boutons d'action */}
+                  <div className="flex gap-3 pt-4 border-t">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={handleClose}
                       disabled={isUploading}
-                      className="hover:border-[#BBA57A] hover:text-[#BBA57A] text-xs sm:text-sm"
+                      className="flex-1"
                     >
-                      Parcourir les fichiers
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={handleUpdate}
+                      disabled={!selectedFile || isUploading}
+                      className="flex-1 bg-[#BBA57A] hover:bg-[#BBA57A]/90 text-white"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Mise à jour...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Mettre à jour
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Input file caché */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={handleFileSelect}
-              disabled={isUploading}
-              className="hidden"
-            />
-            </div>
-
-            {/* Nom du document */}
-            <div className="space-y-2">
-              <Label htmlFor="documentName" className="text-sm sm:text-base font-medium text-foreground">
-                Nom du document <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="documentName"
-                type="text"
-                placeholder="Saisissez le nom du document"
-                value={documentName}
-                onChange={(e) => setDocumentName(e.target.value)}
-                disabled={isUploading}
-                className="transition-all duration-200 hover:border-[#BBA57A] focus:border-[#BBA57A] focus:ring-2 focus:ring-[#BBA57A]/20 text-sm sm:text-base"
-              />
-            </div>
-
-            {/* Thématique */}
-            <div className="space-y-2">
-              <Label htmlFor="thematic" className="text-sm sm:text-base font-medium text-foreground">
-                Thématique
-              </Label>
-              <Select value={thematic} onValueChange={setThematic} disabled={isUploading}>
-                <SelectTrigger className="transition-all duration-200 hover:border-[#BBA57A] focus:border-[#BBA57A] focus:ring-2 focus:ring-[#BBA57A]/20 text-sm sm:text-base">
-                  <SelectValue placeholder="Select an option ..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="housekeeping">Housekeeping (Gouvernance)</SelectItem>
-                  <SelectItem value="reception">Reception (Accueil)</SelectItem>
-                  <SelectItem value="maintenance">Maintenance (Maintenance)</SelectItem>
-                  <SelectItem value="security">Security (Sécurité)</SelectItem>
-                  <SelectItem value="fb">F&B (Restauration)</SelectItem>
-                  <SelectItem value="customer_experience">Customer experience (expérience client)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Boutons d'action */}
-            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t sticky bottom-0 bg-white pb-2 sm:pb-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isUploading}
-                className="w-full sm:w-auto order-2 sm:order-1"
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleUpload}
-                disabled={!selectedFile || !documentName.trim() || !thematic || isUploading}
-                className="min-w-full sm:min-w-[140px] bg-[#BBA57A] hover:bg-[#BBA57A]/90 text-white order-1 sm:order-2"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Chargement...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Charger
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
