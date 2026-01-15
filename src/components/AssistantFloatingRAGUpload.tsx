@@ -153,6 +153,27 @@ export function AssistantFloatingRAGUpload() {
     }
   };
 
+  // Fonction pour normaliser le nom de fichier et éviter les erreurs Supabase Storage
+  const normalizeFileName = (fileName: string): string => {
+    // Séparer nom et extension
+    const lastDotIndex = fileName.lastIndexOf('.');
+    const name = fileName.substring(0, lastDotIndex);
+    const extension = fileName.substring(lastDotIndex);
+    
+    // Normaliser: enlever accents, remplacer espaces/spéciaux par underscores
+    const normalized = name
+      .normalize('NFD') // Décompose les caractères accentués (é → e + ´)
+      .replace(/[\u0300-\u036f]/g, '') // Supprime les diacritiques
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_') // Remplace tout sauf alphanum par _
+      .replace(/^_+|_+$/g, ''); // Enlève underscores début/fin
+    
+    // Ajouter timestamp pour unicité
+    const timestamp = Date.now();
+    
+    return `${normalized}_${timestamp}${extension}`;
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       toast({
@@ -184,19 +205,33 @@ export function AssistantFloatingRAGUpload() {
     setIsUploading(true);
 
     try {
+      // Récupérer l'utilisateur connecté
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Utilisateur non authentifié");
+      }
+
       toast({
         title: "📤 Étape 1/3",
         description: "Upload du fichier dans Supabase...",
       });
 
-      const fileExtension = selectedFile.name.split('.').pop();
-      const uniqueFileName = `${documentName.trim()}_${Date.now()}.${fileExtension}`;
+      // Normaliser le nom de fichier (enlever accents, espaces...)
+      const normalizedFileName = normalizeFileName(selectedFile.name);
+      const filePath = `${user.id}/${normalizedFileName}`;
+
+      console.log('📁 Upload vers Storage:', {
+        original: selectedFile.name,
+        normalized: normalizedFileName,
+        path: filePath
+      });
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('assistant')
-        .upload(uniqueFileName, selectedFile, {
+        .upload(filePath, selectedFile, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // ✅ Écrase les doublons
         });
 
       if (uploadError) {
@@ -205,7 +240,7 @@ export function AssistantFloatingRAGUpload() {
 
       const { data: { publicUrl } } = supabase.storage
         .from('assistant')
-        .getPublicUrl(uniqueFileName);
+        .getPublicUrl(filePath);
 
       toast({
         title: "💾 Étape 2/3",
@@ -216,10 +251,11 @@ export function AssistantFloatingRAGUpload() {
         .from('assistant_documents')
         .insert([{
           document_name: documentName.trim(),
-          file_name: uniqueFileName,
+          file_name: normalizedFileName,
           document_url: publicUrl,
           thematic: thematic,
-          status: 'processing'
+          status: 'processing',
+          uploaded_by: user.id
         }])
         .select()
         .single();
@@ -233,22 +269,39 @@ export function AssistantFloatingRAGUpload() {
         description: "Envoi au moteur de vectorisation...",
       });
 
+      console.log('🚀 Envoi vers N8N:', {
+        url: 'https://sokle.app.n8n.cloud/webhook/assitant-rag-loading',
+        payload: {
+          mode: 'new',
+          document_id: docData.id,
+          document_name: documentName.trim(),
+          document_url: publicUrl,
+          thematic: thematic
+        }
+      });
+
       const response = await fetch('https://sokle.app.n8n.cloud/webhook/assitant-rag-loading', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mode: 'new',
+          file_url: publicUrl,
           document_id: docData.id,
           document_name: documentName.trim(),
-          document_url: publicUrl,
           thematic: thematic
         }),
       });
 
+      console.log('📡 Réponse N8N:', {
+        status: response.status,
+        ok: response.ok
+      });
+
       if (!response.ok) {
-        throw new Error(`Erreur webhook N8N: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Erreur N8N:', errorText);
+        throw new Error(`Erreur webhook N8N: ${response.status} - ${errorText}`);
       }
 
       toast({
