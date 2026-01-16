@@ -44,6 +44,7 @@ interface Document {
   thematic: string;
   document_url: string;
   status: string;
+  uploaded_at: string;
 }
 
 export function AssistantFloatingRAGUpload() {
@@ -63,12 +64,12 @@ export function AssistantFloatingRAGUpload() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // NOUVELLE FONCTION : Fetch documents depuis Supabase
+  // NOUVELLE FONCTION : Fetch documents depuis Supabase avec déduplication
   const fetchDocuments = async () => {
     try {
       const { data, error } = await supabase
         .from('assistant_documents')
-        .select('id, document_name, file_name, thematic, document_url, status')
+        .select('id, document_name, file_name, thematic, document_url, status, uploaded_at')
         .eq('status', 'completed')
         .order('uploaded_at', { ascending: false });
 
@@ -82,7 +83,23 @@ export function AssistantFloatingRAGUpload() {
         return;
       }
 
-      setDocuments(data || []);
+      // 🔥 DÉDUPLICATION : Garder uniquement le document le plus récent par document_name
+      const uniqueDocuments = Object.values(
+        (data || []).reduce((acc: Record<string, any>, doc: any) => {
+          // Si ce document_name n'existe pas encore OU si ce document est plus récent
+          if (!acc[doc.document_name] || new Date(doc.uploaded_at) > new Date(acc[doc.document_name].uploaded_at)) {
+            acc[doc.document_name] = doc;
+          }
+          return acc;
+        }, {})
+      );
+
+      console.log('📊 Documents dédupliqués:', {
+        total: data?.length || 0,
+        unique: uniqueDocuments.length
+      });
+
+      setDocuments(uniqueDocuments);
     } catch (error) {
       console.error('Erreur fetch documents:', error);
     }
@@ -344,15 +361,31 @@ export function AssistantFloatingRAGUpload() {
     setIsUploading(true);
 
     try {
+      // Récupérer l'utilisateur connecté pour le chemin d'upload
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Utilisateur non authentifié");
+      }
+
       toast({
         title: "📤 Étape 1/4",
         description: "Écrasement du fichier dans Storage...",
       });
 
+      // Construire le chemin complet avec userId
+      const filePath = `${user.id}/${selectedDocument.file_name}`;
+
+      console.log('📁 Update vers Storage:', {
+        document_name: selectedDocument.document_name,
+        file_name: selectedDocument.file_name,
+        full_path: filePath
+      });
+
       // Écraser le fichier existant avec le nouveau (même nom)
       const { error: uploadError } = await supabase.storage
         .from('assistant')
-        .upload(selectedDocument.file_name, selectedFile, {
+        .upload(filePath, selectedFile, {
           upsert: true,
           cacheControl: '3600'
         });
@@ -364,7 +397,7 @@ export function AssistantFloatingRAGUpload() {
       // Récupérer l'URL publique (reste la même)
       const { data: { publicUrl } } = supabase.storage
         .from('assistant')
-        .getPublicUrl(selectedDocument.file_name);
+        .getPublicUrl(filePath);
 
       toast({
         title: "💾 Étape 2/4",
@@ -401,7 +434,7 @@ export function AssistantFloatingRAGUpload() {
           document_id: selectedDocument.id,
           document_name: selectedDocument.document_name,
           file_name: selectedDocument.file_name,
-          document_url: publicUrl,
+          file_url: publicUrl,
           thematic: selectedDocument.thematic
         }),
       });
@@ -734,7 +767,7 @@ export function AssistantFloatingRAGUpload() {
                 <div className="space-y-4">
                   {/* Détails document sélectionné */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="font-semibold mb-2 text-blue-900">Document sélectionné :</p>
+                    <p className="font-semibold mb-2 text-blue-900">Document à mettre à jour :</p>
                     <p className="text-gray-900">📄 {selectedDocument.document_name}</p>
                     <p className="text-sm text-gray-600 mt-1">Thématique: {selectedDocument.thematic}</p>
                   </div>
@@ -742,7 +775,7 @@ export function AssistantFloatingRAGUpload() {
                   {/* Zone drag & drop pour nouveau fichier */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
-                      Nouveau fichier <span className="text-red-500">*</span>
+                      Nouveau fichier à charger <span className="text-red-500">*</span>
                     </Label>
                     <div
                       onDragOver={handleDragOver}
