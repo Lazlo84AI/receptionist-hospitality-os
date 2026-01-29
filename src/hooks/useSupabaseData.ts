@@ -53,14 +53,24 @@ export const useTasks = () => {
       console.log('✅ Active shift:', activeShift.id);
       console.log('📋 User service:', activeShift.service);
       
-      // Get all staff members from MY service
-      const { data: myServiceStaff } = await supabase
+      // 🎯 CHECK: If user is from 'direction' service, they see ALL tasks
+      const isDirectionService = activeShift.service?.toLowerCase() === 'direction';
+      
+      if (isDirectionService) {
+        console.log('👑 DIRECTION SERVICE DETECTED - User has full visibility on ALL tasks');
+      }
+      
+      // Get all staff members from MY service (skip if direction service)
+      const { data: myServiceStaff } = !isDirectionService ? await supabase
         .from('staff_directory')
         .select('id')
-        .eq('service', activeShift.service);
+        .eq('service', activeShift.service) : { data: [] };
       
       const myServiceUserIds = (myServiceStaff || []).map(staff => staff.id);
-      console.log(`👥 Found ${myServiceUserIds.length} members in ${activeShift.service} service`);
+      
+      if (!isDirectionService) {
+        console.log(`👥 Found ${myServiceUserIds.length} members in ${activeShift.service} service`);
+      }
       
       // Read tasks, staff_directory AND profiles separately, then join on client side
       // Fetch ALL active tasks (we'll filter by service on client side for complex logic)
@@ -97,8 +107,9 @@ export const useTasks = () => {
       console.log('👤 Profiles chargés:', profilesResponse.data?.length, 'utilisateurs');
       
       // ✅ FILTER TASKS BY SERVICE (2 criteria from documentation)
+      // 👑 EXCEPTION: Direction service sees ALL tasks without filtering
       const rawTasks = tasksResponse.data || [];
-      const filteredTasks = rawTasks.filter((task: any) => {
+      const filteredTasks = isDirectionService ? rawTasks : rawTasks.filter((task: any) => {
         // Criterion 1: Task created by someone from MY service
         if (task.created_by && myServiceUserIds.includes(task.created_by)) {
           console.log(`✅ Task ${task.id} included: created by my service`);
