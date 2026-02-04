@@ -189,17 +189,22 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       if (userError || !user) throw new Error('User not authenticated');
 
       // 1. RÉCUPÉRER LE SHIFT ACTIF DE L'UTILISATEUR
-      const { data: activeShift, error: shiftError } = await supabase
+      const { data: shifts, error: shiftError } = await supabase
         .from('shifts')
         .select('id')
         .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
+        .eq('status', 'active');
 
-      if (!activeShift) {
+      if (shiftError) {
+        console.error('Shift query error:', shiftError);
+        throw new Error('Error checking active shift. Please try again.');
+      }
+
+      if (!shifts || shifts.length === 0) {
         throw new Error('No active shift found. Please start a shift before creating tasks.');
       }
 
+      const activeShift = shifts[0];
       console.log('✅ Active shift found:', activeShift.id);
 
 
