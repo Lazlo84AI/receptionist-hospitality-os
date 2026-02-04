@@ -6,6 +6,7 @@ import { ReminderModal } from './modals/ReminderModal';
 import { useTasks, useProfiles } from '@/hooks/useSupabaseData';
 import { TaskItem } from '@/types/database';
 import { formatTimeElapsed } from '@/utils/timeUtils';
+import { useCurrentShift } from '@/hooks/useShiftData';
 
 // Transform database TaskItem (client request) to UI format
 const transformClientRequest = (request: TaskItem) => ({
@@ -28,6 +29,7 @@ const transformClientRequest = (request: TaskItem) => ({
 export function ClientRequestsCard() {
   const { tasks, loading, error, refetch } = useTasks();
   const { profiles } = useProfiles();
+  const { currentShift } = useCurrentShift();
   
   // Filter client requests from all tasks (exclude completed)
   const clientRequests = tasks
@@ -108,7 +110,9 @@ export function ClientRequestsCard() {
           <div className="text-center py-8 text-muted-foreground">
             <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No client requests found</p>
-            <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
+            {!currentShift && (
+              <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

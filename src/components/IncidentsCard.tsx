@@ -5,6 +5,7 @@ import { useTasks } from '@/hooks/useSupabaseData';
 import { TaskItem } from '@/types/database';
 import { formatTimeElapsed, getTimeElapsedColor } from '@/utils/timeUtils';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
+import { useCurrentShift } from '@/hooks/useShiftData';
 
 // Transform database TaskItem (incident) to UI format - MÊME STRUCTURE QUE CLIENT REQUESTS
 const transformIncident = (incident: TaskItem) => ({
@@ -27,6 +28,7 @@ const transformIncident = (incident: TaskItem) => ({
 
 export function IncidentsCard() {
   const { tasks, loading, error, refetch } = useTasks();
+  const { currentShift } = useCurrentShift();
   
   // Filter incidents from all tasks (exclude completed)
   const incidents = tasks
@@ -107,7 +109,9 @@ export function IncidentsCard() {
           <div className="text-center py-8 text-muted-foreground">
             <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No ongoing incidents</p>
-            <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
+            {!currentShift && (
+              <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

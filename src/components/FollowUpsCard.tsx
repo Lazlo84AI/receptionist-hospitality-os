@@ -7,6 +7,7 @@ import { FollowUp } from '@/types/database';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
 import { TaskItem } from '@/types/database';
+import { useCurrentShift } from '@/hooks/useShiftData';
 
 
 
@@ -49,6 +50,7 @@ export function FollowUpsCard() {
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { currentShift } = useCurrentShift();
   
   // Filter and transform follow-ups and personal tasks from unified tasks (exclude completed)
   const followUpTasks = tasks.filter(task => 
@@ -184,7 +186,9 @@ export function FollowUpsCard() {
           <div className="text-center py-8 text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No follow-ups scheduled</p>
-            <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
+            {!currentShift && (
+              <p className="text-lg font-semibold text-center mt-4">Start the shift in Shift Management</p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
