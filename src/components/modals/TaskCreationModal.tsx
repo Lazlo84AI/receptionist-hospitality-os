@@ -184,22 +184,23 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         throw new Error('Catégorie obligatoire');
       }
 
-      // 0. RÉCUPÉRER LE SHIFT ACTIF
+      // 0. RÉCUPÉRER USER ACTUEL
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('User not authenticated');
+
+      // 1. RÉCUPÉRER LE SHIFT ACTIF DE L'UTILISATEUR
       const { data: activeShift, error: shiftError } = await supabase
         .from('shifts')
         .select('id')
+        .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
-      if (shiftError || !activeShift) {
+      if (!activeShift) {
         throw new Error('No active shift found. Please start a shift before creating tasks.');
       }
 
       console.log('✅ Active shift found:', activeShift.id);
-
-      // 1. RÉCUPÉRER USER ACTUEL
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('User not found');
 
 
       // 2. VÉRIFICATION MEMBRE ASSIGNÉ OBLIGATOIRE
