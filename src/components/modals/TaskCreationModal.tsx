@@ -698,7 +698,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-center gap-3 pt-4 border-t">
           <Button 
             variant="outline" 
             onClick={handleClose}

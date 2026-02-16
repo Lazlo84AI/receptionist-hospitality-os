@@ -1,4 +1,12 @@
-﻿## 2025-12-15
+## 2026-02-12
+- Suppression de la fonctionnalité Voice Input dans l'interface Assistant
+- Retrait du bouton micro, du texte "Recording in progress", et du séparateur "or"
+- Renommage du titre "Voice Input" en "Question Input"
+- Nettoyage du code : suppression de l'état isRecording, de la fonction handleVoiceInput, et des imports inutilisés (Mic, CheckCircle, AlertCircle, XCircle)
+- Interface simplifiée avec uniquement le champ texte et le bouton d'envoi
+src/pages/Assistant.tsx
+
+## 2025-12-15
 - interface de chat question et reponse en lien avec N8N juste la partie interaction pas RAG
 src/pages/Assistant.tsx
 ## 2025-12-11

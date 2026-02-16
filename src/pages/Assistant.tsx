@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mic, Send, FileText, X, User, Loader2, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Send, FileText, X, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,15 +19,9 @@ const Assistant = () => {
   const [confidence, setConfidence] = useState<'high' | 'medium' | 'bad' | null>(null);
   const [sources, setSources] = useState<string[]>([]);
   const [actionSteps, setActionSteps] = useState<string[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSources, setShowSources] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const handleVoiceInput = () => {
-    setIsRecording(!isRecording);
-    // Voice recognition logic would be integrated here
-  };
 
   const handleSubmit = async () => {
     if (!question.trim()) return;
@@ -144,38 +138,11 @@ const Assistant = () => {
           {/* Left Side - Input */}
           <Card className="h-fit">
             <CardHeader>
-              <CardTitle className="text-warm-cream flex items-center gap-2">
-                <Mic className="h-5 w-5" />
-                Voice Input
+              <CardTitle className="text-warm-cream">
+                Question Input
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Voice Input Button */}
-              <div className="flex justify-center">
-                <Button
-                  onClick={handleVoiceInput}
-                  variant={isRecording ? "destructive" : "default"}
-                  size="lg"
-                  className={`rounded-full h-16 w-16 ${
-                    isRecording 
-                      ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
-                      : 'bg-champagne-gold hover:bg-champagne-gold/90 text-palace-navy border-none'
-                  }`}
-                >
-                  <Mic className="h-6 w-6" />
-                </Button>
-              </div>
-              
-              {isRecording && (
-                <p className="text-center text-sm text-soft-pewter">
-                  🎤 Recording in progress...
-                </p>
-              )}
-
-              <div className="text-center text-soft-pewter">
-                <span className="text-xs">or</span>
-              </div>
-
               {/* Text Input */}
               <div className="space-y-3">
                 <Textarea

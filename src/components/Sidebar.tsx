@@ -111,19 +111,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Separator */}
           <div className="my-8 h-px bg-gradient-to-r from-transparent via-hotel-yellow/30 to-transparent" />
 
-          {/* Status Indicator */}
-          <div className="rounded-lg p-4 border border-hotel-yellow/20" style={{ backgroundColor: '#1E1A37' }}>
-            <div className="flex items-center space-x-3">
-              <div className="h-3 w-3 rounded-full bg-green-400 animate-pulse" />
-              <div>
-                <p className="text-sm font-medium text-white">
-                  Système Opérationnel
-                </p>
-                <p className="text-xs text-hotel-yellow/70">
-                  Tous services actifs
-                </p>
-              </div>
-            </div>
+          {/* Widget ElevenLabs */}
+          <div className="rounded-lg border border-hotel-yellow/20 overflow-hidden" style={{ backgroundColor: '#1E1A37' }}>
+            <elevenlabs-convai agent-id="agent_4601kfg261veejy8ryqgfdrbavqj"></elevenlabs-convai>
           </div>
           
           {/* Blason Decœur */}
