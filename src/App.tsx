@@ -17,6 +17,7 @@ import TeamDispatch from "./pages/TeamDispatch";
 import ServiceControl from "./pages/ServiceControl";
 import ServiceControl2 from "./pages/ServiceControl2";
 import LocationCleanupPage from "./pages/LocationCleanup";
+import MyStatistics from "./pages/MyStatistics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/service-control" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
             <Route path="/service-control2" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
             <Route path="/location-cleanup" element={<ProtectedRoute><LocationCleanupPage /></ProtectedRoute>} />
+            <Route path="/my-statistics" element={<ProtectedRoute><MyStatistics /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
@@ -275,28 +276,51 @@ const ShiftManagement = () => {
   const [isShiftCloseOpen, setIsShiftCloseOpen] = useState(false);
   const [isShiftStartOpen, setIsShiftStartOpen] = useState(false);
   const [shiftActive, setShiftActive] = useState(false);
+  const [isPermanentShift, setIsPermanentShift] = useState(false);
   const [draggedTask, setDraggedTask] = useState<TaskItem | null>(null);
   const [draggedFromColumn, setDraggedFromColumn] = useState<string | null>(null);
   const { toast } = useToast();
+  const location = useLocation();
+
+  // Ouvrir ShiftStartModal automatiquement si redirigé depuis l'onboarding
+  useEffect(() => {
+    if (location.state?.openShiftStart) {
+      setIsShiftStartOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Check for active shift on mount
   useEffect(() => {
     const checkActiveShift = async () => {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setShiftStatus('not_started');
         return;
       }
-      
-      // Check if THIS user has an active shift
-      const { data: activeShift } = await supabase
+
+      // Vérifier si l'user est du service direction (permanent shift)
+      const { data: staffData } = await supabase
+        .from('staff_directory')
+        .select('service')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const isPermanent = staffData?.service === 'direction';
+      setIsPermanentShift(isPermanent);
+
+      // Utiliser .limit(1) au lieu de .maybeSingle()
+      // pour éviter l'erreur si plusieurs shifts actifs existent
+      const { data: activeShifts } = await supabase
         .from('shifts')
         .select('id')
-        .eq('user_id', user.id)  // ✅ Filter by current user
+        .eq('user_id', user.id)
         .eq('status', 'active')
-        .maybeSingle();  // Can return null if no shift
-      
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const activeShift = activeShifts?.[0] ?? null;
+
       if (activeShift) {
         setShiftStatus('active');
         console.log('✅ Active shift detected:', activeShift.id);
@@ -652,15 +676,23 @@ const ShiftManagement = () => {
                 Shift Management
               </h1>
               <div className="flex items-center gap-2">
-                <div className={cn(
-                  "w-3 h-3 rounded-full",
-                  shiftStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                )} />
-                <span className={cn(
-                  "text-xl font-playfair font-bold",
-                  shiftStatus === 'active' ? 'text-green-600' : 'text-red-600'
-                )}>
-                  Status: {shiftStatus === 'active' ? 'Active' : 'Inactive'}
+                <div
+                  className={cn(
+                    "w-3 h-3 rounded-full animate-pulse",
+                    !isPermanentShift && (shiftStatus === 'active' ? 'bg-green-500' : 'bg-red-500')
+                  )}
+                  style={isPermanentShift ? { backgroundColor: '#BBA57A' } : {}}
+                />
+                <span
+                  className={cn(
+                    "text-xl font-playfair font-bold",
+                    !isPermanentShift && (shiftStatus === 'active' ? 'text-green-600' : 'text-red-600')
+                  )}
+                  style={isPermanentShift ? { color: '#BBA57A' } : {}}
+                >
+                  {isPermanentShift
+                    ? 'Always Active — Auto-archiving nightly'
+                    : `Status: ${shiftStatus === 'active' ? 'Active' : 'Inactive'}`}
                 </span>
               </div>
             </div>

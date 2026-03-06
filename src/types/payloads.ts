@@ -1,7 +1,7 @@
 // Base types for common fields
 export type Priority = 'low' | 'medium' | 'high' | 'urgent' | 'normal';
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
-export type UserRole = 'admin' | 'manager' | 'staff' | 'guest' | 'maintenance' | 'housekeeping';
+export type UserRole = 'admin' | 'manager' | 'staff' | 'guest' | 'maintenance' | 'housekeeping' | 'Director';
 export type ShiftStatus = 'active' | 'completed' | 'paused' | 'cancelled';
 export type CommentType = 'comment' | 'note' | 'update' | 'system' | 'escalation';
 export type AttachmentType = 'image' | 'document' | 'video' | 'audio' | 'other';

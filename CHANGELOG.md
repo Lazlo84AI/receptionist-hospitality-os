@@ -569,3 +569,55 @@ Scenario 2: Housekeeping without new cards
 ### 10. Final Verification Checklist ✅
 
 
+## [2026-03-06]
+
+### feat: Permanent Shift — Mode direction (Thibault de Saint Martin)
+
+**Contexte**
+Le directeur Thibault ne fonctionne pas en shifts manuels. Besoin de créer des tâches et de les attribuer librement, sans contrainte d'ouverture/fermeture de shift.
+
+**Concept implémenté : Permanent Shift**
+Les membres du service `direction` ont un shift toujours actif, renouvelé automatiquement chaque nuit à 1h AM. Totalement transparent pour l'utilisateur.
+
+**Supabase — Base de données**
+- Création du shift permanent initial pour Thibault (`staff_directory.id = 4c509751-f4c1-477d-b63c-f44dbb02da18`, `service = 'direction'`, `status = 'active'`)
+- Création de la fonction PostgreSQL `rotate_permanent_shifts()` : itère sur tous les membres actifs du service `direction`, clôture le shift actif du jour, ouvre un nouveau shift pour le lendemain
+- Activation pg_cron + job `permanent-shift-rotation` schedulé à `0 1 * * *` (1h AM tous les jours)
+- Déploiement Edge Function `rotate-permanent-shifts` (disponible pour invocation manuelle)
+- Contrainte FK confirmée : `shifts.user_id → staff_directory.id` (et non profiles)
+
+**TypeScript — Synchronisation types**
+- `src/types/payloads.ts` : ajout de `'Director'` dans `UserRole`
+- `src/integrations/supabase/types.ts` : ajout de `'Director'` dans `Enums.user_role` et `Constants.user_role`
+
+**Frontend — `src/pages/ShiftManagement.tsx`**
+- Ajout state `isPermanentShift` (boolean)
+- `checkActiveShift()` : détection du service `direction` via `staff_directory` + remplacement de `.maybeSingle()` par `.limit(1)` pour robustesse multi-shifts
+- Badge status conditionnel : service `direction` → point gold animé (`#BBA57A`) + texte gold "Always Active — Auto-archiving nightly" au lieu du rouge/vert standard
+- Aucun impact sur les autres services
+
+**Généralisation**
+Le système est conçu pour tout le service `direction` (pas uniquement Thibault). Tout membre actif avec `service = 'direction'` dans `staff_directory` bénéficie automatiquement du permanent shift.
+
+---
+
+### feat: My Analytics — Page de statistiques personnelles
+
+**Concept**
+Nouvelle page `MyStatistics` donnant à chaque membre une vision complète de ses performances individuelles : tâches créées, complétées, assignées, répartition par catégorie, évolution temporelle et données de shifts.
+
+**Nouveau hook — `src/hooks/useMyStatistics.ts`**
+- Interface `UserTaskStats` : agrégats complets (tâches créées/complétées/en cours/en attente, par catégorie, assignées, par période jour/semaine/mois, shifts total/actif/complété)
+- Interface `TimeseriesEntry` : données de séries temporelles par `period_type` (day / week / month)
+- Requêtes Supabase vers les vues dédiées aux statistiques personnelles
+
+**Nouvelle page — `src/pages/MyStatistics.tsx`**
+- KPI cards : tâches créées, complétées, en cours, en attente — avec icônes et couleurs brand
+- Onglets de période : Day / Week / Month (tabs gold `#BBA57A`)
+- BarChart (Recharts) : évolution des tâches créées dans le temps
+- PieChart (Recharts) : répartition par catégorie (incident, client_request, follow_up, internal_task)
+- Section shifts : total, actifs, complétés, shifts du jour et de la semaine
+- Design brand-compliant : Gold `#BBA57A`, Navy `#1E1A37`, Yellow `#DEAE35`
+- Responsive, chargement avec spinner `Loader2`
+
+

@@ -109,7 +109,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <User className="h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center space-x-2 hotel-hover">
+            <DropdownMenuItem
+              className="flex items-center space-x-2 hotel-hover cursor-pointer"
+              onClick={() => navigate('/my-statistics')}
+            >
               <BarChart3 className="h-4 w-4" />
               <span>My Statistics</span>
             </DropdownMenuItem>

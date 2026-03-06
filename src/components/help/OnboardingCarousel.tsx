@@ -65,7 +65,7 @@ export function OnboardingCarousel({ open, onClose }: OnboardingCarouselProps) {
     if (isLastSlide) {
       // Dernière slide : fermer et rediriger vers Shift Management
       onClose();
-      navigate('/shift');
+      navigate('/shift', { state: { openShiftStart: true } });
     } else {
       setCurrentSlide(currentSlide + 1);
     }
@@ -144,7 +144,7 @@ export function OnboardingCarousel({ open, onClose }: OnboardingCarouselProps) {
                 onClick={handleNext}
                 className="bg-[#BBA57A] hover:bg-[#A89469] text-white flex items-center space-x-2"
               >
-                <span>{isLastSlide ? 'Commencez' : 'Suivant'}</span>
+                <span>{isLastSlide ? 'Start the Shift' : 'Suivant'}</span>
                 {!isLastSlide && <ChevronRight className="h-4 w-4" />}
               </Button>
             </div>

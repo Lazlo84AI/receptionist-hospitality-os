@@ -707,7 +707,7 @@ export type Database = {
       reminder_frequency: "once" | "daily" | "weekly" | "monthly"
       shift_status: "active" | "completed" | "cancelled"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
-      user_role: "admin" | "manager" | "staff" | "maintenance" | "housekeeping"
+      user_role: "admin" | "manager" | "staff" | "maintenance" | "housekeeping" | "Director"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -842,7 +842,7 @@ export const Constants = {
       reminder_frequency: ["once", "daily", "weekly", "monthly"],
       shift_status: ["active", "completed", "cancelled"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
-      user_role: ["admin", "manager", "staff", "maintenance", "housekeeping"],
+      user_role: ["admin", "manager", "staff", "maintenance", "housekeeping", "Director"],
     },
   },
 } as const
