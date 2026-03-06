@@ -5,9 +5,12 @@ import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { IncidentsCard } from '@/components/IncidentsCard';
 import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { FollowUpsCard } from '@/components/FollowUpsCard';
+import { OnboardingCarousel } from '@/components/help/OnboardingCarousel';
+import { useOnboarding } from '@/hooks/useOnboarding';
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { shouldShowOnboarding, closeOnboarding } = useOnboarding();
 
   return (
     <div className="min-h-screen bg-hotel-white">
@@ -46,6 +49,12 @@ const Index = () => {
       
       {/* Floating Voice Command Button */}
       <VoiceCommandButton />
+
+      {/* Onboarding Carousel */}
+      <OnboardingCarousel 
+        open={shouldShowOnboarding} 
+        onClose={closeOnboarding} 
+      />
     </div>
   );
 };

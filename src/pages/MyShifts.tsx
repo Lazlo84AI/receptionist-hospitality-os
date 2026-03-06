@@ -18,7 +18,7 @@ const MyShifts = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const { shifts, loading, error, userService } = useTeamShifts();
+  const { shifts, loading, error, userService, staffMap } = useTeamShifts();
 
   // Transformer une task du handover_data en TaskItem
   const transformToTaskItem = (task: any): TaskItem => {
@@ -28,14 +28,23 @@ const MyShifts = () => {
       description: task.description || task.data?.description,
       status: task.status || task.data?.status || 'pending',
       priority: task.priority || task.data?.priority || 'normal',
-      type: task.type || task.data?.type || 'internal_task',
+      type: task.data?.category || task.category || task.type || task.data?.type || 'internal_task',
       roomNumber: task.location || task.data?.location,
       location: task.location || task.data?.location,
       guestName: task.guestName || task.data?.guestName,
-      assignedTo: task.assignedTo || task.data?.assignedTo || 'Unassigned',
+      assignedTo: (() => {
+        const creatorId = task.created_by || task.data?.created_by;
+        const assignedIds: string[] = task.assigned_to || task.data?.assigned_to || [];
+        const creatorName = creatorId ? (staffMap[creatorId] || creatorId) : '';
+        const assignedNames = assignedIds.map((id: string) => staffMap[id] || id).join(', ');
+        if (creatorName && assignedNames) return `${creatorName} \u2192 ${assignedNames}`;
+        if (creatorName) return creatorName;
+        if (assignedNames) return assignedNames;
+        return 'Unassigned';
+      })(),
       created_at: task.created_at || task.data?.created_at || new Date().toISOString(),
       updated_at: task.updated_at || task.data?.updated_at || new Date().toISOString(),
-      created_by: '',
+      created_by: task.created_by || task.data?.created_by || '',
       service: 'reception'
     };
   };
@@ -63,7 +72,7 @@ const MyShifts = () => {
   const getUniqueTaskTypes = (tasks: any[]) => {
     const types = new Set<string>();
     tasks.forEach(task => {
-      const type = task.type || task.data?.type || 'internal_task';
+      const type = task.data?.category || task.category || task.type || task.data?.type || 'internal_task';
       types.add(type);
     });
     return Array.from(types);

@@ -1,3 +1,157 @@
+## 2026-03-06
+
+### Added
+- **Team Dispatch View** (`/team-dispatch`)
+  - Vue de dispatch pour gouvernante/manager avec vision globale de l'équipe
+  - 3 colonnes Kanban par membre d'équipe (To Process, In Progress, Resolved)
+  - Statistiques temps réel par membre : X tâches • Y% completed • Z% To Process
+  - Drag & Drop entre colonnes et membres
+  - Modal EnhancedTaskDetailModal intégré (commentaires, pièces jointes, escalade)
+  - Indicateur visuel de statut shift : 🔴 "Status: Inactive" / 🟢 "Status: Active" (avec pulse)
+
+- **Service Control View** (`/service-control`)
+  - Vue spécialisée housekeeping avec 4 colonnes : To Process, In Progress, Resolved, Verified
+  - Navigation horizontale : affiche 3 colonnes, scroll pour voir la 4ème
+  - Boutons adaptés : Begin Shift (au lieu de Start Shift), Work Improvement, End Shift
+  - Indicateur visuel de statut shift identique à Team Dispatch
+  - Modal "Begin Shift" sophistiqué avec :
+    - **8 filtres combinables** :
+      - Par étage (RDC, Basement, Étages 1-5)
+      - Par catégorie (Ongoing Incident, Clients, Tasks, Follow Ups)
+      - Par personne (noms individuels des membres d'équipe)
+      - Par priorité (Low, Medium, High, Urgent)
+      - Tri par retard (affiche les plus en retard en premier)
+      - Par shift (issues du shift précédent / nouveau shift)
+    - **Actions d'attribution** :
+      - Sélection multiple (cases à cocher)
+      - Attribution en masse à un membre d'équipe
+      - Application de checklists ("en arrivée" / "en recouche")
+    - **Cartes de chambres vierges** :
+      - Génération automatique : une carte par chambre (basé sur locations Supabase)
+      - Style visuel : bg-yellow-50 pour distinguer des tâches normales
+      - Format : grid 2 colonnes (même largeur que Shift Management)
+      - Tâches assignées vont automatiquement en bas de liste (scroll down)
+
+- **Système d'archivage automatique des tâches**
+  - **Migration SQL** : Ajout du statut 'archived' à l'enum task_status (fichier `add-archived-status.sql`)
+  - **Workflow d'archivage** :
+    1. Pendant le shift : tâches 'completed' restent visibles dans colonne "Resolved"
+    2. À la fermeture du shift (`onShiftEnded`) : toutes les tâches 'completed' passent à 'archived'
+    3. Pour Service Control : 'completed' ET 'verified' passent à 'archived'
+    4. Au shift suivant : tâches archivées ne réapparaissent plus
+  - Archivage pour tous types de tâches : incidents, client_requests, follow_ups, internal_tasks
+  - Toast de confirmation : "X task(s) archived" affiché à la fermeture du shift
+
+- **Indicateurs de statut visuel sur toutes les pages de shift**
+  - Affichage : Shift Management et Service Control
+  - Design :
+    - Cercle coloré (w-3 h-3 rounded-full)
+    - Texte en gras (text-xl font-playfair font-bold)
+    - Position : sur la même ligne que le titre de la page
+  - États :
+    - 🔴 "Status: Inactive" (bg-red-500, text-red-600) → shift non démarré
+    - 🟢 "Status: Active" (bg-green-500 animate-pulse, text-green-600) → shift actif
+
+### Changed
+- **Hook useSupabaseData.ts**
+  - Ajout du filtre `.not('status', 'eq', 'archived')` pour exclure les tâches archivées
+  - Les tâches archivées ne réapparaissent plus dans aucun Kanban
+
+- **Workflow de fermeture de shift**
+  - ShiftManagement : Callback `onShiftEnded` archive automatiquement toutes les tâches 'completed'
+  - ServiceControl : Callback archive les tâches 'completed' ET 'verified'
+  - Mise à jour du champ `updated_at` lors de l'archivage
+  - Refetch automatique après archivage pour retirer les tâches du Kanban
+
+- **Menu Sidebar**
+  - Ajout de l'entrée "Service Control" avec icône Settings
+  - Ordre du menu : Dashboard, Shift Management, Team Dispatch, Service Control, Knowledge Base, Assistant, Sign Out
+
+### Fixed
+- **Bug critique** : Les tâches marquées 'completed' réapparaissaient au shift suivant
+  - **Cause** : Les tâches 'completed' n'étaient jamais retirées de la base de données
+  - **Solution** : Système d'archivage automatique à la fermeture du shift
+  - **Résultat** : Les tâches archivées sont définitivement exclues du Kanban
+  - Les shifts commencent maintenant propres sans les anciennes tâches terminées
+
+### Database
+- **Migration SQL** : `add-archived-status.sql`
+  ```sql
+  ALTER TYPE task_status ADD VALUE IF NOT EXISTS 'archived';
+  ```
+- **Enum task_status mis à jour** : `["pending", "in_progress", "completed", "cancelled", "archived"]`
+- **Tables affectées** : incidents, client_requests, follow_ups, internal_tasks
+
+### Files Created
+- `src/pages/TeamDispatch.tsx`
+- `src/pages/ServiceControl.tsx`
+- `src/components/modals/ServiceShiftStartModal.tsx`
+- `src/components/modals/ServiceShiftCloseModal.tsx`
+- `add-archived-status.sql`
+- `HospitalityOS_CONTEXT.md` (documentation complète architecture)
+
+### Files Modified
+- `src/App.tsx` (routes /team-dispatch et /service-control ajoutées)
+- `src/components/Sidebar.tsx` (menu Team Dispatch et Service Control)
+- `src/pages/ShiftManagement.tsx` (indicateur statut + archivage onShiftEnded)
+- `src/hooks/useSupabaseData.ts` (filtre .not('status', 'eq', 'archived'))
+
+---
+
+## 2026-02-17
+
+### 📊 Feature : Système de tracking des performances utilisateur
+**Objectif** : Suivre automatiquement les métriques de performance des employés (tâches, shifts, assistant, QCM).
+
+**Base de données**
+- Ajout de 4 colonnes dans `staff_directory` :
+  - `tasks_created_total` (integer, default 0) — compteur total des tâches créées par l'employé
+  - `tasks_closed_total` (integer, default 0) — compteur total des tâches fermées
+  - `assistant_queries_total` (integer, default 0) — compteur total des questions posées à l'assistant
+  - `onboarding_views_count` (integer, default 0) — compteur des vues onboarding (limité à 10)
+
+**Triggers automatiques**
+- `trigger_increment_tasks_created` — incrémente `tasks_created_total` sur INSERT dans `task`
+- `trigger_increment_tasks_closed` — incrémente `tasks_closed_total` quand `task.status` passe à 'completed'
+- `trigger_increment_assistant_queries` — incrémente `assistant_queries_total` sur INSERT dans `assistant_conversations`
+- `increment_onboarding_views()` — fonction RPC pour incrémenter le compteur onboarding
+
+**Fichiers créés**
+- add-onboarding-tracking.sql
+- src/hooks/useOnboarding.ts
+
+**Métriques dynamiques** (calculées en temps réel, pas stockées) :
+- Shifts ouverts/clos cette semaine
+- Tâches créées/closes cette semaine
+
+**À venir** : Système QCM + Score Card de compétences (session dédiée)
+
+---
+
+### 🎬 Feature : Système de tutoriels vidéo (Help Center)
+**Objectif** : Permettre aux utilisateurs d'accéder à des vidéos tutoriels contextuelles depuis n'importe quelle page de l'application.
+
+**Base de données**
+- Création table `platform_tutorial_videos` avec vectorisation sémantique préparée
+  - Colonnes : id, title, category, objectif_fonctionnel, url, keywords (text[]), transcript, embedding (vector 1536), sort_order, is_active
+  - RLS activé : lecture authentifiée uniquement
+  - Index ivfflat sur embedding pour recherche cosine distance (pgvector)
+  - 2 vidéos insérées en test (8 lignes — déduplication par titre côté front)
+
+**Frontend**
+- Nouveau dossier `src/components/help/`
+  - `HelpButton.tsx` — icône HelpCircle Gold #BBA57A, Popover déroulant, fetch Supabase, déduplication par titre, liste plate sans catégories
+  - `VideoTutorialModal.tsx` — Dialog Radix, iframe responsive 16:9, compatible Loom + YouTube (détection automatique par URL)
+- Modification `Header.tsx` :
+  - Suppression email + "Authenticated User" du header
+  - Migration email + rôle en haut du dropdown avatar (section informative non cliquable)
+  - Insertion `<HelpButton />` entre l'horloge et l'avatar
+
+**Fichiers modifiés**
+- src/components/Header.tsx
+- src/components/help/HelpButton.tsx (nouveau)
+- src/components/help/VideoTutorialModal.tsx (nouveau)
+
 ## 2026-02-12
 - Suppression de la fonctionnalité Voice Input dans l'interface Assistant
 - Retrait du bouton micro, du texte "Recording in progress", et du séparateur "or"

@@ -452,7 +452,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {task.assignedTo && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Assigned to</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Created by → Assigned to</p>
                     <p className="text-foreground">{task.assignedTo}</p>
                   </div>
                 )}

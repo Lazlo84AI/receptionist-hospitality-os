@@ -172,7 +172,8 @@ const KanbanColumn = ({
   onStatusChange,
   onCardClick,
   draggedTask,
-  draggedFromColumn
+  draggedFromColumn,
+  shiftStatus
 }: { 
   title: string; 
   tasks: TaskItem[]; 
@@ -181,6 +182,7 @@ const KanbanColumn = ({
   onCardClick: (task: TaskItem) => void;
   draggedTask: TaskItem | null;
   draggedFromColumn: string | null;
+  shiftStatus: 'not_started' | 'active' | 'closed';
 }) => {
   const filteredTasks = tasks.filter(task => task.status === status);
   const isDraggedFromThisColumn = draggedFromColumn === status;
@@ -246,7 +248,11 @@ const KanbanColumn = ({
                   isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted"
                 )}>
                   <p className="text-sm">No cards to show</p>
-                  {/* Message removed - empty column is normal during active shift */}
+                  {shiftStatus === 'not_started' && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Start the shift — in the menu just above.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -639,12 +645,26 @@ const ShiftManagement = () => {
       <main className="p-8">
         <div className="max-w-7xl mx-auto">
           
-          {/* Page Title */}
+          {/* Page Title avec Status */}
           <div className="mb-8">
-            <h1 className="text-3xl font-playfair font-bold text-foreground mb-2">
-              Shift Management
-            </h1>
-            <p className="text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-playfair font-bold text-foreground">
+                Shift Management
+              </h1>
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-3 h-3 rounded-full",
+                  shiftStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                )} />
+                <span className={cn(
+                  "text-xl font-playfair font-bold",
+                  shiftStatus === 'active' ? 'text-green-600' : 'text-red-600'
+                )}>
+                  Status: {shiftStatus === 'active' ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+            <p className="text-muted-foreground mt-2">
               Manage your tasks and activities during your shift
             </p>
           </div>
@@ -673,6 +693,7 @@ const ShiftManagement = () => {
                     onCardClick={handleCardClick}
                     draggedTask={draggedTask}
                     draggedFromColumn={draggedFromColumn}
+                    shiftStatus={shiftStatus}
                   />
                   
                   <KanbanColumn
@@ -683,6 +704,7 @@ const ShiftManagement = () => {
                     onCardClick={handleCardClick}
                     draggedTask={draggedTask}
                     draggedFromColumn={draggedFromColumn}
+                    shiftStatus={shiftStatus}
                   />
                   
                   <KanbanColumn
@@ -693,6 +715,7 @@ const ShiftManagement = () => {
                     onCardClick={handleCardClick}
                     draggedTask={draggedTask}
                     draggedFromColumn={draggedFromColumn}
+                    shiftStatus={shiftStatus}
                   />
                 </div>
               </SortableContext>
@@ -743,15 +766,50 @@ const ShiftManagement = () => {
         }}
         onShiftEnded={async () => {
           // Appelé SEULEMENT après validation complète du shift
+          
+          // ✅ ARCHIVER toutes les tâches 'completed' avant de fermer le shift
+          const completedTasks = tasks.filter(t => t.status === 'completed');
+          
+          if (completedTasks.length > 0) {
+            console.log(`Archiving ${completedTasks.length} completed tasks...`);
+            
+            // Archiver toutes les tâches en une seule requête vers la table unifiée 'task'
+            const taskIds = completedTasks.map(t => t.id);
+            
+            try {
+              const { error } = await supabase
+                .from('task')
+                .update({ 
+                  status: 'archived',
+                  updated_at: new Date().toISOString()
+                })
+                .in('id', taskIds);
+              
+              if (error) {
+                console.error('Error archiving tasks:', error);
+                throw error;
+              }
+              
+              console.log(`✅ All ${completedTasks.length} completed tasks archived`);
+            } catch (error) {
+              console.error('Failed to archive tasks:', error);
+              toast({
+                title: "Error",
+                description: "Failed to archive some tasks. Please try again.",
+                variant: "destructive",
+              });
+            }
+          }
+          
           setShiftStatus('closed');
           setIsShiftCloseOpen(false);
           
-          // Refetch pour vider le kanban (plus de shift actif)
+          // Refetch pour retirer les tâches archivées du kanban
           await refetch();
           
           toast({
             title: "Shift Ended",
-            description: "Your shift has been ended successfully",
+            description: `Your shift has been ended successfully. ${completedTasks.length} task(s) archived.`,
             variant: "default",
           });
         }}

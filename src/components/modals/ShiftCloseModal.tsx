@@ -233,7 +233,55 @@ export const ShiftCloseModal = ({ isOpen, onClose, onShiftEnded, tasks, onCardCl
       
       addLog(`✅ Shift ${currentShift.id} ended successfully`);
       
-      // 4. Tag all activity_logs created during this shift
+      // 4. Récupérer les tâches du SERVICE uniquement pour le handover
+      // Critère 1 : créées par mon service | Critère 2 : assignées à mon service
+      addLog('Fetching service tasks for handover archive...');
+
+      // 4a. Récupérer les IDs de tous les membres de mon service
+      const currentService = currentShift.service;
+      const { data: serviceStaff } = await supabase
+        .from('staff_directory')
+        .select('id')
+        .eq('service', currentService);
+
+      const serviceUserIds = (serviceStaff || []).map((s: any) => s.id);
+      addLog(`Found ${serviceUserIds.length} members in ${currentService} service`);
+
+      // 4b. Récupérer TOUTES les tâches actives puis filtrer côté client (même logique que Kanban)
+      const { data: allActiveTasks, error: tasksError } = await supabase
+        .from('task')
+        .select('*')
+        .in('status', ['pending', 'in_progress', 'completed']);
+
+      if (tasksError) {
+        console.warn('Error fetching tasks:', tasksError);
+      }
+
+      // Filtre : created_by dans mon service OU assigned_to contient quelqu'un de mon service
+      const tasksToArchive = (allActiveTasks || []).filter((task: any) => {
+        if (task.created_by && serviceUserIds.includes(task.created_by)) return true;
+        if (Array.isArray(task.assigned_to)) {
+          return task.assigned_to.some((id: string) => serviceUserIds.includes(id));
+        }
+        return false;
+      });
+      addLog(`Found ${tasksToArchive.length} tasks for ${currentService} service (filtered from ${(allActiveTasks || []).length} total)`);
+      
+      // 5. Détacher les tâches 'completed' du shift (ne pas les transférer au shift suivant)
+      addLog('Detaching completed tasks from shift...');
+      const { error: detachError } = await supabase
+        .from('task')
+        .update({ shift_id: null })
+        .eq('shift_id', currentShift.id)
+        .eq('status', 'completed');
+      
+      if (detachError) {
+        console.warn('Warning detaching completed tasks:', detachError);
+      } else {
+        addLog('✅ Completed tasks detached from shift');
+      }
+      
+      // 6. Tag all activity_logs created during this shift
       const { error: tagError } = await supabase
         .from('activity_logs')
         .update({ shift_id: currentShift.id })
@@ -247,11 +295,11 @@ export const ShiftCloseModal = ({ isOpen, onClose, onShiftEnded, tasks, onCardCl
         addLog('Activity logs tagged with shift_id');
       }
       
-      // 5. Get user info for the success message
+      // 7. Get user info for the success message
       const { data: userData } = await supabase.auth.getUser();
       const userDisplayName = userData.user?.user_metadata?.full_name || userData.user?.email?.split('@')[0] || 'Team Member';
       
-      // 6. Récupérer TOUTES les tâches du shift (incluant completed) pour les stats
+      // 8. Récupérer TOUTES les tâches du shift (incluant completed) pour les stats
       addLog('Fetching all shift tasks for accurate stats...');
       const { data: allShiftTasks, error: shiftTasksError } = await supabase
         .from('task')
@@ -266,21 +314,7 @@ export const ShiftCloseModal = ({ isOpen, onClose, onShiftEnded, tasks, onCardCl
       const shiftTasks = allShiftTasks || [];
       addLog(`Found ${shiftTasks.length} total tasks created during this shift`);
       
-      // 7. Récupérer TOUTES les tâches actives pour le handover (pas seulement celles du shift)
-      addLog('Fetching all active tasks for handover...');
-      const { data: allActiveTasks, error: tasksError } = await supabase
-        .from('task')
-        .select('*')
-        .in('status', ['pending', 'in_progress']);
-      
-      if (tasksError) {
-        console.warn('Error fetching tasks:', tasksError);
-      }
-      
-      const tasksToArchive = allActiveTasks || [];
-      addLog(`Found ${tasksToArchive.length} active tasks to archive`);
-      
-      // 7. Save shift handover snapshot with ALL active tasks
+      // 9. Save shift handover snapshot with ALL tasks (already retrieved in step 4)
       addLog('Applying intelligent transfer rules...');
       await saveShiftHandover(
         currentShift.id,

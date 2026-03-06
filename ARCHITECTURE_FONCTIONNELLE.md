@@ -1729,8 +1729,198 @@ Ce document décrit l'architecture fonctionnelle complète du système Hospitali
 
 ---
 
-**Document Version** : 1.0  
-**Date** : 29 Janvier 2026  
+## 5. Système de Tutoriels Vidéo & Help Center
+
+**Ajouté le** : 17 Février 2026
+
+### 5.1 Architecture générale
+
+Le Help Center est accessible depuis toutes les pages via l'icône `HelpCircle` (Gold #BBA57A) dans le header, à gauche de l'avatar utilisateur. Un clic ouvre un Popover déroulant listant les vidéos disponibles. Un clic sur un titre ouvre un Dialog modal avec player embed (Loom ou YouTube).
+
+```
+Header
+  └── HelpButton.tsx
+        ├── Popover (liste plate, dédupliquée par titre)
+        └── VideoTutorialModal.tsx (iframe 16:9, Loom + YouTube)
+```
+
+### 5.2 Table Supabase : `platform_tutorial_videos`
+
+| Colonne | Type | Rôle |
+|---|---|---|
+| `id` | uuid PK | Identifiant unique |
+| `title` | text | Titre affiché dans le popover |
+| `category` | text | Page concernée : `Dashboard`, `Shift Management`, `Team Dispatch`, `Service Control` |
+| `objectif_fonctionnel` | text | Problème utilisateur résolu, formulé explicitement (utilisé pour le RAG) |
+| `url` | text | URL complète Loom ou YouTube |
+| `keywords` | text[] | Mots-clés pour recherche simple et RAG |
+| `transcript` | text | Contenu verbal de la vidéo — base de la vectorisation |
+| `embedding` | vector(1536) | Vecteur sémantique généré depuis transcript + objectif_fonctionnel |
+| `sort_order` | integer | Ordre d'affichage dans le popover |
+| `is_active` | boolean | Activer/désactiver sans supprimer |
+
+**RLS** : lecture authentifiée uniquement (`TO authenticated USING (true)`)  
+**Index** : `ivfflat` sur `embedding vector_cosine_ops` (listes = 100) pour recherche sémantique rapide
+
+### 5.3 Règles de gestion
+
+**Affichage front**
+- Le popover affiche une **liste plate sans catégories**, dédupliquée par `title` (première occurrence selon `sort_order`)
+- Une même vidéo peut avoir **plusieurs lignes en base** (une par catégorie) — c'est intentionnel pour le RAG contextuel
+- Le player détecte automatiquement Loom vs YouTube par pattern matching sur l'URL
+- `objectif_fonctionnel` s'affiche en sous-titre gris sous le titre dans le popover
+
+**Gestion du contenu**
+- Les vidéos sont gérées directement en base Supabase (pas d'interface admin pour l'instant)
+- Pour désactiver une vidéo : mettre `is_active = false` (ne pas supprimer)
+- Pour réordonner : modifier `sort_order`
+- Pour ajouter une vidéo présente sur 4 pages : insérer 4 lignes avec la même URL et des `category` différentes
+
+### 5.4 Pipeline de vectorisation (prêt à brancher)
+
+**Statut actuel** : la colonne `embedding` est créée et indexée, mais non remplie.
+
+**Pipeline prévu (N8N)** :
+1. Trigger : INSERT ou UPDATE sur `platform_tutorial_videos`
+2. Concaténation : `transcript` + `objectif_fonctionnel` + `keywords` joinés
+3. Appel API Mistral ou OpenAI embeddings (dim 1536)
+4. Stockage du vecteur dans la colonne `embedding`
+
+**Recherche sémantique** (future fonction Supabase) :
+```sql
+SELECT title, url, objectif_fonctionnel
+FROM platform_tutorial_videos
+ORDER BY embedding <=> '[vecteur_requete]'::vector
+LIMIT 3;
+```
+
+**Contenu à vectoriser par vidéo** = `transcript` (contenu brut) + `objectif_fonctionnel` (problème utilisateur) + `keywords` (termes clés). C'est ce triptyque qui garantit une bonne remontrée sémantique.
+
+---
+
+## 6. Système de Tracking des Performances Utilisateur
+
+**Ajouté le** : 17 Février 2026
+
+### 6.1 Objectif
+
+Suivre automatiquement les métriques de performance des employés pour :
+- Mesurer l'engagement et la productivité
+- Alimenter de futurs dashboards RH et analytics
+- Préparer le système de score card de compétences
+
+### 6.2 Colonnes ajoutées à `staff_directory`
+
+| Colonne | Type | Mode de mise à jour | Source |
+|---|---|---|---|
+| `onboarding_views_count` | integer (default 0) | Fonction RPC `increment_onboarding_views()` | Hook `useOnboarding` (frontend) |
+| `tasks_created_total` | integer (default 0) | Trigger automatique | `task` (INSERT) |
+| `tasks_closed_total` | integer (default 0) | Trigger automatique | `task` (UPDATE status → 'completed') |
+| `assistant_queries_total` | integer (default 0) | Trigger automatique | `assistant_conversations` (INSERT) |
+
+**Note** : Toutes les colonnes sont cumulées (compteurs totaux depuis la création du compte).
+
+### 6.3 Triggers automatiques
+
+**Trigger 1 : Incrémentation tâches créées**
+```sql
+CREATE TRIGGER trigger_increment_tasks_created
+AFTER INSERT ON task
+FOR EACH ROW
+EXECUTE FUNCTION increment_tasks_created();
+```
+- Se déclenche à chaque nouvelle tâche
+- Incrémente `tasks_created_total` pour l'employé (`task.created_by` → `staff_directory.auth_user_id`)
+
+**Trigger 2 : Incrémentation tâches fermées**
+```sql
+CREATE TRIGGER trigger_increment_tasks_closed
+AFTER UPDATE ON task
+FOR EACH ROW
+EXECUTE FUNCTION increment_tasks_closed();
+```
+- Se déclenche quand `task.status` passe à 'completed'
+- Incrémente `tasks_closed_total` uniquement si le statut change (OLD.status ≠ 'completed')
+
+**Trigger 3 : Incrémentation requêtes assistant**
+```sql
+CREATE TRIGGER trigger_increment_assistant_queries
+AFTER INSERT ON assistant_conversations
+FOR EACH ROW
+EXECUTE FUNCTION increment_assistant_queries();
+```
+- Se déclenche à chaque question posée à l'assistant
+- Incrémente `assistant_queries_total` pour l'employé (`assistant_conversations.user_id` → `staff_directory.auth_user_id`)
+
+### 6.4 Métriques dynamiques (calculées en temps réel)
+
+Ces métriques ne sont **pas stockées** en colonnes mais calculées via queries :
+
+**Shifts ouverts cette semaine** :
+```sql
+SELECT COUNT(*) FROM shifts 
+WHERE auth_user_id = :user_id 
+  AND status = 'active' 
+  AND start_time >= date_trunc('week', now());
+```
+
+**Shifts clos cette semaine** :
+```sql
+SELECT COUNT(*) FROM shifts 
+WHERE auth_user_id = :user_id 
+  AND status = 'completed' 
+  AND end_time >= date_trunc('week', now());
+```
+
+**Tâches créées cette semaine** :
+```sql
+SELECT COUNT(*) FROM task 
+WHERE created_by = :user_id 
+  AND created_at >= date_trunc('week', now());
+```
+
+**Tâches fermées cette semaine** :
+```sql
+SELECT COUNT(*) FROM task 
+WHERE created_by = :user_id 
+  AND status = 'completed'
+  AND updated_at >= date_trunc('week', now());
+```
+
+### 6.5 Onboarding Carousel
+
+**Composant** : `OnboardingCarousel.tsx`  
+**Hook** : `useOnboarding.ts`
+
+**Logique** :
+- Au chargement du Dashboard, vérification de `staff_directory.onboarding_views_count`
+- Si `<= 10` → affichage du carousel de 4 tutoriels vidéo
+- Après fermeture du carousel : appel RPC `increment_onboarding_views(user_uuid)`
+- Après 10 vues, le carousel ne s'affiche plus
+
+**Slides du carousel** :
+1. "Pourquoi pas de cartes au début ? Comment lancer et clôturer son shift"
+2. "Comment créer une carte : à la voix ou via l'interface"
+3. "Vous avez une question ? Soumettez-la à l'assistant"
+4. "Progressez dans votre travail : apprenez avec le formateur"
+
+Bouton final : "Commencez" → redirection vers `/shift-management`
+
+### 6.6 À venir : Système QCM + Score Card de compétences
+
+**Statut** : Planifié pour session dédiée
+
+**Objectifs** :
+- Créer table `training_user_answers` pour stocker les réponses aux QCM
+- Pondération des questions par compétence
+- Calcul automatique du score par skill
+- Mise à jour du profil de compétences dans `staff_directory` ou table dédiée
+- Dashboard de progression individuelle
+
+---
+
+**Document Version** : 1.2  
+**Dernière mise à jour** : 17 Février 2026  
 **Auteur** : Wilfried de Renty  
 **Statut** : ✅ Production-Ready
 

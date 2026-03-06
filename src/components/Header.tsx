@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Menu, User, Clock, BarChart3, Calendar, LogOut } from 'lucide-react';
+import { HelpButton } from '@/components/help/HelpButton';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -83,14 +84,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
           </p>
         </div>
 
+        {/* Help Button */}
+        <HelpButton />
+
         {/* User Profile */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center space-x-2 hotel-hover">
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-white">{user?.email}</p>
-                <p className="text-xs text-hotel-sand">Authenticated User</p>
-              </div>
+            <Button variant="ghost" className="flex items-center space-x-2 hotel-hover p-1">
               <Avatar className="h-10 w-10 ring-2 ring-[#BBA57A]/50">
                 <AvatarImage src="/api/placeholder/40/40" />
                 <AvatarFallback className="avatar-gold font-semibold">
@@ -99,8 +99,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem className="flex items-center space-x-2 hotel-hover">
+          <DropdownMenuContent align="end" className="w-64">
+            {/* Email & rôle — informatif, non cliquable */}
+            <div className="px-3 py-2 border-b border-gray-100">
+              <p className="text-sm font-medium text-gray-800 truncate">{user?.email}</p>
+              <p className="text-xs text-gray-400">Authenticated User</p>
+            </div>
+            <DropdownMenuItem className="flex items-center space-x-2 hotel-hover mt-1">
               <User className="h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>

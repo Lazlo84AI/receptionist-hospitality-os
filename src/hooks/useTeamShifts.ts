@@ -35,6 +35,7 @@ export const useTeamShifts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userService, setUserService] = useState<string>('reception');
+  const [staffMap, setStaffMap] = useState<Record<string, string>>({});
 
   const fetchTeamShifts = async () => {
     try {
@@ -112,6 +113,31 @@ export const useTeamShifts = () => {
 
       console.log('✅ Transformed shifts data:', transformedData);
       setShifts(transformedData);
+
+      // Collecter tous les UUIDs présents dans les snapshots pour résolution en noms
+      const allUUIDs = new Set<string>();
+      transformedData.forEach(shift => {
+        (shift.handover_data?.all_tasks || []).forEach((task: any) => {
+          if (task.created_by) allUUIDs.add(task.created_by);
+          if (Array.isArray(task.assigned_to)) {
+            task.assigned_to.forEach((id: string) => allUUIDs.add(id));
+          }
+        });
+      });
+
+      let resolvedMap: Record<string, string> = {};
+      if (allUUIDs.size > 0) {
+        const { data: staffMembers } = await supabase
+          .from('staff_directory')
+          .select('id, first_name, last_name, full_name')
+          .in('id', Array.from(allUUIDs));
+
+        (staffMembers || []).forEach((s: any) => {
+          resolvedMap[s.id] = s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.id;
+        });
+        console.log(`👥 ${Object.keys(resolvedMap).length} UUIDs résolus en noms`);
+      }
+      setStaffMap(resolvedMap);
       setError(null);
     } catch (err) {
       console.error('💥 Error fetching team shifts:', err);
@@ -127,5 +153,5 @@ export const useTeamShifts = () => {
     fetchTeamShifts();
   }, []);
 
-  return { shifts, loading, error, userService, refetch: fetchTeamShifts };
+  return { shifts, loading, error, userService, staffMap, refetch: fetchTeamShifts };
 };

@@ -78,7 +78,7 @@ export const useTasks = () => {
         supabase
           .from('task')
           .select('*')
-          .in('status', ['pending', 'in_progress', 'completed'])  // Active tasks
+          .not('status', 'eq', 'archived')  // Exclure les tâches archivées
           .order('created_at', { ascending: false }),
         supabase
           .from('staff_directory')
