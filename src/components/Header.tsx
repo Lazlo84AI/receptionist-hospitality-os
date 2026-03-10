@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Menu, User, Clock, BarChart3, Calendar, LogOut } from 'lucide-react';
+import { Menu, User, Clock, BarChart3, Calendar, LogOut, ShieldCheck } from 'lucide-react';
 import { HelpButton } from '@/components/help/HelpButton';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
+import { useStaffService } from '@/hooks/useStaffService';
 import { HotelCrest } from '@/components/HotelCrest';
 
 interface HeaderProps {
@@ -15,6 +16,7 @@ interface HeaderProps {
 export function Header({ onMenuToggle }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { user, signOut } = useAuth();
+  const { isDirection } = useStaffService();
   const navigate = useNavigate();
 
   // Update time every minute
@@ -124,6 +126,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <Calendar className="h-4 w-4" />
               <span>Team Shifts</span>
             </DropdownMenuItem>
+            {isDirection && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="flex items-center space-x-2 cursor-pointer"
+                  style={{ color: '#BBA57A' }}
+                  onClick={() => navigate('/admin/onboarding')}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="font-medium">Admin Panel</span>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="flex items-center space-x-2 cursor-pointer text-red-600 hover:bg-red-50"

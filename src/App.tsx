@@ -19,6 +19,11 @@ import ServiceControl2 from "./pages/ServiceControl2";
 import LocationCleanupPage from "./pages/LocationCleanup";
 import MyStatistics from "./pages/MyStatistics";
 import NotFound from "./pages/NotFound";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import TeamOnboarding from "./pages/admin/TeamOnboarding";
+import TeamAnalytics from "./pages/admin/TeamAnalytics";
+import AdminTraining from "./pages/admin/AdminTraining";
+import KnowledgeAssistance from "./pages/admin/KnowledgeAssistance";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +48,11 @@ const App = () => (
             <Route path="/service-control2" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
             <Route path="/location-cleanup" element={<ProtectedRoute><LocationCleanupPage /></ProtectedRoute>} />
             <Route path="/my-statistics" element={<ProtectedRoute><MyStatistics /></ProtectedRoute>} />
+            {/* ── ADMIN ROUTES (direction only) ────────────────────────── */}
+            <Route path="/admin/onboarding" element={<AdminProtectedRoute><TeamOnboarding /></AdminProtectedRoute>} />
+            <Route path="/admin/analytics"  element={<AdminProtectedRoute><TeamAnalytics /></AdminProtectedRoute>} />
+            <Route path="/admin/training"   element={<AdminProtectedRoute><AdminTraining /></AdminProtectedRoute>} />
+            <Route path="/admin/knowledge"  element={<AdminProtectedRoute><KnowledgeAssistance /></AdminProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
