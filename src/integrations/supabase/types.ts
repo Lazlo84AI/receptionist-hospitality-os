@@ -647,6 +647,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string | null
+          notification_type: string | null
+          title: string | null
+          body: string | null
+          priority: string | null
+          entity_type: string | null
+          entity_id: string | null
+          is_read: boolean | null
+          read_at: string | null
+          action_required: boolean | null
+          action_taken: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          notification_type?: string | null
+          title?: string | null
+          body?: string | null
+          priority?: string | null
+          entity_type?: string | null
+          entity_id?: string | null
+          is_read?: boolean | null
+          read_at?: string | null
+          action_required?: boolean | null
+          action_taken?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          notification_type?: string | null
+          title?: string | null
+          body?: string | null
+          priority?: string | null
+          entity_type?: string | null
+          entity_id?: string | null
+          is_read?: boolean | null
+          read_at?: string | null
+          action_required?: boolean | null
+          action_taken?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       task_members: {
         Row: {
           added_by: string

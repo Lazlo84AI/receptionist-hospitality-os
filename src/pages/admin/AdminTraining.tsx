@@ -121,6 +121,34 @@ const STEP_CONFIG: Record<string, {
 const getStepConfig = (step: string) =>
   STEP_CONFIG[step] ?? STEP_CONFIG['formation'];
 
+// ─── Config thématique → emoji + dégradé ─────────────────────────────────────
+
+const THEMATIC_TRAINING_CONFIG: Record<string, { emoji: string; gradient: string; iconBg: string }> = {
+  // Thématiques explicites
+  'Housekeeping':          { emoji: '🧹', gradient: 'linear-gradient(135deg, #4c1d95 0%, #312e81 100%)', iconBg: 'rgba(167,139,250,0.2)' },
+  'Réception':             { emoji: '🛎️', gradient: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)', iconBg: 'rgba(187,165,122,0.22)' },
+  'Reception':             { emoji: '🛎️', gradient: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)', iconBg: 'rgba(187,165,122,0.22)' },
+  'Maintenance':           { emoji: '🔧', gradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', iconBg: 'rgba(148,163,184,0.2)' },
+  'Sécurité':              { emoji: '🔒', gradient: 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)', iconBg: 'rgba(248,113,113,0.2)' },
+  'F&B':                   { emoji: '🍽️', gradient: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)', iconBg: 'rgba(110,231,183,0.2)' },
+  'Restauration':          { emoji: '🍽️', gradient: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)', iconBg: 'rgba(110,231,183,0.2)' },
+  'Petit Dejeuner':        { emoji: '☕', gradient: 'linear-gradient(135deg, #431407 0%, #1c0700 100%)', iconBg: 'rgba(253,186,116,0.2)' },
+  'Espace Bien Etre':      { emoji: '🧘', gradient: 'linear-gradient(135deg, #134e4a 0%, #042f2e 100%)', iconBg: 'rgba(94,234,212,0.2)' },
+  'Spa':                   { emoji: '🧘', gradient: 'linear-gradient(135deg, #134e4a 0%, #042f2e 100%)', iconBg: 'rgba(94,234,212,0.2)' },
+  'Bar':                   { emoji: '🍸', gradient: 'linear-gradient(135deg, #1e1b4b 0%, #0f0c29 100%)', iconBg: 'rgba(165,180,252,0.2)' },
+  'Conciergerie':          { emoji: '🗝️', gradient: 'linear-gradient(135deg, #713f12 0%, #3b1f06 100%)', iconBg: 'rgba(253,224,71,0.15)' },
+  'Terrain':               { emoji: '🎯', gradient: 'linear-gradient(135deg, #14532d 0%, #052e16 100%)', iconBg: 'rgba(74,222,128,0.2)' },
+};
+
+const THEMATIC_TRAINING_FALLBACK = {
+  emoji: '📚',
+  gradient: 'linear-gradient(135deg, #1e1a37 0%, #0f0d1f 100%)',
+  iconBg: 'rgba(187,165,122,0.15)',
+};
+
+const getThematicTrainingConfig = (thematic: string) =>
+  THEMATIC_TRAINING_CONFIG[thematic] ?? THEMATIC_TRAINING_FALLBACK;
+
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
 function KpiCard({
@@ -227,43 +255,37 @@ function ItemCard({
       ? 'En cours'
       : 'À traiter';
 
+  const themCfg = getThematicTrainingConfig(item.thematic);
+
   return (
     <div
       onClick={() => onOpen(item)}
-      className="rounded-xl border overflow-hidden group transition-all duration-200 hover:translate-y-[-2px] cursor-pointer"
-      style={{
-        backgroundColor: 'rgba(30,26,55,0.9)',
-        borderColor: cfg.border,
-      }}
+      className="rounded-2xl overflow-hidden group transition-all duration-200 hover:scale-[1.02] hover:shadow-2xl cursor-pointer flex flex-col"
+      style={{ background: themCfg.gradient, border: `1px solid ${cfg.border}` }}
     >
-      {/* Top accent bar */}
+      {/* Top accent bar — couleur par TYPE (Formation/QCM/etc.) conservée */}
       <div
-        className="h-1 w-full"
-        style={{ backgroundColor: cfg.accent, opacity: 0.7 }}
+        className="h-1 w-full flex-shrink-0"
+        style={{ backgroundColor: cfg.accent, opacity: 0.9 }}
       />
 
       {/* Icon header */}
-      <div
-        className="px-4 pt-4 pb-3 flex items-start justify-between"
-      >
+      <div className="px-4 pt-4 pb-3 flex items-start justify-between">
+        {/* Emoji thématique dans le carré */}
         <div
-          className="h-10 w-10 rounded-lg flex items-center justify-center"
-          style={{ backgroundColor: cfg.bg, border: `1px solid ${cfg.border}` }}
+          className="h-11 w-11 rounded-xl flex items-center justify-center text-2xl shadow-lg"
+          style={{ backgroundColor: themCfg.iconBg, backdropFilter: 'blur(4px)' }}
         >
-          <Icon className="h-5 w-5" style={{ color: cfg.color }} />
+          {themCfg.emoji}
         </div>
 
         {/* Actions (visible on hover) */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {item.document_url && (
-            <a
-              href={item.document_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-            >
+            <a href={item.document_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
               <button
-                className="h-7 w-7 rounded-md flex items-center justify-center transition-colors hover:bg-white/10"
+                className="h-7 w-7 rounded-md flex items-center justify-center transition-colors"
+                style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}
                 title="Voir le document"
               >
                 <Eye className="h-3.5 w-3.5" style={{ color: '#BBA57A' }} />
@@ -272,7 +294,8 @@ function ItemCard({
           )}
           <button
             onClick={e => { e.stopPropagation(); onDelete(item); }}
-            className="h-7 w-7 rounded-md flex items-center justify-center transition-colors hover:bg-red-500/20"
+            className="h-7 w-7 rounded-md flex items-center justify-center transition-colors"
+            style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}
             title="Supprimer"
           >
             <Trash2 className="h-3.5 w-3.5 text-red-400" />
@@ -280,72 +303,53 @@ function ItemCard({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 pb-4">
+      {/* Titre */}
+      <div className="px-4 pb-3 flex-1">
         <h3
-          className="text-sm font-semibold text-white mb-1 line-clamp-2 leading-snug"
+          className="text-sm font-bold text-white mb-1 line-clamp-2 leading-snug drop-shadow-sm"
           title={item.document_name}
         >
           {item.document_name}
         </h3>
-
-        {/* Thematic */}
-        <p className="text-xs mb-3 truncate" style={{ color: 'rgba(187,165,122,0.55)' }}>
+        <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {item.thematic}
         </p>
+      </div>
 
-        {/* Badges row */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          {/* Type badge */}
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
-            style={{
-              backgroundColor: cfg.bg,
-              color: cfg.color,
-              border: `1px solid ${cfg.border}`,
-            }}
-          >
-            {cfg.label}
-          </span>
+      {/* Badges row — TYPE badge garde sa couleur d'origine */}
+      <div className="px-4 pb-4 flex items-center justify-between flex-wrap gap-2">
+        <span
+          className="text-xs font-semibold px-2.5 py-1 rounded-full"
+          style={{
+            backgroundColor: cfg.bg,
+            color: cfg.color,
+            border: `1px solid ${cfg.border}`,
+          }}
+        >
+          {cfg.label}
+        </span>
 
-          {/* Status dot + label */}
-          <div className="flex items-center gap-1">
-            <div
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: statusColor }}
-            />
-            <span className="text-xs" style={{ color: statusColor }}>
-              {statusLabel}
-            </span>
+        <div className="flex items-center gap-1">
+          <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
+          <span className="text-xs" style={{ color: statusColor }}>{statusLabel}</span>
+        </div>
+      </div>
+
+      {/* Score moyen si dispo */}
+      {item.average_score !== null && item.average_score > 0 && (
+        <div
+          className="px-4 py-3"
+          style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Score moyen</span>
+            <span className="text-xs font-bold" style={{ color: '#DEAE35' }}>{item.average_score}%</span>
+          </div>
+          <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+            <div className="h-full rounded-full" style={{ width: `${item.average_score}%`, backgroundColor: '#DEAE35' }} />
           </div>
         </div>
-
-        {/* Average score si dispo */}
-        {item.average_score !== null && item.average_score > 0 && (
-          <div className="mt-3 pt-3 border-t" style={{ borderColor: 'rgba(187,165,122,0.1)' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs" style={{ color: 'rgba(187,165,122,0.5)' }}>
-                Score moyen
-              </span>
-              <span className="text-xs font-semibold" style={{ color: '#DEAE35' }}>
-                {item.average_score}%
-              </span>
-            </div>
-            <div
-              className="h-1 rounded-full overflow-hidden"
-              style={{ backgroundColor: 'rgba(187,165,122,0.15)' }}
-            >
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${item.average_score}%`,
-                  backgroundColor: '#DEAE35',
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

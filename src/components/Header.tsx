@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Menu, User, Clock, BarChart3, Calendar, LogOut, ShieldCheck } from 'lucide-react';
 import { HelpButton } from '@/components/help/HelpButton';
+import { NotificationBell } from '@/components/NotificationBell';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -76,7 +77,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
         {/* Time & Date */}
         <div className="hidden lg:block text-right">
           <div className="flex items-center space-x-2 text-white">
-            <Clock className="h-4 w-4 text-hotel-yellow" />
+            <Clock className="h-4 w-4" style={{ color: '#E0D3B4' }} />
             <span className="font-mono text-lg jost-semibold">
               {formatTime(currentTime)}
             </span>
@@ -88,6 +89,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
         {/* Help Button */}
         <HelpButton />
+
+        {/* Notifications */}
+        <NotificationBell />
 
         {/* User Profile */}
         <DropdownMenu>
@@ -130,12 +134,12 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="flex items-center space-x-2 cursor-pointer"
-                  style={{ color: '#BBA57A' }}
+                  className="flex items-center space-x-2 cursor-pointer mx-2 mb-1 rounded-md"
+                  style={{ backgroundColor: '#BBA57A', color: '#1E1A37' }}
                   onClick={() => navigate('/admin/onboarding')}
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  <span className="font-medium">Admin Panel</span>
+                  <span className="font-medium">Accès Admin</span>
                 </DropdownMenuItem>
               </>
             )}

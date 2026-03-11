@@ -283,10 +283,46 @@ const ShiftManagement = () => {
   const location = useLocation();
 
   // Ouvrir ShiftStartModal automatiquement si redirigé depuis l'onboarding
+  // Ouvrir la modale d'une tâche spécifique si redirigé depuis les notifications
   useEffect(() => {
     if (location.state?.openShiftStart) {
       setIsShiftStartOpen(true);
       window.history.replaceState({}, document.title);
+    }
+    if (location.state?.openTaskId) {
+      const taskId = location.state.openTaskId as string;
+      window.history.replaceState({}, document.title);
+      // Fetch la tâche par son ID et ouvre la modale
+      const fetchAndOpenTask = async () => {
+        const client = supabase as any;
+        const { data, error } = await client
+          .from('task')
+          .select('*')
+          .eq('id', taskId)
+          .single();
+        if (!error && data) {
+          // Mapper vers TaskItem
+          const taskItem: TaskItem = {
+            id: data.id,
+            title: data.title,
+            description: data.description || '',
+            type: data.category || 'internal_task',
+            status: data.status || 'pending',
+            priority: data.priority || 'medium',
+            location: data.location || '',
+            assignedTo: data.assigned_to?.[0] || '',
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+            guestName: data.guest_name || '',
+            roomNumber: '',
+            service: data.service || '',
+          };
+          setSelectedTask(taskItem);
+          setIsTaskDetailOpen(true);
+        }
+      };
+      // Attendre que les tâches soient chargées avant d'ouvrir
+      setTimeout(fetchAndOpenTask, 300);
     }
   }, [location.state]);
 

@@ -18,10 +18,10 @@ interface AdminSidebarProps {
 }
 
 const adminMenuItems = [
-  { icon: UserPlus,      label: 'Team Onboarding',     href: '/admin/onboarding' },
   { icon: BarChart3,     label: 'Team Analytics',       href: '/admin/analytics' },
   { icon: GraduationCap, label: 'Training Management',  href: '/admin/training' },
   { icon: Brain,         label: 'Knowledge Assistance', href: '/admin/knowledge' },
+  { icon: UserPlus,      label: 'Team Onboarding',      href: '/admin/onboarding' },
 ];
 
 // Gold Dark — charte Decœur Pantone 4006C
@@ -122,27 +122,30 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   className={cn(
                     'w-full justify-start text-left h-12 transition-all duration-300 font-medium',
                     isActive
-                      ? 'text-white shadow-lg border border-white/30'
-                      : 'text-white hover:text-white'
+                      ? 'shadow-md border'
+                      : ''
                   )}
                   style={
                     isActive
                       ? {
-                          backgroundColor: '#1E1A37',
+                          backgroundColor: 'rgba(0,0,0,0.18)',
+                          color: 'white',
                           borderColor: 'rgba(255,255,255,0.25)',
                         }
-                      : {}
+                      : { color: 'white' }
                   }
                   onMouseEnter={(e) => {
                     if (!isActive) {
                       (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                        'rgba(30,26,55,0.18)';
+                        'rgba(30,26,55,0.12)';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#DEAE35';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       (e.currentTarget as HTMLButtonElement).style.backgroundColor =
                         'transparent';
+                      (e.currentTarget as HTMLButtonElement).style.color = 'white';
                     }
                   }}
                 >
