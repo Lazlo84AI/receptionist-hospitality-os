@@ -217,6 +217,7 @@ export const useTasks = () => {
           status: task.status,
           description: task.description || undefined,
           assignedTo: combinedDisplay,
+          assignedToUserIds: Array.isArray(task.assigned_to) ? task.assigned_to : [],
           location: task.location || undefined,
           guestName: undefined, // Not available in unified table
           roomNumber: undefined, // Not available in unified table

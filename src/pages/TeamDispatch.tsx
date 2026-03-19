@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,11 +56,28 @@ const TeamDispatch = () => {
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   
   // Nouveaux états pour la gestion des colonnes
-  const [selectedColumns, setSelectedColumns] = useState<(string | null)[]>([null, null, null, null]);
+  // Persistance localStorage : on relit les colonnes sauvegardées au montage
+  const [selectedColumns, setSelectedColumns] = useState<(string | null)[]>(() => {
+    try {
+      const saved = localStorage.getItem('teamDispatch_columns');
+      return saved ? JSON.parse(saved) : [null];
+    } catch {
+      return [null];
+    }
+  });
   const [isSelectingMember, setIsSelectingMember] = useState(false);
   const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null);
   // État pour le bandeau mobile collapsible
   const [isMobileStatsExpanded, setIsMobileStatsExpanded] = useState(false);
+
+  // Sauvegarde automatique des colonnes dans localStorage à chaque changement
+  useEffect(() => {
+    try {
+      localStorage.setItem('teamDispatch_columns', JSON.stringify(selectedColumns));
+    } catch {
+      // localStorage indisponible, on ignore silencieusement
+    }
+  }, [selectedColumns]);
   
   // Hooks de données
   const { tasks, loading: tasksLoading, error: tasksError, refetch } = useTasks();
@@ -103,10 +120,18 @@ const TeamDispatch = () => {
     // Add unassigned column
     assignments['unassigned'] = [];
     
-    // Group tasks by assignee
+    // Group tasks by assignee (supports multiple assignees per task)
     tasks.forEach(task => {
-      if (task.assignedToUserId && assignments[task.assignedToUserId]) {
-        assignments[task.assignedToUserId].push(task);
+      const userIds = task.assignedToUserIds || [];
+      if (userIds.length > 0) {
+        let assigned = false;
+        userIds.forEach(userId => {
+          if (assignments[userId] !== undefined) {
+            assignments[userId].push(task);
+            assigned = true;
+          }
+        });
+        if (!assigned) assignments['unassigned'].push(task);
       } else {
         assignments['unassigned'].push(task);
       }
@@ -463,7 +488,7 @@ const TeamDispatch = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleOpenMemberSelector(member.columnIndex)}
-                                className="h-6 w-6 p-0 text-[#DEAE53] hover:text-[#1E1A37] hover:bg-[#DEAE53]/20"
+                                className="h-6 w-6 p-0 text-[#1E1A37] hover:text-[#1E1A37] hover:bg-[#1E1A37]/10"
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>
@@ -484,7 +509,7 @@ const TeamDispatch = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenMemberSelector(member.columnIndex)}
-                            className="h-6 w-6 p-0 text-[#1E1A37]/60 hover:text-[#DEAE53] hover:bg-[#DEAE53]/20"
+                            className="h-6 w-6 p-0 text-[#1E1A37] hover:text-[#1E1A37] hover:bg-[#1E1A37]/10"
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
@@ -503,7 +528,7 @@ const TeamDispatch = () => {
                     </div>
 
                     {/* Tasks List */}
-                    <ScrollArea className="max-h-96">
+                    <ScrollArea className="h-[50vh] md:h-[calc(100vh-420px)]">
                       <div className="space-y-3">
                         {activeTasks.length === 0 ? (
                           <div className="text-center py-8 text-[#1E1A37]/50">

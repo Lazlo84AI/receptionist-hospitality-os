@@ -208,6 +208,7 @@ export interface TaskItem {
   status: TaskStatus;
   description?: string;
   assignedTo?: string;
+  assignedToUserIds?: string[];
   dueDate?: string;
   location?: string;
   guestName?: string;

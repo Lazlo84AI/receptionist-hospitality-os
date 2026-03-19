@@ -328,8 +328,8 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       }
 
       toast({
-        title: "Test réussi!",
-        description: `Tâche créée: ${result.title}`,
+        title: "Merci, ta carte a bien été enregistrée 🌟",
+        description: `"${result.title}" a été ajoutée avec succès.`,
       });
       
       onClose();
