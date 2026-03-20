@@ -1,3 +1,48 @@
+## 2026-03-19
+
+### Fixed — Team Dispatch (bugfixes client V1)
+
+**1. Colonne unique par défaut**
+- Réduit l'état initial de 4 colonnes vides à 1 seule colonne "Add Staff Member"
+- Fichier : `src/pages/TeamDispatch.tsx`
+
+**2. Tâches non affichées dans les colonnes membres**
+- Ajout du champ `assignedToUserIds: string[]` dans l'interface `TaskItem`
+- Propagation des UUIDs bruts depuis `useTasks` (champ `assigned_to` de la table `task`)
+- Remplacement du routing `assignedToUserId` (champ inexistant) par `assignedToUserIds` dans `taskAssignments`
+- Support multi-assignation : une tâche assignée à plusieurs membres apparaît dans chaque colonne
+- Fichiers : `src/types/database.ts`, `src/hooks/useSupabaseData.ts`, `src/pages/TeamDispatch.tsx`
+
+**3. Persistance des colonnes**
+- Sauvegarde automatique des colonnes sélectionnées dans `localStorage` (clé : `teamDispatch_columns`)
+- Restauration au chargement de la page — survit à la navigation et au F5
+- Fichier : `src/pages/TeamDispatch.tsx`
+
+**4. Bouton edit harmonisé**
+- Couleur unifiée navy `#1E1A37` sur les deux boutons edit (colonne vide et colonne assignée)
+- Fichier : `src/pages/TeamDispatch.tsx`
+
+**5. Message toast création de carte**
+- Remplacement de "Test réussi!" par "Merci, ta carte a bien été enregistrée 🌟"
+- Fichier : `src/components/modals/TaskCreationModal.tsx`
+
+**6. Scroll interne des colonnes**
+- Hauteur fixe responsive avec scroll interne visible : `h-[50vh] md:h-[calc(100vh-420px)]`
+- Permet de naviguer à travers toutes les cartes d'une colonne à la molette
+- Fichier : `src/pages/TeamDispatch.tsx`
+
+### Fixed — Base de données Miguel Lopez (Maintenance)
+
+**Contexte** : Miguel avait deux entrées dans `staff_directory` — une entrée historique (`185bd59c`) sans `auth_user_id` ni `service`, et un doublon créé à l'inscription (`bedfa044`) avec `service = reception` et prénom/nom inversés. Les tâches assignées à l'entrée historique n'étaient jamais reçues par Miguel.
+
+**Corrections SQL appliquées** :
+- Migration de toutes les tâches de l'ancien ID (`185bd59c`) vers le compte auth réel (`bedfa044`) via `array_replace`
+- `staff_directory` `bedfa044` mis à jour : `first_name = Miguel`, `last_name = Lopez`, `full_name = Miguel Lopez`, `service = maintenance`, `department = Maintenance`, `hierarchy = Manager`, `is_active = true`
+- `profiles` `bedfa044` mis à jour : `service = maintenance`, `hierarchy = Manager`
+- Entrée orpheline `185bd59c` désactivée : `is_active = false`, `auth_user_id = NULL`
+
+---
+
 ## 2026-03-06
 
 ### Added
