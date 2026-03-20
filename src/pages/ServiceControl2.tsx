@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
@@ -257,22 +257,12 @@ const getFilteredTasks = (tasks: TaskItem[], locations: Location[], profiles: an
     });
   }
 
-  // Filtre par personne - chercher dans assignedTo transformé
+  // Filtre par personne — match direct sur la string assignedTo ("Créateur → Assignés")
   if (filters.person !== 'all') {
-    // Trouver le nom de la personne sélectionnée
-    const selectedProfile = profiles.find(p => p.id === filters.person);
-    if (selectedProfile) {
-      const personName = selectedProfile.full_name || 
-        `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() ||
-        selectedProfile.email;
-      
-      filteredTasks = filteredTasks.filter(task => {
-        // assignedTo contient "Créateur → Assignés", on cherche le nom dans la partie après →
-        if (!task.assignedTo) return false;
-        const assignedPart = task.assignedTo.split(' → ')[1] || task.assignedTo;
-        return assignedPart.includes(personName);
-      });
-    }
+    filteredTasks = filteredTasks.filter(task => {
+      if (!task.assignedTo) return false;
+      return task.assignedTo.includes(filters.person);
+    });
   }
 
   // Filtre par thématique
@@ -283,8 +273,8 @@ const getFilteredTasks = (tasks: TaskItem[], locations: Location[], profiles: an
         filteredTasks = filteredTasks.filter(task => task.priority === 'urgent');
         break;
       case 'most_delayed':
-        // Exclure les tâches completed (resolues) car elles ne peuvent pas être en retard
-        filteredTasks = filteredTasks.filter(task => task.status !== 'completed');
+        // Exclure completed et verified car elles ne peuvent pas être en retard
+        filteredTasks = filteredTasks.filter(task => task.status !== 'completed' && task.status !== 'verified');
         // Trier par: 1. Urgences d'abord, 2. Plus anciennes d'abord
         filteredTasks = filteredTasks.sort((a, b) => {
           // D'abord par priorité (urgent = 1, normal = 0)
@@ -312,6 +302,10 @@ const getFilteredTasks = (tasks: TaskItem[], locations: Location[], profiles: an
         filteredTasks = filteredTasks.filter(task => {
           return new Date(task.created_at) >= today;
         });
+        break;
+      case 'needs_verification':
+        // Toutes les cartes en statut Resolved (completed) — en attente de vérification
+        filteredTasks = filteredTasks.filter(task => task.status === 'completed');
         break;
     }
   }
@@ -449,24 +443,40 @@ const ServiceControl2 = () => {
     { value: 'client_requests', label: 'Client Requests' },
     { value: 'follow_ups', label: 'Follow Ups' },
     { value: 'personal_tasks', label: 'Personal Tasks' },
-    { value: 'chambres_arrivee', label: 'Chambres "en arrivée"' },
-    { value: 'chambres_recouche', label: 'Chambres "en recouche"' }
+    { value: 'chambres_arrivee', label: 'Chambres "en arrivée"', disabled: true },
+    { value: 'chambres_recouche', label: 'Chambres "en recouche"', disabled: true }
   ];
 
-  const personOptions = [
-    { value: 'all', label: 'Toutes les personnes' },
-    ...profiles.map(profile => ({
-      value: profile.id,
-      label: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email || 'Unknown'
-    }))
-  ];
+  // Personnes dérivées dynamiquement depuis les tâches visibles
+  const personOptions = useMemo(() => {
+    const nameSet = new Set<string>();
+    tasks.forEach(task => {
+      if (!task.assignedTo) return;
+      // Format : "Créateur → Assignés" — on extrait les deux parties
+      const parts = task.assignedTo.split(' → ');
+      parts.forEach(part => {
+        // Plusieurs assignés séparés par virgule
+        part.split(', ').forEach(name => {
+          const trimmed = name.trim();
+          if (trimmed && trimmed !== 'Non assigné' && trimmed !== 'Inconnu') {
+            nameSet.add(trimmed);
+          }
+        });
+      });
+    });
+    return [
+      { value: 'all', label: 'Toutes les personnes' },
+      ...Array.from(nameSet).sort().map(name => ({ value: name, label: name }))
+    ];
+  }, [tasks]);
 
   const themeOptions = [
     { value: 'all', label: 'Tous' },
     { value: 'priority', label: 'Par priorité' },
     { value: 'most_delayed', label: 'Les plus en retard' },
     { value: 'previous_shift', label: 'Issues du shift précédent' },
-    { value: 'new_shift', label: 'Issues du nouveau shift' }
+    { value: 'new_shift', label: 'Issues du nouveau shift' },
+    { value: 'needs_verification', label: 'Besoin de vérification' },
   ];
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -781,7 +791,14 @@ const ServiceControl2 = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {categoryOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              disabled={'disabled' in option && option.disabled}
+                              className={'disabled' in option && option.disabled ? 'text-gray-300 cursor-not-allowed' : ''}
+                            >
+                              {option.label}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -802,7 +819,7 @@ const ServiceControl2 = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-700">Thématiques</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Échéances et statuts</label>
                       <Select value={selectedTheme} onValueChange={setSelectedTheme}>
                         <SelectTrigger className={cn("w-full transition-all duration-200 bg-white border-2", selectedTheme !== 'all' && "ring-1 ring-yellow-400 border-yellow-400")}>
                           <SelectValue placeholder="Sélectionner un thème" />
@@ -930,7 +947,7 @@ const ServiceControl2 = () => {
 
                     {/* Filtre Thématiques - Dernier filtre avec direction vers le haut */}
                     <div>
-                      <label className="block text-lg font-medium text-gray-800 mb-4">Thématiques</label>
+                      <label className="block text-lg font-medium text-gray-800 mb-4">Échéances et statuts</label>
                       <Select value={selectedTheme} onValueChange={setSelectedTheme}>
                         <SelectTrigger className={cn("w-full h-12 text-base transition-all duration-200", selectedTheme !== 'all' && "ring-2 ring-yellow-400 border-yellow-400")}>
                           <SelectValue placeholder="Sélectionner un thème" />
