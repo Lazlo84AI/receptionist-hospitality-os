@@ -117,6 +117,19 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
 
   const confirmSave = async () => {
     try {
+      const { error } = await supabase
+        .from('task')
+        .update({
+          status: editedTask.status,
+          priority: editedTask.priority,
+          title: editedTask.title,
+          description: editedTask.description,
+          location: editedTask.location,
+        })
+        .eq('id', editedTask.id);
+
+      if (error) throw error;
+
       onSave(editedTask);
       toast({
         title: "Task Updated",

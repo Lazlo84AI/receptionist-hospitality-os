@@ -824,6 +824,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
             onUpdateTask(updatedTask);
           }
           setIsTaskFullEditOpen(false);
+          onClose();
         }}
       />
     </>

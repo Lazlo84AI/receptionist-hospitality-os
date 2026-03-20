@@ -646,6 +646,45 @@ Le système est conçu pour tout le service `direction` (pas uniquement Thibault
 
 ---
 
+---
+
+## [2026-03-20]
+
+### fix: TaskFullEditView — Persistance du statut en base Supabase
+
+**Contexte**
+Le modal "Full Editable Card" (`TaskFullEditView.tsx`) permettait de changer le statut d'une tâche mais ne persistait rien en base. Le toast "Task Updated" s'affichait, le modal se fermait, mais la table `task` n'était jamais mise à jour.
+
+**Root cause**
+`confirmSave()` appelait uniquement le callback `onSave(editedTask)` (notification parent) sans aucun appel Supabase.
+
+**Fix — `src/components/modules/TaskFullEditView.tsx`**
+- Ajout d'un appel `supabase.from('task').update({status, priority, title, description, location}).eq('id', editedTask.id)` en tête de `confirmSave()`
+- Si erreur Supabase → `throw error` → toast destructive, modal reste ouvert
+- Si succès → `onSave` → toast succès → fermeture
+- Le client Supabase était déjà importé, zéro nouvel import
+
+**Fix UX — `src/components/modals/EnhancedTaskDetailModal.tsx`**
+- Ajout de `onClose()` dans le callback `onSave` de `<TaskFullEditView>` : les deux modals (Full Edit + Detail) se ferment simultanément après save
+- Suppression de l'état intermédiaire stale visible sur `EnhancedTaskDetailModal` après un save
+- Le Realtime Supabase (`useTasks` subscription sur `task`) propage la mise à jour au kanban automatiquement
+
+---
+
+### feat: ServiceControl2 — Manager Interface redesign
+
+**Contexte**
+Refonte de la page `ServiceControl2` pour les managers : mise en avant des colonnes "Resolved" et "Verified", colonnes "To Process" et "In Progress" repliables, suppression du module shift inutile dans ce contexte.
+
+**`src/pages/ServiceControl2.tsx`**
+- Titre : "Service Control - Manager Interface"
+- Sous-titre : "Monitor your team's work by moving cards from 'Resolved' to 'Verified'"
+- Suppression du bloc `ShiftActionSelector` (Active Shift / Work Improvement / End Shift) — non pertinent pour cette vue manager
+- `KanbanColumn` redesigné : mode replié = bande verticale `w-12` avec titre en `writing-mode: vertical-rl`, badge count et chevron. Clic sur la bande → expand. Mode ouvert = `flex-1` avec bouton `ChevronLeft` pour replier
+- State `collapsedColumns` initialisé à `{ pending: true, in_progress: true }` → To Process et In Progress repliés par défaut à l'ouverture
+- Container : `flex gap-3 overflow-x-auto` — wrappers des colonnes en `flex-none w-12` (replié) ou `flex-none w-[85vw] md:flex-1` (ouvert) pour compatibilité mobile scroll horizontal + desktop flex
+- Resolved et Verified visibles immédiatement, occupent tout l'espace disponible
+
 ### feat: My Analytics — Page de statistiques personnelles
 
 **Concept**

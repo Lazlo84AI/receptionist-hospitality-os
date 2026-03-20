@@ -129,47 +129,80 @@ const SortableCardFace = ({ task, onCardClick }: { task: TaskItem; onCardClick: 
   );
 };
 
-const KanbanColumn = ({ title, tasks, status, onStatusChange, onCardClick, draggedTask, draggedFromColumn }: { 
+const KanbanColumn = ({ title, tasks, status, onStatusChange, onCardClick, draggedTask, draggedFromColumn, isCollapsed, onToggleCollapse }: { 
   title: string; tasks: TaskItem[]; status: string;
   onStatusChange: (taskId: string, newStatus: string) => void;
   onCardClick: (task: TaskItem) => void; draggedTask: TaskItem | null; draggedFromColumn: string | null;
+  isCollapsed?: boolean; onToggleCollapse?: () => void;
 }) => {
   const filteredTasks = tasks.filter(task => task.status === status);
   const isDraggedFromThisColumn = draggedFromColumn === status;
   const isTargetColumn = draggedTask && draggedTask.status !== status;
   const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
 
+  // Collapsed : bande étroite verticale, tout est cliquable pour ouvrir
+  if (isCollapsed) {
+    return (
+      <div
+        className="flex-none w-12 cursor-pointer"
+        onClick={onToggleCollapse}
+        title={`Expand ${title}`}
+      >
+        <div className="bg-muted/50 rounded-lg h-full min-h-[600px] flex flex-col items-center justify-start pt-4 gap-3 hover:bg-muted/80 transition-colors duration-200">
+          <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{filteredTasks.length}</Badge>
+          <span
+            className="text-xs font-semibold text-muted-foreground tracking-wide select-none"
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            {title}
+          </span>
+          <ChevronRight className="h-3 w-3 text-muted-foreground mt-auto mb-4" />
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded : pleine largeur
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-w-0">
       <div className="bg-muted/50 rounded-lg p-4 h-full min-h-[600px]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg">{title}</h3>
-          <Badge variant="secondary" className="text-sm">{filteredTasks.length}</Badge>
+        <h3 className="font-semibold text-lg">{title}</h3>
+        <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="text-sm">{filteredTasks.length}</Badge>
+        {onToggleCollapse && (
+        <button onClick={onToggleCollapse} className="p-1 rounded hover:bg-muted transition-colors" title="Collapse">
+        <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+        </button>
+        )}
         </div>
-        <div ref={setNodeRef} className={cn("min-h-[520px] rounded-lg transition-all duration-300 p-4 border-2", isOver && isTargetColumn ? "bg-green-50 border-green-300 border-dashed shadow-inner" : "bg-transparent border-transparent hover:border-gray-200")}>
-          <div className="space-y-5 max-h-[calc(100vh-300px)] overflow-y-auto">
-            {filteredTasks.map((task) => {
-              const isDraggedCard = draggedTask && task.id === draggedTask.id;
-              return (
-                <div key={task.id} className={cn("transition-all duration-200", isOver && isTargetColumn && "transform translate-y-1", isDraggedCard && isDraggedFromThisColumn && "opacity-30")}>
-                  {isDraggedCard && isDraggedFromThisColumn ? (
-                    <div className="w-full h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">Drop elsewhere to move</div>
-                  ) : (
-                    <SortableCardFace task={task} onCardClick={onCardClick} />
-                  )}
+        </div>
+        {true && (
+          <div ref={setNodeRef} className={cn("min-h-[520px] rounded-lg transition-all duration-300 p-4 border-2", isOver && isTargetColumn ? "bg-green-50 border-green-300 border-dashed shadow-inner" : "bg-transparent border-transparent hover:border-gray-200")}>
+            <div className="space-y-5 max-h-[calc(100vh-300px)] overflow-y-auto">
+              {filteredTasks.map((task) => {
+                const isDraggedCard = draggedTask && task.id === draggedTask.id;
+                return (
+                  <div key={task.id} className={cn("transition-all duration-200", isOver && isTargetColumn && "transform translate-y-1", isDraggedCard && isDraggedFromThisColumn && "opacity-30")}>
+                    {isDraggedCard && isDraggedFromThisColumn ? (
+                      <div className="w-full h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">Drop elsewhere to move</div>
+                    ) : (
+                      <SortableCardFace task={task} onCardClick={onCardClick} />
+                    )}
+                  </div>
+                );
+              })}
+              {filteredTasks.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <div className={cn("border-2 border-dashed rounded-lg p-8 transition-all duration-300", isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted")}>
+                    <p className="text-sm">No cards to show</p>
+                    <p className="text-xs mt-2">Begin the shift in Service Control</p>
+                  </div>
                 </div>
-              );
-            })}
-            {filteredTasks.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <div className={cn("border-2 border-dashed rounded-lg p-8 transition-all duration-300", isOver && isTargetColumn ? "border-green-400 bg-green-50" : "border-muted")}>
-                  <p className="text-sm">No cards to show</p>
-                  <p className="text-xs mt-2">Begin the shift in Service Control</p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -383,6 +416,7 @@ const ServiceControl2 = () => {
   const [selectedPerson, setSelectedPerson] = useState<string>('all');
   const [selectedTheme, setSelectedTheme] = useState<string>('all');
   const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({ pending: true, in_progress: true });
 
   // Colonnes Kanban : 4 colonnes (3 visibles)
   const columns = [
@@ -690,60 +724,11 @@ const ServiceControl2 = () => {
       <main className="p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-playfair font-bold text-foreground mb-2">Service Control</h1>
-            <p className="text-muted-foreground">Manage your service tasks and housekeeping activities during your shift</p>
+            <h1 className="text-3xl font-playfair font-bold text-foreground mb-2">Service Control - Manager Interface</h1>
+            <p className="text-muted-foreground">Monitor your team's work by moving cards from "Resolved" to "Verified"</p>
           </div>
 
-          {isCheckingShift ? (
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <Button disabled className="h-12 text-base" variant="secondary">
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Checking Shift...
-              </Button>
-              <Button onClick={() => handleShiftAction('improve')} variant="outline" className="h-12 text-base">
-                <Target className="h-5 w-5 mr-2" />Work Improvement
-              </Button>
-              <Button disabled className="h-12 text-base" variant="secondary">
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Loading...
-              </Button>
-            </div>
-          ) : (
-            <div className="mb-8">
-              {/* Version mobile : bouton + popup */}
-              <div className="flex md:hidden gap-4 items-start">
-                <div className="flex-1">
-                  <ShiftActionSelector 
-                    shiftStatus={shiftStatus} 
-                    onShiftAction={handleShiftAction} 
-                  />
-                </div>
-                <Button
-                  onClick={() => setIsFiltersOpen(true)}
-                  variant="outline"
-                  className="h-14 px-6 text-base font-medium transition-all duration-200 hover:shadow-md"
-                  style={{ 
-                    backgroundColor: '#E0D3B4', 
-                    borderColor: '#D4C5A0', 
-                    color: '#8B7355'
-                  }}
-                >
-                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                  Filtres
-                </Button>
-              </div>
-              
-              {/* Version desktop : ShiftActionSelector normal */}
-              <div className="hidden md:block">
-                <ShiftActionSelector 
-                  shiftStatus={shiftStatus} 
-                  onShiftAction={handleShiftAction} 
-                />
-              </div>
-            </div>
-          )}
+
 
           {/* Section des filtres pour DESKTOP - Version repliable avec couleur RAL 9016 Blanc */}
           <div className="hidden md:block mb-6">
@@ -1025,9 +1010,13 @@ const ServiceControl2 = () => {
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <SortableContext items={filteredTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible snap-x snap-mandatory md:snap-none -mx-8 px-8 md:mx-0 md:px-0">
-                {visibleColumns.map(column => (
-                  <div key={column.status} className="flex-1 min-w-[70vw] md:min-w-0 snap-center">
+              <div className="flex gap-3 items-stretch overflow-x-auto">
+                {columns.map(column => (
+                  <div key={column.status} className={cn(
+                    collapsedColumns[column.status]
+                      ? "flex-none w-12"
+                      : "flex-none w-[85vw] md:flex-1 md:w-auto min-w-0"
+                  )}>
                     <KanbanColumn
                       title={column.title}
                       tasks={filteredTasks}
@@ -1036,6 +1025,8 @@ const ServiceControl2 = () => {
                       onCardClick={handleCardClick}
                       draggedTask={draggedTask}
                       draggedFromColumn={draggedFromColumn}
+                      isCollapsed={collapsedColumns[column.status] ?? false}
+                      onToggleCollapse={() => setCollapsedColumns(prev => ({ ...prev, [column.status]: !prev[column.status] }))}
                     />
                   </div>
                 ))}
