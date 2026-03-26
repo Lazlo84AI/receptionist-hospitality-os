@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { UploadTraining } from '@/components/UploadTraining';
@@ -250,6 +251,65 @@ const TrainingManagement = () => {
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [isQuizzOpen, setIsQuizzOpen] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+
+  // ── Notification deep-link : ouvrir le premier doc du programme assigné ──
+  // Dépendance [location.key] : se déclenche à chaque navigation vers /training,
+  // même si le composant est déjà monté (user déjà sur la page).
+  useEffect(() => {
+    const assignmentId = (location.state as any)?.openTrainingAssignmentId;
+    if (!assignmentId) return;
+    // Nettoyer le state de navigation pour éviter la réouverture au refresh
+    window.history.replaceState({}, document.title);
+
+    const fetchAndOpen = async () => {
+      // 1. Récupérer l'assignation pour avoir la liste ordonnée des contenus
+      const { data: assignment, error: aErr } = await supabase
+        .from('training_assignments')
+        .select('knowledge_item_ids')
+        .eq('id', assignmentId)
+        .single();
+
+      if (aErr || !assignment?.knowledge_item_ids?.length) {
+        console.warn('📚 Notification training: assignation introuvable ou vide', aErr);
+        return;
+      }
+
+      // 2. Récupérer TOUS les documents du programme dans l'ordre défini
+      const { data: docs, error: dErr } = await supabase
+        .from('knowledge_queries')
+        .select('id, document_title, document_name, document_url, thematic, formation_steps, kanban_status, created_at, updated_at')
+        .in('id', assignment.knowledge_item_ids);
+
+      if (dErr || !docs?.length) {
+        console.warn('📚 Notification training: documents introuvables', dErr);
+        return;
+      }
+
+      // 3. Respecter l'ordre de knowledge_item_ids et prendre le 1er qui n'est pas un QCM
+      const orderedDocs = assignment.knowledge_item_ids
+        .map((itemId: string) => docs.find((d: any) => d.id === itemId))
+        .filter(Boolean) as any[];
+
+      const firstFormation = orderedDocs.find((d: any) => d.formation_steps !== 'qcm')
+        ?? orderedDocs[0]; // fallback sur le 1er si tout est QCM
+
+      if (!firstFormation) return;
+
+      // 4. Normaliser : 'thematic' en DB → 'topic' attendu par KnowledgeQuery
+      const normalizedDoc = { ...firstFormation, topic: firstFormation.thematic };
+      setSelectedTask(normalizedDoc as any);
+
+      if (firstFormation.formation_steps === 'qcm') {
+        setIsQuizzOpen(true);
+      } else {
+        setIsDocumentViewerOpen(true);
+      }
+    };
+
+    // Petit délai pour laisser la page se monter
+    setTimeout(fetchAndOpen, 300);
+  }, [location.key]); // location.key change à chaque navigate(), même vers la même route
 
   // Drag and drop sensors
   const sensors = useSensors(

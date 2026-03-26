@@ -40,13 +40,12 @@ function NotificationItem({
   const handleClick = async () => {
     // Marquer comme lu en DB avant de naviguer
     if (!notif.is_read) await onRead(notif.id);
-    if (notif.entity_type && notif.entity_id) {
-      if (notif.entity_type === 'task') {
-        navigate('/shift', { state: { openTaskId: notif.entity_id } });
-      } else {
-        const routeFn = NOTIFICATION_ROUTE[notif.entity_type];
-        if (routeFn) navigate(routeFn(notif.entity_id));
-      }
+    if (notif.entity_type === 'task' && notif.entity_id) {
+      navigate('/shift', { state: { openTaskId: notif.entity_id } });
+    } else if (notif.entity_type === 'training_assignment') {
+      // Ouvrir directement le premier document du programme sur /training
+      // entity_id peut être null sur les anciennes notifs → on navigue quand même
+      navigate('/training', { state: { openTrainingAssignmentId: notif.entity_id ?? null } });
     }
   };
 

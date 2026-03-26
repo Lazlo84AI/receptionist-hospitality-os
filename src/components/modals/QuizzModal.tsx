@@ -188,13 +188,22 @@ const QuizzModal = ({
         description: "La question a été supprimée avec succès",
       });
 
-      // Recharger les questions
-      await queryClient.invalidateQueries(['quiz-questions', questionIds]);
-      
-      // Ajuster l'index si on était sur la dernière question
-      if (currentQuestionIndex >= totalQuestions - 1 && currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(prev => prev - 1);
+      // 1. Mise à jour synchrone du cache → disparition immédiate sans attente réseau
+      const deletedId = currentQuestion.id;
+      queryClient.setQueryData(
+        ['quiz-questions', questionIds],
+        (old: TrainingQuestionCompatible[] | undefined) =>
+          (old || []).filter(q => q.id !== deletedId)
+      );
+
+      // 2. Navigation : si plus aucune question → écran de fin, sinon ajuster l'index
+      const newTotal = totalQuestions - 1;
+      if (newTotal === 0) {
+        setQuizCompleted(true);
+      } else if (currentQuestionIndex >= newTotal) {
+        setCurrentQuestionIndex(newTotal - 1);
       }
+      setShowResult(false);
     } catch (error) {
       console.error('Error deleting question:', error);
       toast({
