@@ -111,10 +111,10 @@ const STEP_CONFIG: Record<string, {
   practice: {
     label: 'Practice',
     icon: FlaskConical,
-    color: '#a5b4fc',
-    bg: 'rgba(165,180,252,0.1)',
-    border: 'rgba(165,180,252,0.35)',
-    accent: '#a5b4fc',
+    color: '#8b83b8',
+    bg: 'rgba(30,26,55,0.35)',
+    border: 'rgba(139,131,184,0.35)',
+    accent: '#8b83b8',
   },
 };
 
@@ -125,19 +125,20 @@ const getStepConfig = (step: string) =>
 
 const THEMATIC_TRAINING_CONFIG: Record<string, { emoji: string; gradient: string; iconBg: string }> = {
   // Thématiques explicites
-  'Housekeeping':          { emoji: '🧹', gradient: 'linear-gradient(135deg, #4c1d95 0%, #312e81 100%)', iconBg: 'rgba(167,139,250,0.2)' },
-  'Réception':             { emoji: '🛎️', gradient: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)', iconBg: 'rgba(187,165,122,0.22)' },
-  'Reception':             { emoji: '🛎️', gradient: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)', iconBg: 'rgba(187,165,122,0.22)' },
-  'Maintenance':           { emoji: '🔧', gradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', iconBg: 'rgba(148,163,184,0.2)' },
-  'Sécurité':              { emoji: '🔒', gradient: 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)', iconBg: 'rgba(248,113,113,0.2)' },
-  'F&B':                   { emoji: '🍽️', gradient: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)', iconBg: 'rgba(110,231,183,0.2)' },
-  'Restauration':          { emoji: '🍽️', gradient: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)', iconBg: 'rgba(110,231,183,0.2)' },
-  'Petit Dejeuner':        { emoji: '☕', gradient: 'linear-gradient(135deg, #431407 0%, #1c0700 100%)', iconBg: 'rgba(253,186,116,0.2)' },
-  'Espace Bien Etre':      { emoji: '🧘', gradient: 'linear-gradient(135deg, #134e4a 0%, #042f2e 100%)', iconBg: 'rgba(94,234,212,0.2)' },
-  'Spa':                   { emoji: '🧘', gradient: 'linear-gradient(135deg, #134e4a 0%, #042f2e 100%)', iconBg: 'rgba(94,234,212,0.2)' },
-  'Bar':                   { emoji: '🍸', gradient: 'linear-gradient(135deg, #1e1b4b 0%, #0f0c29 100%)', iconBg: 'rgba(165,180,252,0.2)' },
-  'Conciergerie':          { emoji: '🗝️', gradient: 'linear-gradient(135deg, #713f12 0%, #3b1f06 100%)', iconBg: 'rgba(253,224,71,0.15)' },
-  'Terrain':               { emoji: '🎯', gradient: 'linear-gradient(135deg, #14532d 0%, #052e16 100%)', iconBg: 'rgba(74,222,128,0.2)' },
+  // ── Charte Sokle alignée : Navy · Gold · Yellow · Sand · White · Teal ──
+  'Housekeeping':          { emoji: '🧹', gradient: 'linear-gradient(135deg, #2d2850 0%, #1E1A37 100%)', iconBg: 'rgba(139,131,184,0.2)' },
+  'Réception':             { emoji: '🛎️', gradient: 'linear-gradient(135deg, #5a1428 0%, #2e0a14 100%)', iconBg: 'rgba(196,99,122,0.22)' },
+  'Reception':             { emoji: '🛎️', gradient: 'linear-gradient(135deg, #5a1428 0%, #2e0a14 100%)', iconBg: 'rgba(196,99,122,0.22)' },
+  'Maintenance':           { emoji: '🔧', gradient: 'linear-gradient(135deg, #4a3c28 0%, #241d12 100%)', iconBg: 'rgba(224,211,180,0.2)' },
+  'Sécurité':              { emoji: '🔒', gradient: 'linear-gradient(135deg, #1a1030 0%, #100820 100%)', iconBg: 'rgba(222,174,53,0.18)' },
+  'F&B':                   { emoji: '🍽️', gradient: 'linear-gradient(135deg, #7a5e10 0%, #3d2f08 100%)', iconBg: 'rgba(222,174,53,0.2)' },
+  'Restauration':          { emoji: '🍽️', gradient: 'linear-gradient(135deg, #7a5e10 0%, #3d2f08 100%)', iconBg: 'rgba(222,174,53,0.2)' },
+  'Petit Dejeuner':        { emoji: '☕', gradient: 'linear-gradient(135deg, #7a5e10 0%, #3d2f08 100%)', iconBg: 'rgba(222,174,53,0.2)' },
+  'Espace Bien Etre':      { emoji: '🧘', gradient: 'linear-gradient(135deg, #0d3d3d 0%, #061f1f 100%)', iconBg: 'rgba(95,179,179,0.2)' },
+  'Spa':                   { emoji: '🧘', gradient: 'linear-gradient(135deg, #0d3d3d 0%, #061f1f 100%)', iconBg: 'rgba(95,179,179,0.2)' },
+  'Bar':                   { emoji: '🍸', gradient: 'linear-gradient(135deg, #100a1f 0%, #070412 100%)', iconBg: 'rgba(139,131,184,0.2)' },
+  'Conciergerie':          { emoji: '🗝️', gradient: 'linear-gradient(135deg, #5a1428 0%, #2e0a14 100%)', iconBg: 'rgba(196,99,122,0.22)' },
+  'Terrain':               { emoji: '🎯', gradient: 'linear-gradient(135deg, #3a2f1a 0%, #1a1509 100%)', iconBg: 'rgba(224,211,180,0.2)' },
 };
 
 const THEMATIC_TRAINING_FALLBACK = {

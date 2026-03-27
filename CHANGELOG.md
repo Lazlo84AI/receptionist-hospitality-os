@@ -1,3 +1,48 @@
+## 2026-03-26
+
+### style: Alignement charte graphique Sokle — KnowledgeAssistance + AdminTraining (itérations couleurs)
+
+**Contexte**
+Toutes les tuiles des modules Knowledge et Training utilisaient des couleurs hors charte (violet, rouge, vert, ardoise). Harmonisation complète sur la palette officielle Sokle : Navy `#1E1A37` · Gold `#BBA57A` · Yellow `#DEAE35` · Sand `#E0D3B4` · White `#FFFFFF` + Teal prestige `#0d3d3d` (6e couleur, cohérente charte, inspirée du luxe hôtelier).
+
+**`src/pages/admin/KnowledgeAssistance.tsx`**
+- `THEMATIC_CONFIG` : 6 thématiques remappées sur la charte
+  - Housekeeping → Sand foncé `#4a3c28 → #241d12`
+  - Réception → Gold foncé `#6b4c28 → #3a2810`
+  - Maintenance → Navy pur `#2d2850 → #1E1A37`
+  - Sécurité → Navy très sombre `#1a1030 → #100820` + accent Yellow
+  - F&B → Yellow foncé `#7a5e10 → #3d2f08`
+  - Expérience client → Teal prestige `#0d3d3d → #061f1f`
+
+**`src/pages/admin/AdminTraining.tsx`**
+- `STEP_CONFIG` : step `practice` migré de violet `#a5b4fc` vers Navy `#8b83b8` (4e couleur charte, différenciante)
+- `THEMATIC_TRAINING_CONFIG` : 13 thématiques remappées, en cohérence exacte avec KnowledgeAssistance pour les thématiques communes
+  - Housekeeping → Sand foncé (idem KA)
+  - Réception/Reception → Gold foncé (idem KA)
+  - Maintenance → Navy pur (idem KA)
+  - Sécurité → Navy très sombre (idem KA)
+  - F&B/Restauration → Yellow foncé (idem KA)
+  - Petit Déjeuner → Gold warm `#5c3d18 → #2e1c08`
+  - Espace Bien Être/Spa → Teal prestige (idem Expérience client KA)
+  - Bar → Navy nuit `#100a1f → #070412`
+  - Conciergerie → Gold profond `#4a2e10 → #21130a`
+  - Terrain → Sand terreux `#3a2f1a → #1a1509`
+
+**Corrections visuelles post-rendu (itérations)**
+- Housekeeping ↔ Maintenance permutés : Housekeeping → Navy bleuté, Maintenance → Sand terreux (bruns trop proches à l'œil)
+- Réception + Conciergerie migrés vers **Lie de vin** `#5a1428 → #2e0a14` (ultra premium, service haut de gamme)
+- Petit Déjeuner migré vers Yellow kaki `#7a5e10 → #3d2f08` (trop proche de Réception Gold avant correction)
+
+**Palette finale 6 familles visuelles**
+- 🍷 Lie de vin `#5a1428→2e0a14` : Réception, Conciergerie
+- 🟣 Navy bleuté `#2d2850→1E1A37` : Housekeeping, Bar
+- 🟤 Sand terreux `#4a3c28→241d12` : Maintenance, Terrain
+- ⬛ Navy nuit `#1a1030→100820` : Sécurité
+- 🟡 Yellow kaki `#7a5e10→3d2f08` : F&B, Restauration, Petit Déjeuner
+- 🩵 Teal `#0d3d3d→061f1f` : Espace Bien Être, Spa, Expérience client
+
+---
+
 ## 2026-03-19
 
 ### Fixed — Team Dispatch (bugfixes client V1)

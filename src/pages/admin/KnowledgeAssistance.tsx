@@ -74,29 +74,37 @@ const THEMATIC_CONFIG: Record<string, {
   label: string; color: string; bg: string; border: string;
   emoji: string; gradient: string; iconBg: string;
 }> = {
+  // ── Charte Sokle : 5 couleurs officielles + teal prestige (6e) ──
+  // Navy #1E1A37 · Gold #BBA57A · Yellow #DEAE35 · Sand #E0D3B4 · White #FFFFFF · Teal #0d3d3d
   housekeeping: {
-    label: 'Housekeeping', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.35)',
-    emoji: '🧹', gradient: 'linear-gradient(135deg, #4c1d95 0%, #312e81 100%)', iconBg: 'rgba(167,139,250,0.2)',
+    // Navy pur : sobre, propre, structuré — distinct du Gold/Sand
+    label: 'Housekeeping', color: '#8b83b8', bg: 'rgba(139,131,184,0.12)', border: 'rgba(139,131,184,0.35)',
+    emoji: '🧹', gradient: 'linear-gradient(135deg, #2d2850 0%, #1E1A37 100%)', iconBg: 'rgba(139,131,184,0.2)',
   },
   reception: {
-    label: 'Réception', color: '#BBA57A', bg: 'rgba(187,165,122,0.12)', border: 'rgba(187,165,122,0.4)',
-    emoji: '🛎️', gradient: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)', iconBg: 'rgba(187,165,122,0.22)',
+    // Lie de vin : ultra premium, service haut de gamme, hospitalité de luxe
+    label: 'Réception', color: '#c4637a', bg: 'rgba(196,99,122,0.12)', border: 'rgba(196,99,122,0.4)',
+    emoji: '🛎️', gradient: 'linear-gradient(135deg, #5a1428 0%, #2e0a14 100%)', iconBg: 'rgba(196,99,122,0.22)',
   },
   maintenance: {
-    label: 'Maintenance', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.35)',
-    emoji: '🔧', gradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', iconBg: 'rgba(148,163,184,0.2)',
+    // Sand foncé : terrain, matière, infrastructure physique
+    label: 'Maintenance', color: '#E0D3B4', bg: 'rgba(224,211,180,0.12)', border: 'rgba(224,211,180,0.35)',
+    emoji: '🔧', gradient: 'linear-gradient(135deg, #4a3c28 0%, #241d12 100%)', iconBg: 'rgba(224,211,180,0.2)',
   },
   security: {
-    label: 'Sécurité', color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.35)',
-    emoji: '🔒', gradient: 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)', iconBg: 'rgba(248,113,113,0.2)',
+    // Navy teinté sombre : vigilance, rigueur, autorité
+    label: 'Sécurité', color: '#DEAE35', bg: 'rgba(222,174,53,0.10)', border: 'rgba(222,174,53,0.35)',
+    emoji: '🔒', gradient: 'linear-gradient(135deg, #1a1030 0%, #100820 100%)', iconBg: 'rgba(222,174,53,0.18)',
   },
   fb: {
-    label: 'F&B', color: '#6ee7b7', bg: 'rgba(110,231,183,0.1)', border: 'rgba(110,231,183,0.35)',
-    emoji: '🍽️', gradient: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)', iconBg: 'rgba(110,231,183,0.2)',
+    // Yellow foncé : chaleur, gastronomie, appétit
+    label: 'F&B', color: '#DEAE35', bg: 'rgba(222,174,53,0.10)', border: 'rgba(222,174,53,0.35)',
+    emoji: '🍽️', gradient: 'linear-gradient(135deg, #7a5e10 0%, #3d2f08 100%)', iconBg: 'rgba(222,174,53,0.2)',
   },
   customer_experience: {
-    label: 'Expérience client', color: '#f9a8d4', bg: 'rgba(249,168,212,0.1)', border: 'rgba(249,168,212,0.35)',
-    emoji: '⭐', gradient: 'linear-gradient(135deg, #701a75 0%, #3b0764 100%)', iconBg: 'rgba(249,168,212,0.2)',
+    // Teal prestige : luxe hôtelier, bien-être, spa — cohérent charte (froid noble vs navy chaud)
+    label: 'Expérience client', color: '#5fb3b3', bg: 'rgba(95,179,179,0.10)', border: 'rgba(95,179,179,0.35)',
+    emoji: '⭐', gradient: 'linear-gradient(135deg, #0d3d3d 0%, #061f1f 100%)', iconBg: 'rgba(95,179,179,0.2)',
   },
 };
 
