@@ -18,10 +18,10 @@ interface AdminSidebarProps {
 }
 
 const adminMenuItems = [
+  { icon: UserPlus,      label: 'Team Management',      href: '/admin/onboarding' },
   { icon: BarChart3,     label: 'Team Analytics',       href: '/admin/analytics' },
   { icon: GraduationCap, label: 'Training Management',  href: '/admin/training' },
   { icon: Brain,         label: 'Knowledge Assistance', href: '/admin/knowledge' },
-  { icon: UserPlus,      label: 'Team Onboarding',      href: '/admin/onboarding' },
 ];
 
 // Gold Dark — charte Decœur Pantone 4006C
