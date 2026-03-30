@@ -102,6 +102,18 @@ const STANDOUT_STATS = [
   { category: 'Organization', score: 87, fullMark: 100, definition: 'Time and task management: respecting schedules, priorities, assigned areas, and operational procedures.' }
 ];
 
+// ─── Données vides (fallback si aucun score de compétence pour cet utilisateur) ──
+const EMPTY_RADAR_DATA = FORMATION_CATEGORIES.map(c => ({
+  category: c.name,
+  score: 0,
+  fullMark: 100,
+  definition: c.definition,
+}));
+
+// Convertit "maitrise_caisse" → "Maitrise Caisse"
+const formatCompetencyKey = (key: string): string =>
+  key.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
 const Connaissances = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
@@ -133,6 +145,10 @@ const Connaissances = () => {
   const [userFirstName, setUserFirstName] = useState<string>('User');
   const [userLastName, setUserLastName] = useState<string>('');
 
+  // 📊 Données radar (scores de compétences depuis Supabase)
+  const [radarData, setRadarData] = useState(STANDOUT_STATS);
+  const [isCompetencyEmpty, setIsCompetencyEmpty] = useState(false);
+
   // 🚀 Récupération du nom de l'utilisateur connecté
   useEffect(() => {
     const fetchUserData = async () => {
@@ -151,6 +167,47 @@ const Connaissances = () => {
           if (staffData && !error) {
             setUserFirstName(staffData.first_name || 'User');
             setUserLastName(staffData.last_name || '');
+          }
+
+          // 1. Récupérer tous les axes du service de l'employé
+          const userService = staffData?.service || null;
+          if (userService) {
+            const { data: profileAxes, error: axesError } = await (supabase as any)
+              .from('service_competency_profiles')
+              .select('competency_key, label')
+              .eq('service', userService);
+
+            // 2. Récupérer les scores réels de l'employé
+            const { data: compScores, error: compError } = await (supabase as any)
+              .from('competency_scores')
+              .select('competency_key, current_score')
+              .eq('employee_id', user.id);
+
+            if (!axesError && profileAxes && profileAxes.length > 0) {
+              // Construire un dictionnaire des scores réels
+              const scoreMap: Record<string, number> = {};
+              (compScores || []).forEach((row: any) => {
+                scoreMap[row.competency_key] = Number(row.current_score) || 0;
+              });
+
+              // Tous les axes du service, score réel ou 0 si pas encore de QCM
+              const mapped = profileAxes.map((axis: any) => ({
+                category: axis.label,
+                score: scoreMap[axis.competency_key] ?? 0,
+                fullMark: 100,
+                definition: '',
+              }));
+
+              setRadarData(mapped);
+              // Vide = tous les scores sont à 0
+              setIsCompetencyEmpty(mapped.every((a: any) => a.score === 0));
+            } else {
+              setRadarData(EMPTY_RADAR_DATA);
+              setIsCompetencyEmpty(true);
+            }
+          } else {
+            setRadarData(EMPTY_RADAR_DATA);
+            setIsCompetencyEmpty(true);
           }
         }
       } catch (error) {
@@ -563,8 +620,13 @@ const Connaissances = () => {
                       <CardContent className="pt-0 bg-[#1E1A37] pb-6">
                         {/* Graphique Radar */}
                         <div className="mb-6 bg-[#2A2448] rounded-lg p-4">
+                          {isCompetencyEmpty && (
+                            <p className="text-center text-[#DEAE35] text-xs font-bold uppercase tracking-widest mb-3">
+                              ⚡ Dépêchez-vous de vous former !
+                            </p>
+                          )}
                           <ResponsiveContainer width="100%" height={250}>
-                            <RadarChart data={STANDOUT_STATS}>
+                            <RadarChart data={radarData}>
                               <PolarGrid stroke="#BBA57A" opacity={0.3} />
                               <PolarAngleAxis 
                                 dataKey="category" 
@@ -584,7 +646,7 @@ const Connaissances = () => {
 
                         {/* Barres de stats */}
                         <div className="space-y-4">
-                          {STANDOUT_STATS.map((stat) => (
+                          {radarData.map((stat) => (
                             <div key={stat.category} className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-white font-medium text-sm">{stat.category.toUpperCase()}</span>
@@ -838,8 +900,13 @@ const Connaissances = () => {
                     <CardContent className="pt-6 bg-[#1E1A37] pb-6">
                       {/* Graphique Radar */}
                       <div className="mb-6 bg-[#2A2448] rounded-lg p-4">
+                        {isCompetencyEmpty && (
+                          <p className="text-center text-[#DEAE35] text-xs font-bold uppercase tracking-widest mb-3">
+                            ⚡ Dépêchez-vous de vous former !
+                          </p>
+                        )}
                         <ResponsiveContainer width="100%" height={280}>
-                          <RadarChart data={STANDOUT_STATS}>
+                          <RadarChart data={radarData}>
                             <PolarGrid stroke="#BBA57A" opacity={0.3} />
                             <PolarAngleAxis 
                               dataKey="category" 
@@ -859,7 +926,7 @@ const Connaissances = () => {
 
                       {/* Barres de stats */}
                       <div className="space-y-4">
-                        {STANDOUT_STATS.map((stat) => (
+                        {radarData.map((stat) => (
                           <div key={stat.category} className="space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-white font-medium text-sm">{stat.category.toUpperCase()}</span>

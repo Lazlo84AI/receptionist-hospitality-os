@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { useMyStatistics, TimeseriesEntry } from '@/hooks/useMyStatistics';
+import { useTrainingStatistics } from '@/hooks/useTrainingStatistics';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, ResponsiveContainer, Legend,
+  LineChart, Line,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
   Loader2, TrendingUp, CheckCircle2, Clock, AlertCircle,
-  Users, Calendar, BarChart3, Activity, Zap,
+  Users, Calendar, BarChart3, Activity, Zap, BookOpen,
 } from 'lucide-react';
 
 // ─── Brand colours ─────────────────────────────────────────────────────────
@@ -209,6 +211,13 @@ const MyStatistics = () => {
     canSeeTeamDetail,
     loading, error,
   } = useMyStatistics();
+
+  const {
+    myResults, myAvgScore, myBestScore,
+    hotelRanking, serviceRanking,
+    myService, myUserId,
+    loading: trainingLoading,
+  } = useTrainingStatistics();
 
   // ── Derived KPIs for selected period (Tasks) ──
   const taskKpis = {
@@ -570,6 +579,216 @@ const MyStatistics = () => {
 
           {canSeeTeamDetail && (
             <RankedTeamTables teamStats={teamStats} myStats={myStats} />
+          )}
+        </section>
+
+        {/* ══════════════════════════════════════════
+            BLOC 4 — MY TRAINING
+        ══════════════════════════════════════════ */}
+        <section>
+          <SectionTitle>My Training</SectionTitle>
+
+          {trainingLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="animate-spin w-6 h-6" style={{ color: GOLD }} />
+            </div>
+          ) : myResults.length === 0 ? (
+            <Card className="text-center py-12 space-y-3">
+              <p className="text-3xl">&#x1F4DA;</p>
+              <p className="font-semibold" style={{ color: NAVY }}>Aucun QCM complété pour l’instant</p>
+              <p className="text-sm text-gray-400">Rendez-vous dans la Knowledge Base pour commencer vos formations !</p>
+            </Card>
+          ) : (
+            <>
+              {/* KPI row */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <KpiCard
+                  icon={<BookOpen className="w-4 h-4" />}
+                  label="QCMs passés"
+                  value={myResults.length}
+                  sub="all time"
+                />
+                <KpiCard
+                  icon={<TrendingUp className="w-4 h-4" />}
+                  label="Score moyen"
+                  value={`${myAvgScore}%`}
+                  accent={myAvgScore >= 80 ? '#22c55e' : myAvgScore >= 60 ? YELLOW : '#ef4444'}
+                  sub="sur l’ensemble des QCMs"
+                />
+                <KpiCard
+                  icon={<Zap className="w-4 h-4" />}
+                  label="Meilleur score"
+                  value={`${myBestScore}%`}
+                  accent={YELLOW}
+                  sub="record personnel"
+                />
+              </div>
+
+              {/* Courbe + Tableau historique */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+                {/* Courbe de progression */}
+                <Card>
+                  <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>Progression des scores</p>
+                  <p className="text-xs text-gray-400 mb-4">Évolution chronologique de tes résultats</p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart
+                      data={[...myResults].reverse().map(r => ({
+                        date: new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+                        score: Math.round(r.score_percent),
+                        name: r.document_name,
+                      }))}
+                      margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0ece4" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v: number) => `${v}%`} />
+                      <Tooltip
+                        contentStyle={{ background: '#fff', border: `1px solid ${GOLD}40`, borderRadius: 10, fontSize: 12 }}
+                        labelStyle={{ color: NAVY, fontWeight: 600 }}
+                        formatter={(v: any) => [`${v}%`, 'Score']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke={GOLD}
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: GOLD }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card>
+
+                {/* Tableau historique */}
+                <Card className="overflow-hidden p-0">
+                  <div className="p-5 pb-3">
+                    <p className="text-sm font-semibold" style={{ color: NAVY }}>Historique des QCMs</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Derniers résultats</p>
+                  </div>
+                  <div className="overflow-y-auto max-h-52">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#BBA57A]/15 text-gray-400 text-xs uppercase tracking-wider bg-[#faf8f4]">
+                          <th className="text-left px-5 py-2">Formation</th>
+                          <th className="text-center px-3 py-2">Score</th>
+                          <th className="text-right px-5 py-2">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {myResults.map((r, i) => {
+                          const scoreColor = r.score_percent >= 80 ? '#22c55e' : r.score_percent >= 60 ? YELLOW : '#ef4444';
+                          return (
+                            <tr key={i} className="border-b border-gray-50 hover:bg-[#faf8f4] transition-colors">
+                              <td className="px-5 py-2.5 font-medium text-xs" style={{ color: NAVY }}>
+                                {r.document_name.length > 30 ? r.document_name.slice(0, 30) + '…' : r.document_name}
+                              </td>
+                              <td className="px-3 py-2.5 text-center font-bold text-sm" style={{ color: scoreColor }}>
+                                {Math.round(r.score_percent)}%
+                              </td>
+                              <td className="px-5 py-2.5 text-right text-xs text-gray-400">
+                                {new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Classements */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* Classement service */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#BBA57A] mb-3">
+                    Classement service — {myService ?? 'Non assigné'}
+                  </p>
+                  <div className="rounded-2xl border border-[#BBA57A]/15 bg-white shadow-sm overflow-hidden">
+                    {serviceRanking.length === 0 ? (
+                      <div className="p-6 text-center text-gray-400 text-sm">Aucune donnée de service</div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[#BBA57A]/15 text-gray-400 text-xs uppercase tracking-wider">
+                            <th className="text-left px-4 py-2.5">#</th>
+                            <th className="text-left px-4 py-2.5">Nom</th>
+                            <th className="text-center px-4 py-2.5">Moy.</th>
+                            <th className="text-center px-4 py-2.5">QCMs</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {serviceRanking.map((entry, idx) => {
+                            const isMe = entry.user_id === myUserId;
+                            const scoreColor = entry.avg_score >= 80 ? '#22c55e' : entry.avg_score >= 60 ? YELLOW : '#ef4444';
+                            return (
+                              <tr key={entry.user_id} className={`border-b border-gray-50 transition-colors ${isMe ? 'bg-[#BBA57A]/5' : 'hover:bg-[#faf8f4]'}`}>
+                                <td className="px-4 py-2.5 font-mono text-gray-400 text-xs">
+                                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                                </td>
+                                <td className="px-4 py-2.5 font-semibold text-xs" style={{ color: isMe ? GOLD : NAVY }}>
+                                  {entry.display_name}
+                                  {isMe && <span className="ml-1 text-[10px] text-[#BBA57A]">(vous)</span>}
+                                </td>
+                                <td className="px-4 py-2.5 text-center font-bold text-sm" style={{ color: scoreColor }}>{entry.avg_score}%</td>
+                                <td className="px-4 py-2.5 text-center text-xs text-gray-400">{entry.quiz_count}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                {/* Classement hôtel */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#BBA57A] mb-3">
+                    Classement hôtel — Tout le staff
+                  </p>
+                  <div className="rounded-2xl border border-[#BBA57A]/15 bg-white shadow-sm overflow-hidden">
+                    {hotelRanking.length === 0 ? (
+                      <div className="p-6 text-center text-gray-400 text-sm">Aucune donnée disponible</div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[#BBA57A]/15 text-gray-400 text-xs uppercase tracking-wider">
+                            <th className="text-left px-4 py-2.5">#</th>
+                            <th className="text-left px-4 py-2.5">Nom</th>
+                            <th className="text-left px-4 py-2.5">Service</th>
+                            <th className="text-center px-4 py-2.5">Moy.</th>
+                            <th className="text-center px-4 py-2.5">QCMs</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {hotelRanking.map((entry, idx) => {
+                            const isMe = entry.user_id === myUserId;
+                            const scoreColor = entry.avg_score >= 80 ? '#22c55e' : entry.avg_score >= 60 ? YELLOW : '#ef4444';
+                            return (
+                              <tr key={entry.user_id} className={`border-b border-gray-50 transition-colors ${isMe ? 'bg-[#BBA57A]/5' : 'hover:bg-[#faf8f4]'}`}>
+                                <td className="px-4 py-2.5 font-mono text-gray-400 text-xs">
+                                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                                </td>
+                                <td className="px-4 py-2.5 font-semibold text-xs" style={{ color: isMe ? GOLD : NAVY }}>
+                                  {entry.display_name}
+                                  {isMe && <span className="ml-1 text-[10px] text-[#BBA57A]">(vous)</span>}
+                                </td>
+                                <td className="px-4 py-2.5 text-xs text-gray-500 capitalize">{entry.service ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-center font-bold text-sm" style={{ color: scoreColor }}>{entry.avg_score}%</td>
+                                <td className="px-4 py-2.5 text-center text-xs text-gray-400">{entry.quiz_count}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </>
           )}
         </section>
 
