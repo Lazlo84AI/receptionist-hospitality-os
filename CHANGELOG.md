@@ -1,3 +1,54 @@
+## 2026-03-31
+
+### feat: Radar compétences dynamique + Bloc My Training (statistiques formation)
+
+**Contexte**
+Le radar de la page Connaissances affichait des données statiques codées en dur. Le bloc formation de MyStatistics n'existait pas. Création du système complet de visualisation des scores de compétences par service et des statistiques de formation personnelles.
+
+**Nouvelle table Supabase — `service_competency_profiles`**
+- Définit les axes du radar pour chaque service (source de vérité)
+- Colonnes : `service`, `competency_key`, `label`
+- Données insérées : Réception (7 critères), Housekeeping (6), Restauration (6), Maintenance (5)
+- RLS activée : `SELECT` pour tous les utilisateurs authentifiés
+- `direction` : délibérément non défini — reporté à une session dédiée
+- `restauration` : inséré mais absent de `staff_directory` pour l'instant (pas d'employés restauration)
+
+**`src/pages/Connaissances.tsx`**
+- Suppression des données statiques `STANDOUT_STATS`
+- Ajout states `radarData` et `isCompetencyEmpty`
+- Double query dans `fetchUserData` :
+  1. `service_competency_profiles` → tous les axes du service de l'employé (liste complète)
+  2. `competency_scores` → scores réels de l'employé, mergés par `competency_key`
+- Axes sans score → affichés à 0 (comportement correct)
+- Fallback si service inconnu ou `direction` → `EMPTY_RADAR_DATA` (7 catégories à 0)
+- Message `⚡ Dépêchez-vous de vous former !` affiché si tous les scores sont à 0
+- Applicable desktop ET mobile (2 blocs radar synchronisés)
+
+**`src/hooks/useTrainingStatistics.ts`** (nouveau)
+- Fetch `training_results` (tous les employés) + `staff_directory` (noms + services)
+- Calcul côté JS : scores perso, moyenne, meilleur score
+- Classement hôtel : tous les employés triés par `avg_score` DESC
+- Classement service : filtré sur le service de l'utilisateur connecté
+
+**`src/pages/MyStatistics.tsx`**
+- Import `useTrainingStatistics`, `LineChart`, `Line`, `BookOpen`
+- Nouveau Bloc 4 "My Training" après Team Ranking :
+  - 3 KPIs : QCMs passés / Score moyen (couleur dynamique vert/jaune/rouge) / Meilleur score
+  - Courbe de progression Recharts (LineChart, chronologique)
+  - Tableau historique scrollable : formation · score · date
+  - Classement service (sans colonne Service)
+  - Classement hôtel (avec colonne Service)
+  - Emoji médailles 🥇🥈🥉 + ligne de l'utilisateur surlignée en doré
+  - État vide si aucun QCM complété
+
+**À faire (prochaine session)**
+- Vérifier le rendu visuel dans le navigateur (radar + bloc My Training)
+- Définir les critères de compétences du service `direction`
+- Vérifier cohérence `competency_key` entre `service_competency_profiles` et `formation_criteria_mapping`
+- Valider que `training_results` est bien alimenté par le système de scoring QCM existant
+
+---
+
 ## 2026-03-26
 
 ### style: Alignement charte graphique Sokle — KnowledgeAssistance + AdminTraining (itérations couleurs)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Menu, User, Clock, BarChart3, Calendar, LogOut, ShieldCheck } from 'lucide-react';
+import { Menu, User, Clock, BarChart3, GraduationCap, Calendar, LogOut, ShieldCheck } from 'lucide-react';
 import { HelpButton } from '@/components/help/HelpButton';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useNavigate } from 'react-router-dom';
@@ -111,7 +111,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <p className="text-sm font-medium text-gray-800 truncate">{user?.email}</p>
               <p className="text-xs text-gray-400">Authenticated User</p>
             </div>
-            <DropdownMenuItem className="flex items-center space-x-2 hotel-hover mt-1">
+            <DropdownMenuItem
+              className="flex items-center space-x-2 hotel-hover mt-1 cursor-pointer"
+              onClick={() => navigate('/profile')}
+            >
               <User className="h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
@@ -120,7 +123,14 @@ export function Header({ onMenuToggle }: HeaderProps) {
               onClick={() => navigate('/my-statistics')}
             >
               <BarChart3 className="h-4 w-4" />
-              <span>My Statistics</span>
+              <span>Tasks Analytics</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="flex items-center space-x-2 hotel-hover cursor-pointer"
+              onClick={() => navigate('/training-statistics')}
+            >
+              <GraduationCap className="h-4 w-4" />
+              <span>Training Statistics</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

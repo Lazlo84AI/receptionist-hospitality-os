@@ -307,23 +307,44 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
       // 7. AJOUTER LES ATTACHMENTS DANS LA TABLE SÉPARÉE SI NÉCESSAIRE
       if (attachments.length > 0) {
 
-        const attachmentInserts = attachments.map(attachment => ({
-          task_id: result.id,
-          filename: attachment.name,
-          file_url: attachment.type === 'link' ? attachment.url : null,
-          file_size: attachment.type === 'file' ? attachment.size : null,
-          mime_type: attachment.type === 'file' ? attachment.fileType : null,
-          attachment_type: attachment.type === 'link' ? 'other' : 'document', // ✅ Corrigé : 'other' pour liens, 'document' pour fichiers
-          uploaded_by: user.id
-        }));
+        const attachmentInserts = [];
+        for (const attachment of attachments) {
+          let fileUrl = attachment.type === 'link' ? (attachment.url || null) : null;
 
+          // Upload du fichier vers Supabase Storage
+          if (attachment.type === 'file' && attachment.fileObject) {
+            const filePath = `${result.id}/${Date.now()}-${attachment.name}`;
+            const { error: uploadError } = await supabase.storage
+              .from('task-attachments')
+              .upload(filePath, attachment.fileObject, { upsert: false });
+
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage
+                .from('task-attachments')
+                .getPublicUrl(filePath);
+              fileUrl = urlData.publicUrl;
+            } else {
+              console.warn('⚠️ Upload Storage échoué pour', attachment.name, uploadError);
+            }
+          }
+
+          attachmentInserts.push({
+            task_id: result.id,
+            filename: attachment.name,
+            file_url: fileUrl,
+            file_size: attachment.type === 'file' ? attachment.size : null,
+            mime_type: attachment.type === 'file' ? attachment.fileType : null,
+            attachment_type: attachment.type === 'link' ? 'other' : 'document',
+            uploaded_by: user.id
+          });
+        }
 
         const { error: attachmentError } = await supabase
           .from('attachments')
           .insert(attachmentInserts);
 
         if (attachmentError) {
-          console.warn('⚠️ Erreur ajout attachments:', attachmentError);
+          console.warn('⚠️ Erreur ajout attachments en base:', attachmentError);
         }
       }
 

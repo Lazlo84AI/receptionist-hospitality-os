@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { useMyStatistics, TimeseriesEntry } from '@/hooks/useMyStatistics';
-import { useTrainingStatistics } from '@/hooks/useTrainingStatistics';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, ResponsiveContainer, Legend,
-  LineChart, Line,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import {
   Loader2, TrendingUp, CheckCircle2, Clock, AlertCircle,
-  Users, Calendar, BarChart3, Activity, Zap, BookOpen,
+  Users, Calendar, BarChart3, Activity, Zap,
 } from 'lucide-react';
 
 // ─── Brand colours ─────────────────────────────────────────────────────────
@@ -118,7 +116,6 @@ const RankedTeamTables = ({ teamStats, myStats }: { teamStats: any[]; myStats: a
 
   return (
     <div>
-      {/* Toggle */}
       <div className="flex gap-1 bg-[#f0ece4] rounded-lg p-1 w-fit mb-4">
         {(['tasks', 'shifts'] as const).map(mode => (
           <button key={mode} onClick={() => setRankMode(mode)}
@@ -212,13 +209,6 @@ const MyStatistics = () => {
     loading, error,
   } = useMyStatistics();
 
-  const {
-    myResults, myAvgScore, myBestScore,
-    hotelRanking, serviceRanking,
-    myService, myUserId,
-    loading: trainingLoading,
-  } = useTrainingStatistics();
-
   // ── Derived KPIs for selected period (Tasks) ──
   const taskKpis = {
     day:   { created: myStats?.tasks_created_today      ?? 0, label: 'today' },
@@ -232,15 +222,12 @@ const MyStatistics = () => {
     month: { count: myStats?.shifts_this_month ?? 0, label: 'this month' },
   }[shiftsPeriod];
 
-  // ── Chart data for Tasks progression ──
   const tasksChartData = filterByPeriod(timeseries, tasksPeriod).map(e => ({
     label:     e.period_label,
     Created:   e.tasks_created,
     Completed: e.tasks_completed,
   }));
 
-  // ── Chart data for Shifts progression (from v_user_task_stats shifts_* fields) ──
-  // We build shift timeseries from myStats period fields — simple bar
   const shiftsBarData = [
     { label: 'Total',     value: myStats?.shifts_total     ?? 0, fill: GOLD  },
     { label: 'Closed',    value: myStats?.shifts_completed ?? 0, fill: '#22c55e' },
@@ -253,7 +240,6 @@ const MyStatistics = () => {
     },
   ];
 
-  // ── Pie chart — category breakdown (all time, not period-dependent) ──
   const pieData = myStats ? [
     { name: 'Incidents',       value: myStats.incidents_count,       color: CATEGORY_COLORS.incident },
     { name: 'Client Requests', value: myStats.client_requests_count, color: CATEGORY_COLORS.client_request },
@@ -261,7 +247,6 @@ const MyStatistics = () => {
     { name: 'Internal Tasks',  value: myStats.internal_tasks_count,  color: CATEGORY_COLORS.internal_task },
   ].filter(d => d.value > 0) : [];
 
-  // ── Status breakdown for shifts section ──
   const statusPieData = myStats ? [
     { name: 'Completed / Archived', value: myStats.tasks_completed,  color: '#22c55e' },
     { name: 'In Progress',          value: myStats.tasks_in_progress, color: YELLOW },
@@ -300,7 +285,7 @@ const MyStatistics = () => {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold font-playfair" style={{ color: NAVY }}>
-              My Analytics
+              Tasks Analytics
             </h1>
             <p className="text-sm text-gray-400 mt-1">
               {myStats?.display_name}
@@ -317,16 +302,13 @@ const MyStatistics = () => {
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════
-            BLOC 1 — MY TASKS
-        ══════════════════════════════════════════ */}
+        {/* ── BLOC 1 — MY TASKS ── */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <SectionTitle>My Tasks</SectionTitle>
             <PeriodTabs value={tasksPeriod} onChange={setTasksPeriod} />
           </div>
 
-          {/* KPI row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <KpiCard
               icon={<BarChart3 className="w-4 h-4" />}
@@ -356,21 +338,12 @@ const MyStatistics = () => {
             />
           </div>
 
-          {/* Tasks charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Created vs Completed — bar chart by period */}
             <Card>
-              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>
-                Created vs Completed
-              </p>
-              <p className="text-xs text-gray-400 mb-4">
-                Evolution by {tasksPeriod}
-              </p>
+              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>Created vs Completed</p>
+              <p className="text-xs text-gray-400 mb-4">Evolution by {tasksPeriod}</p>
               {tasksChartData.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-                  No data for this period
-                </div>
+                <div className="h-48 flex items-center justify-center text-gray-400 text-sm">No data for this period</div>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={tasksChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -386,25 +359,16 @@ const MyStatistics = () => {
               )}
             </Card>
 
-            {/* Category breakdown — pie */}
             <Card>
-              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>
-                Breakdown by Category
-              </p>
+              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>Breakdown by Category</p>
               <p className="text-xs text-gray-400 mb-4">All time distribution</p>
               {pieData.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-                  No tasks yet
-                </div>
+                <div className="h-48 flex items-center justify-center text-gray-400 text-sm">No tasks yet</div>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name"
-                      cx="50%" cy="50%" outerRadius={75}
-                      label={({ value }) => value}>
-                      {pieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ value }) => value}>
+                      {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
                     <Tooltip {...tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -415,37 +379,17 @@ const MyStatistics = () => {
           </div>
         </section>
 
-        {/* ══════════════════════════════════════════
-            BLOC 2 — MY SHIFTS
-        ══════════════════════════════════════════ */}
+        {/* ── BLOC 2 — MY SHIFTS ── */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <SectionTitle>My Shifts</SectionTitle>
             <PeriodTabs value={shiftsPeriod} onChange={setShiftsPeriod} />
           </div>
 
-          {/* KPI row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <KpiCard
-              icon={<Calendar className="w-4 h-4" />}
-              label="Shifts Opened"
-              value={myStats?.shifts_total ?? 0}
-              sub="all time"
-            />
-            <KpiCard
-              icon={<CheckCircle2 className="w-4 h-4" />}
-              label="Shifts Closed"
-              value={myStats?.shifts_completed ?? 0}
-              accent="#22c55e"
-              sub="all time"
-            />
-            <KpiCard
-              icon={<Activity className="w-4 h-4" />}
-              label="Active Now"
-              value={myStats?.shifts_active ?? 0}
-              accent={YELLOW}
-              sub="currently running"
-            />
+            <KpiCard icon={<Calendar className="w-4 h-4" />} label="Shifts Opened" value={myStats?.shifts_total ?? 0} sub="all time" />
+            <KpiCard icon={<CheckCircle2 className="w-4 h-4" />} label="Shifts Closed" value={myStats?.shifts_completed ?? 0} accent="#22c55e" sub="all time" />
+            <KpiCard icon={<Activity className="w-4 h-4" />} label="Active Now" value={myStats?.shifts_active ?? 0} accent={YELLOW} sub="currently running" />
             <KpiCard
               icon={<TrendingUp className="w-4 h-4" />}
               label={shiftsPeriod === 'day' ? 'Today' : shiftsPeriod === 'week' ? 'This Week' : 'This Month'}
@@ -454,14 +398,9 @@ const MyStatistics = () => {
             />
           </div>
 
-          {/* Shifts charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Shifts overview bar */}
             <Card>
-              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>
-                Shifts Overview
-              </p>
+              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>Shifts Overview</p>
               <p className="text-xs text-gray-400 mb-4">
                 Total / Closed / Active / {shiftsPeriod === 'day' ? 'Today' : shiftsPeriod === 'week' ? 'This Week' : 'This Month'}
               </p>
@@ -472,33 +411,22 @@ const MyStatistics = () => {
                   <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} allowDecimals={false} />
                   <Tooltip {...tooltipStyle} />
                   <Bar dataKey="value" radius={[4,4,0,0]}>
-                    {shiftsBarData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
-                    ))}
+                    {shiftsBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </Card>
 
-            {/* Task status breakdown — pie (relevant to shift activity) */}
             <Card>
-              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>
-                Task Status Breakdown
-              </p>
+              <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>Task Status Breakdown</p>
               <p className="text-xs text-gray-400 mb-4">Completed · In Progress · Pending</p>
               {statusPieData.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
-                  No data yet
-                </div>
+                <div className="h-48 flex items-center justify-center text-gray-400 text-sm">No data yet</div>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={statusPieData} dataKey="value" nameKey="name"
-                      cx="50%" cy="50%" outerRadius={75}
-                      label={({ value }) => value}>
-                      {statusPieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
+                    <Pie data={statusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ value }) => value}>
+                      {statusPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
                     <Tooltip {...tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -512,9 +440,7 @@ const MyStatistics = () => {
         {/* ── Service Benchmarks ── */}
         {myBenchmark && (
           <section>
-            <SectionTitle>
-              Service Benchmarks — {myBenchmark.service ?? 'Unassigned'}
-            </SectionTitle>
+            <SectionTitle>Service Benchmarks — {myBenchmark.service ?? 'Unassigned'}</SectionTitle>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { label: 'Tasks Created',   min: myBenchmark.min_tasks_created,    max: myBenchmark.max_tasks_created,    avg: myBenchmark.avg_tasks_created },
@@ -543,13 +469,10 @@ const MyStatistics = () => {
           </section>
         )}
 
-        {/* ══════════════════════════════════════════
-            BLOC 3 — TEAM RANKING
-        ══════════════════════════════════════════ */}
+        {/* ── BLOC 3 — TEAM RANKING ── */}
         <section>
           <SectionTitle>Team Ranking</SectionTitle>
 
-          {/* Collaborator — two rank cards only, no names */}
           {!canSeeTeamDetail && myStats && (() => {
             const tasksSorted  = [...teamStats].sort((a, b) => b.tasks_created_total - a.tasks_created_total);
             const shiftsSorted = [...teamStats].sort((a, b) => b.shifts_completed - a.shifts_completed);
@@ -579,216 +502,6 @@ const MyStatistics = () => {
 
           {canSeeTeamDetail && (
             <RankedTeamTables teamStats={teamStats} myStats={myStats} />
-          )}
-        </section>
-
-        {/* ══════════════════════════════════════════
-            BLOC 4 — MY TRAINING
-        ══════════════════════════════════════════ */}
-        <section>
-          <SectionTitle>My Training</SectionTitle>
-
-          {trainingLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="animate-spin w-6 h-6" style={{ color: GOLD }} />
-            </div>
-          ) : myResults.length === 0 ? (
-            <Card className="text-center py-12 space-y-3">
-              <p className="text-3xl">&#x1F4DA;</p>
-              <p className="font-semibold" style={{ color: NAVY }}>Aucun QCM complété pour l’instant</p>
-              <p className="text-sm text-gray-400">Rendez-vous dans la Knowledge Base pour commencer vos formations !</p>
-            </Card>
-          ) : (
-            <>
-              {/* KPI row */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <KpiCard
-                  icon={<BookOpen className="w-4 h-4" />}
-                  label="QCMs passés"
-                  value={myResults.length}
-                  sub="all time"
-                />
-                <KpiCard
-                  icon={<TrendingUp className="w-4 h-4" />}
-                  label="Score moyen"
-                  value={`${myAvgScore}%`}
-                  accent={myAvgScore >= 80 ? '#22c55e' : myAvgScore >= 60 ? YELLOW : '#ef4444'}
-                  sub="sur l’ensemble des QCMs"
-                />
-                <KpiCard
-                  icon={<Zap className="w-4 h-4" />}
-                  label="Meilleur score"
-                  value={`${myBestScore}%`}
-                  accent={YELLOW}
-                  sub="record personnel"
-                />
-              </div>
-
-              {/* Courbe + Tableau historique */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-
-                {/* Courbe de progression */}
-                <Card>
-                  <p className="text-sm font-semibold mb-1" style={{ color: NAVY }}>Progression des scores</p>
-                  <p className="text-xs text-gray-400 mb-4">Évolution chronologique de tes résultats</p>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart
-                      data={[...myResults].reverse().map(r => ({
-                        date: new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-                        score: Math.round(r.score_percent),
-                        name: r.document_name,
-                      }))}
-                      margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0ece4" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v: number) => `${v}%`} />
-                      <Tooltip
-                        contentStyle={{ background: '#fff', border: `1px solid ${GOLD}40`, borderRadius: 10, fontSize: 12 }}
-                        labelStyle={{ color: NAVY, fontWeight: 600 }}
-                        formatter={(v: any) => [`${v}%`, 'Score']}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="score"
-                        stroke={GOLD}
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: GOLD }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-
-                {/* Tableau historique */}
-                <Card className="overflow-hidden p-0">
-                  <div className="p-5 pb-3">
-                    <p className="text-sm font-semibold" style={{ color: NAVY }}>Historique des QCMs</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Derniers résultats</p>
-                  </div>
-                  <div className="overflow-y-auto max-h-52">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[#BBA57A]/15 text-gray-400 text-xs uppercase tracking-wider bg-[#faf8f4]">
-                          <th className="text-left px-5 py-2">Formation</th>
-                          <th className="text-center px-3 py-2">Score</th>
-                          <th className="text-right px-5 py-2">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {myResults.map((r, i) => {
-                          const scoreColor = r.score_percent >= 80 ? '#22c55e' : r.score_percent >= 60 ? YELLOW : '#ef4444';
-                          return (
-                            <tr key={i} className="border-b border-gray-50 hover:bg-[#faf8f4] transition-colors">
-                              <td className="px-5 py-2.5 font-medium text-xs" style={{ color: NAVY }}>
-                                {r.document_name.length > 30 ? r.document_name.slice(0, 30) + '…' : r.document_name}
-                              </td>
-                              <td className="px-3 py-2.5 text-center font-bold text-sm" style={{ color: scoreColor }}>
-                                {Math.round(r.score_percent)}%
-                              </td>
-                              <td className="px-5 py-2.5 text-right text-xs text-gray-400">
-                                {new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Classements */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                {/* Classement service */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#BBA57A] mb-3">
-                    Classement service — {myService ?? 'Non assigné'}
-                  </p>
-                  <div className="rounded-2xl border border-[#BBA57A]/15 bg-white shadow-sm overflow-hidden">
-                    {serviceRanking.length === 0 ? (
-                      <div className="p-6 text-center text-gray-400 text-sm">Aucune donnée de service</div>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[#BBA57A]/15 text-gray-400 text-xs uppercase tracking-wider">
-                            <th className="text-left px-4 py-2.5">#</th>
-                            <th className="text-left px-4 py-2.5">Nom</th>
-                            <th className="text-center px-4 py-2.5">Moy.</th>
-                            <th className="text-center px-4 py-2.5">QCMs</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {serviceRanking.map((entry, idx) => {
-                            const isMe = entry.user_id === myUserId;
-                            const scoreColor = entry.avg_score >= 80 ? '#22c55e' : entry.avg_score >= 60 ? YELLOW : '#ef4444';
-                            return (
-                              <tr key={entry.user_id} className={`border-b border-gray-50 transition-colors ${isMe ? 'bg-[#BBA57A]/5' : 'hover:bg-[#faf8f4]'}`}>
-                                <td className="px-4 py-2.5 font-mono text-gray-400 text-xs">
-                                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
-                                </td>
-                                <td className="px-4 py-2.5 font-semibold text-xs" style={{ color: isMe ? GOLD : NAVY }}>
-                                  {entry.display_name}
-                                  {isMe && <span className="ml-1 text-[10px] text-[#BBA57A]">(vous)</span>}
-                                </td>
-                                <td className="px-4 py-2.5 text-center font-bold text-sm" style={{ color: scoreColor }}>{entry.avg_score}%</td>
-                                <td className="px-4 py-2.5 text-center text-xs text-gray-400">{entry.quiz_count}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-
-                {/* Classement hôtel */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#BBA57A] mb-3">
-                    Classement hôtel — Tout le staff
-                  </p>
-                  <div className="rounded-2xl border border-[#BBA57A]/15 bg-white shadow-sm overflow-hidden">
-                    {hotelRanking.length === 0 ? (
-                      <div className="p-6 text-center text-gray-400 text-sm">Aucune donnée disponible</div>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-[#BBA57A]/15 text-gray-400 text-xs uppercase tracking-wider">
-                            <th className="text-left px-4 py-2.5">#</th>
-                            <th className="text-left px-4 py-2.5">Nom</th>
-                            <th className="text-left px-4 py-2.5">Service</th>
-                            <th className="text-center px-4 py-2.5">Moy.</th>
-                            <th className="text-center px-4 py-2.5">QCMs</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hotelRanking.map((entry, idx) => {
-                            const isMe = entry.user_id === myUserId;
-                            const scoreColor = entry.avg_score >= 80 ? '#22c55e' : entry.avg_score >= 60 ? YELLOW : '#ef4444';
-                            return (
-                              <tr key={entry.user_id} className={`border-b border-gray-50 transition-colors ${isMe ? 'bg-[#BBA57A]/5' : 'hover:bg-[#faf8f4]'}`}>
-                                <td className="px-4 py-2.5 font-mono text-gray-400 text-xs">
-                                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
-                                </td>
-                                <td className="px-4 py-2.5 font-semibold text-xs" style={{ color: isMe ? GOLD : NAVY }}>
-                                  {entry.display_name}
-                                  {isMe && <span className="ml-1 text-[10px] text-[#BBA57A]">(vous)</span>}
-                                </td>
-                                <td className="px-4 py-2.5 text-xs text-gray-500 capitalize">{entry.service ?? '—'}</td>
-                                <td className="px-4 py-2.5 text-center font-bold text-sm" style={{ color: scoreColor }}>{entry.avg_score}%</td>
-                                <td className="px-4 py-2.5 text-center text-xs text-gray-400">{entry.quiz_count}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-            </>
           )}
         </section>
 

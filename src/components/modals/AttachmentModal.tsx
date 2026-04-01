@@ -23,6 +23,7 @@ interface UploadedFile {
   type: 'file' | 'link';
   url?: string;
   fileType?: string; // MIME type for files
+  fileObject?: File; // Objet File natif pour upload vers Storage
 }
 
 export const AttachmentModal: React.FC<AttachmentModalProps> = ({ 
@@ -75,7 +76,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
         size: file.size,
         type: 'file' as const,
         fileType: file.type,
-        url: URL.createObjectURL(file)
+        url: URL.createObjectURL(file), // prévisualisation locale uniquement
+        fileObject: file                // objet File conservé pour upload Storage
       };
       setAttachments(prev => [...prev, newFile]);
     });

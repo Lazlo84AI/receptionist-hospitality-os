@@ -18,6 +18,8 @@ import ServiceControl from "./pages/ServiceControl";
 import ServiceControl2 from "./pages/ServiceControl2";
 import LocationCleanupPage from "./pages/LocationCleanup";
 import MyStatistics from "./pages/MyStatistics";
+import TrainingStatistics from "./pages/TrainingStatistics";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TeamOnboarding from "./pages/admin/TeamOnboarding";
@@ -48,6 +50,8 @@ const App = () => (
             <Route path="/service-control2" element={<ProtectedRoute><ServiceControl2 /></ProtectedRoute>} />
             <Route path="/location-cleanup" element={<ProtectedRoute><LocationCleanupPage /></ProtectedRoute>} />
             <Route path="/my-statistics" element={<ProtectedRoute><MyStatistics /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/training-statistics" element={<ProtectedRoute><TrainingStatistics /></ProtectedRoute>} />
             {/* ── ADMIN ROUTES (direction only) ────────────────────────── */}
             <Route path="/admin/onboarding" element={<AdminProtectedRoute><TeamOnboarding /></AdminProtectedRoute>} />
             <Route path="/admin/analytics"  element={<AdminProtectedRoute><TeamAnalytics /></AdminProtectedRoute>} />
