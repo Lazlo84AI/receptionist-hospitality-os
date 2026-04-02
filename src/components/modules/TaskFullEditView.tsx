@@ -619,6 +619,7 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
                                   .eq('id', attachment.id);
                                 if (error) throw error;
                                 refetchAttachments();
+                                setHasChanges(true);
                                 toast({ title: "Pièce jointe supprimée" });
                               } catch (err) {
                                 toast({ title: "Erreur", description: "Impossible de supprimer", variant: "destructive" });

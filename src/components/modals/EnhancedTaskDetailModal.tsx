@@ -817,12 +817,16 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
       {/* NOUVEAU: TaskFullEditView Modal */}
       <TaskFullEditView 
         isOpen={isTaskFullEditOpen}
-        onClose={() => setIsTaskFullEditOpen(false)}
+        onClose={() => {
+          setIsTaskFullEditOpen(false);
+          refetchAttachments();
+        }}
         task={task}
         onSave={(updatedTask) => {
           if (onUpdateTask) {
             onUpdateTask(updatedTask);
           }
+          refetchAttachments();
           setIsTaskFullEditOpen(false);
           onClose();
         }}
