@@ -1,3 +1,52 @@
+## 2026-04-02
+
+### fix: Système de pièces jointes — upload Storage, affichage et suppression
+
+**Contexte**
+Les pièces jointes ajoutées aux cartes n'étaient jamais uploadées dans Supabase Storage. Le contenu binaire des fichiers restait en mémoire RAM du navigateur (blob URL temporaire) et disparaissait à la fermeture de l'onglet. La table `attachments` recevait les métadonnées (nom, taille, MIME type) mais `file_url` était systématiquement `NULL`.
+
+**Supabase Storage — bucket `task-attachments`**
+- Création du bucket public `task-attachments`
+- Ajout de 3 policies sur `storage.objects` :
+  - `INSERT` pour les utilisateurs authentifiés
+  - `SELECT` public (lecture sans authentification pour affichage direct)
+  - `UPDATE` pour les utilisateurs authentifiés
+
+**`src/components/modals/AttachmentModal.tsx`**
+- Ajout de `fileObject?: File` dans l'interface `UploadedFile` — conserve l'objet `File` natif au lieu de le jeter après création du blob URL
+- Remplacement de `handleSubmit` par `handleSave` avec deux chemins :
+  - Si `onSave` fourni (création de tâche) : délègue au parent (`TaskCreationModal` gère l'upload)
+  - Si `task.id` fourni (carte existante) : upload vers Storage → récupération URL publique → `INSERT` dans `attachments`
+- `DialogContent` : ajout `max-h-[85vh] flex flex-col overflow-hidden` + contenu interne scrollable
+- Fix layout noms de fichiers longs : `overflow-hidden` + `min-w-0 flex-1` sur les conteneurs
+- Bouton Add : état `uploading` avec label dynamique "Uploading..."
+- Suppression des imports inutiles (`sendTaskUpdatedEvent`, `useProfiles`, `useLocations`)
+
+**`src/components/modals/TaskCreationModal.tsx`**
+- Step 7 de `handleCreateCard` : remplacement du `.map()` par une boucle `for...of` async
+- Pour chaque fichier : upload vers `task-attachments` Storage → `getPublicUrl` → `file_url` renseigné
+- Les liens (type `link`) continuent de passer directement en `file_url`
+
+**`src/components/modals/EnhancedTaskDetailModal.tsx`**
+- Footer bouton Validate : `justify-end` → `justify-center` (évite le chevauchement avec le bouton flottant de création de carte sur petit écran)
+
+**`src/components/modules/TaskFullEditView.tsx`**
+- Import `useTaskAttachments` depuis `useTaskDetails`, `Paperclip` et `Trash2` depuis lucide
+- Hook `useTaskAttachments(task?.id)` appelé au niveau du composant
+- Nouvelle section "Pièces jointes (N)" affichée si `attachments.length > 0` :
+  - Nom de fichier tronqué + lien "Voir le fichier" (bleu) ou badge orange "⚠ Fichier non uploadé"
+  - Taille en KB si disponible
+  - Bouton poubelle rouge : DELETE en base + `refetchAttachments()` immédiat
+- `AttachmentModal.onUpdate` connecté à `refetchAttachments()` (était vide)
+- Footer Cancel/Save : `justify-between` → `justify-center gap-4`
+
+**Résultat**
+- Upload fichiers fonctionnel sur les cartes existantes et nouvelles
+- Prévisualisation des images/GIFs/PDFs directement dans la carte
+- Suppression propre des anciennes entrées NULL depuis la Full Editable Card
+
+---
+
 ## 2026-03-31
 
 ### feat: Radar compétences dynamique + Bloc My Training (statistiques formation)

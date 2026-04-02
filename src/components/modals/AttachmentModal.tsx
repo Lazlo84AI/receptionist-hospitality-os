@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, X, File, Image, FileText, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { sendTaskUpdatedEvent } from '@/lib/webhookService';
-import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface AttachmentModalProps {
@@ -37,9 +36,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
   const [linkUrl, setLinkUrl] = useState('');
   
-  const { profiles } = useProfiles();
-  const { locations } = useLocations();
   const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -122,64 +120,87 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
     inputRef.current?.click();
   };
 
-  const handleSubmit = async () => {
-    if (task && attachments.length > 0) {
-      try {
-        const attachmentsData = attachments.map(attachment => ({
-          id: attachment.id,
-          name: attachment.name,
-          size: attachment.size,
-          type: attachment.type,
-          url: attachment.type === 'link' ? attachment.url : `drive-path-to-be-defined/${attachment.name}` // URL réelle pour links, chemin drive pour files
-        }));
+  const handleSave = async () => {
+    if (attachments.length === 0) return;
 
-        // Send webhook event for task update with attachments
-        const webhookResult = await sendTaskUpdatedEvent(
-          task.id,
-          task,
-          task,
-          profiles,
-          locations,
-          {
-            attachments: attachmentsData
-          }
-        );
+    // Cas création de tâche : TaskCreationModal gère lui-même l'upload
+    if (onSave) {
+      onSave(attachments);
+      setAttachments([]);
+      setLinkUrl('');
+      onClose();
+      return;
+    }
 
-        if (webhookResult.success) {
-          toast({
-            title: "Attachments Added",
-            description: "Attachments have been added and notification sent successfully",
-          });
-          // Call onUpdate to trigger data refresh
-          if (onUpdate) {
-            onUpdate();
+    // Cas carte existante : upload Storage + INSERT en base
+    if (!task?.id) {
+      toast({ title: "Erreur", description: "Tâche introuvable", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) throw new Error('Non authentifié');
+
+      const inserts: any[] = [];
+      for (const attachment of attachments) {
+        let fileUrl = attachment.type === 'link' ? (attachment.url || null) : null;
+
+        if (attachment.type === 'file' && attachment.fileObject) {
+          const filePath = `${task.id}/${Date.now()}-${attachment.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('task-attachments')
+            .upload(filePath, attachment.fileObject, { upsert: false });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('task-attachments')
+              .getPublicUrl(filePath);
+            fileUrl = urlData.publicUrl;
+          } else {
+            console.warn('⚠️ Upload Storage échoué pour', attachment.name, uploadError);
           }
-        } else {
-          toast({
-            title: "Webhook Error",
-            description: webhookResult.error || "Failed to send attachment notification",
-            variant: "destructive",
-          });
         }
-      } catch (error) {
-        console.error('Error sending webhook:', error);
-        toast({
-          title: "Attachment Error",
-          description: "Failed to send attachment notification",
-          variant: "destructive",
+
+        inserts.push({
+          task_id: task.id,
+          filename: attachment.name,
+          file_url: fileUrl,
+          file_size: attachment.type === 'file' ? attachment.size : null,
+          mime_type: attachment.type === 'file' ? attachment.fileType : null,
+          attachment_type: attachment.type === 'link' ? 'other' : 'document',
+          uploaded_by: currentUser.id
         });
       }
+
+      const { error: insertError } = await supabase
+        .from('attachments')
+        .insert(inserts);
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Pièces jointes ajoutées",
+        description: `${inserts.length} fichier(s) ajouté(s) avec succès`,
+      });
+
+      if (onUpdate) onUpdate();
+
+      setAttachments([]);
+      setLinkUrl('');
+      onClose();
+    } catch (error) {
+      console.error('❌ Erreur upload attachments:', error);
+      toast({ title: "Erreur", description: "Impossible d'ajouter les pièces jointes", variant: "destructive" });
+    } finally {
+      setUploading(false);
     }
-    
-    // Reset and close
-    setAttachments([]);
-    setLinkUrl('');
-    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Paperclip className="h-5 w-5" />
@@ -187,7 +208,7 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 pr-1">
           {/* Drag and Drop Zone */}
           <div 
             className={cn(
@@ -254,8 +275,8 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
             <div className="space-y-2">
               <p className="text-sm font-medium">Selected attachments:</p>
               {attachments.map((attachment) => (
-                <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                  <div className="flex items-center gap-2">
+                <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded-md overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="text-muted-foreground">
                       {getFileIcon(attachment)}
                     </div>
@@ -297,18 +318,10 @@ export const AttachmentModal: React.FC<AttachmentModalProps> = ({
               Cancel
             </Button>
             <Button 
-              onClick={() => {
-                if (onSave && attachments.length > 0) {
-                  console.log('📎 Envoi des attachments au parent:', attachments);
-                  onSave(attachments);
-                }
-                setAttachments([]);
-                setLinkUrl('');
-                onClose();
-              }}
-              disabled={attachments.length === 0}
+              onClick={handleSave}
+              disabled={attachments.length === 0 || uploading}
             >
-              Add {attachments.length > 0 && `(${attachments.length})`}
+              {uploading ? 'Uploading...' : `Add${attachments.length > 0 ? ` (${attachments.length})` : ''}`}
             </Button>
           </div>
         </div>

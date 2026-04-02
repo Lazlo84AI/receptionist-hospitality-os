@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, X, Users, MapPin } from 'lucide-react';
+import { Check, X, Users, MapPin, Paperclip, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TaskItem } from '@/types/database';
 import { useProfiles, useLocations } from '@/hooks/useSupabaseData';
@@ -47,6 +47,7 @@ import { MembersModal } from '@/components/modals/MembersModal';
 import { EscalationModal } from '@/components/modals/EscalationModal';
 import { AttachmentModal } from '@/components/modals/AttachmentModal';
 import { ChecklistComponent } from '@/components/ChecklistComponent';
+import { useTaskAttachments } from '@/hooks/useTaskDetails';
 
 interface TaskFullEditViewProps {
   isOpen: boolean;
@@ -78,6 +79,7 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
   const { profiles } = useProfiles();
   const { locations } = useLocations();
   const { toast } = useToast();
+  const { attachments, refetch: refetchAttachments } = useTaskAttachments(task?.id);
 
   useEffect(() => {
     setEditedTask(task);
@@ -580,6 +582,58 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
                   />
                 )}
 
+                {/* Pièces jointes existantes */}
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Pièces jointes ({attachments.length})
+                    </Label>
+                    <div className="space-y-2">
+                      {attachments.map((attachment) => (
+                        <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded border overflow-hidden">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{attachment.filename}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {attachment.file_url ? (
+                                  <a href={attachment.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                    Voir le fichier
+                                  </a>
+                                ) : (
+                                  <span className="text-orange-500">⚠ Fichier non uploadé</span>
+                                )}
+                                {attachment.file_size && ` · ${(attachment.file_size / 1024).toFixed(0)} KB`}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const { error } = await supabase
+                                  .from('attachments')
+                                  .delete()
+                                  .eq('id', attachment.id);
+                                if (error) throw error;
+                                refetchAttachments();
+                                toast({ title: "Pièce jointe supprimée" });
+                              } catch (err) {
+                                toast({ title: "Erreur", description: "Impossible de supprimer", variant: "destructive" });
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 flex-shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Description - Champ spécial en pleine largeur avec rollover jaune */}
                 <div className="space-y-2">
                   <Label htmlFor="description" className="text-sm font-medium">
@@ -631,7 +685,7 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
           </div>
 
           {/* Footer Actions */}
-          <div className="p-6 border-t bg-background flex justify-between">
+          <div className="p-6 border-t bg-background flex justify-center gap-4">
             <Button
               variant="outline"
               onClick={handleCancel}
@@ -747,7 +801,7 @@ export const TaskFullEditView = ({ isOpen, onClose, task, onSave }: TaskFullEdit
         isOpen={modalsState.attachment}
         onClose={() => closeModal('attachment')}
         task={editedTask}
-        onUpdate={() => {/* Handle attachment update */}}
+        onUpdate={() => { refetchAttachments(); }}
       />
     </Dialog>
   );

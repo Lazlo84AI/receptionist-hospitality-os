@@ -729,7 +729,7 @@ const EnhancedTaskDetailModal: React.FC<EnhancedTaskDetailModalProps> = ({
           </div>
           
           {/* Footer avec bouton Validate */}
-          <div className="p-6 border-t bg-background flex justify-end mt-6">
+          <div className="p-6 border-t bg-background flex justify-center mt-6">
             <Button
               onClick={async () => {
                 try {
