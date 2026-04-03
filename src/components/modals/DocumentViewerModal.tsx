@@ -176,8 +176,8 @@ const FormationRadarPanel = ({ radarData }: { radarData: RadarPoint[] }) => {
       <h3 className="text-white font-semibold text-sm mb-1">Impact sur tes compétences</h3>
       <p className="text-[#BBA57A] text-xs mb-4">Si tu obtiens 100% au QCM</p>
 
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height={260}>
+      <div>
+        <ResponsiveContainer width="100%" height={200}>
           <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
             <PolarGrid stroke="#BBA57A" opacity={0.25} />
             <PolarAngleAxis
@@ -449,16 +449,7 @@ export const DocumentViewerModal = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="text-gray-600 hover:text-palace-navy flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+
           </div>
         </div>
 

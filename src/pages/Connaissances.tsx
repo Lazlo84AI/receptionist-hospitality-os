@@ -14,10 +14,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useKnowledgeFormations, KnowledgeFormation } from '@/hooks/useKnowledgeFormations';
+import { useMyAssignedFormations } from '@/hooks/useMyAssignedFormations';
+import { KnowledgeFormation } from '@/hooks/useKnowledgeFormations';
 import { DocumentViewerModal } from '@/components/modals/DocumentViewerModal';
 import QuizzModal from '@/components/modals/QuizzModal';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Activity {
@@ -123,7 +124,7 @@ const Connaissances = () => {
   const [isCorrect, setIsCorrect] = useState(false);
 
   // Récupération des vraies données depuis Supabase
-  const { data: knowledgeFormations, isLoading, error } = useKnowledgeFormations();
+  const { data: knowledgeFormations, isLoading, error } = useMyAssignedFormations();
 
   // Variables d'état pour la recherche et les filtres
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,6 +135,7 @@ const Connaissances = () => {
   // États pour la gestion mobile
   const isMobile = useIsMobile();
   const [isStatsCollapsed, setIsStatsCollapsed] = useState(true); // Par défaut fermé sur mobile
+  const [isDesktopStatsCollapsed, setIsDesktopStatsCollapsed] = useState(false); // Par défaut ouvert sur desktop
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   // États pour le modal de visualisation des documents
@@ -146,8 +148,12 @@ const Connaissances = () => {
   const [userLastName, setUserLastName] = useState<string>('');
 
   // 📊 Données radar (scores de compétences depuis Supabase)
-  const [radarData, setRadarData] = useState(STANDOUT_STATS);
+  const [radarData, setRadarData] = useState<any[]>(STANDOUT_STATS);
   const [isCompetencyEmpty, setIsCompetencyEmpty] = useState(false);
+  // 🎯 Formation sélectionnée — impact sur le radar
+  const [selectedFormationTitle, setSelectedFormationTitle] = useState<string | null>(null);
+  const [formationImpactMap, setFormationImpactMap] = useState<Record<string, number>>({});
+  const [selectedImpactId, setSelectedImpactId] = useState<string | null>(null);
 
   // 🚀 Récupération du nom de l'utilisateur connecté
   useEffect(() => {
@@ -160,7 +166,7 @@ const Connaissances = () => {
           // Récupérer les infos depuis staff_directory
           const { data: staffData, error } = await supabase
             .from('staff_directory')
-            .select('first_name, last_name')
+            .select('first_name, last_name, service')
             .eq('id', user.id)
             .single();
           
@@ -193,6 +199,7 @@ const Connaissances = () => {
               // Tous les axes du service, score réel ou 0 si pas encore de QCM
               const mapped = profileAxes.map((axis: any) => ({
                 category: axis.label,
+                competency_key: axis.competency_key,
                 score: scoreMap[axis.competency_key] ?? 0,
                 fullMark: 100,
                 definition: '',
@@ -457,16 +464,24 @@ const Connaissances = () => {
   // Fonctions pour gérer les modaux
   const handleDocumentView = (document: KnowledgeFormation) => {
     setSelectedDocument(document);
-    
-    // 🎯 LOGIQUE CONDITIONNELLE : QCM vs Formation
     if (document.formation_steps === 'qcm') {
-      // Carte QCM → Ouvrir QuizzModal avec les données de training_questions
-      console.log('🧠 Opening QuizzModal for QCM:', document.topic);
       setIsQuizzOpen(true);
     } else {
-      // Carte Formation → Ouvrir DocumentViewerModal
-      console.log('📚 Opening DocumentViewerModal for Formation:', document.document_title);
       setIsDocumentModalOpen(true);
+    }
+  };
+
+  // Sélection pour l'impact radar (indépendant du modal)
+  const handleSelectForRadar = (e: React.MouseEvent, document: KnowledgeFormation) => {
+    e.stopPropagation();
+    if (selectedImpactId === document.id) {
+      // Désélectionner
+      setSelectedImpactId(null);
+      setSelectedFormationTitle(null);
+      setFormationImpactMap({});
+    } else {
+      setSelectedImpactId(document.id);
+      fetchFormationImpact(document.document_name, document.document_title);
     }
   };
 
@@ -478,6 +493,28 @@ const Connaissances = () => {
   const handleCloseQuizzModal = () => {
     setIsQuizzOpen(false);
     setSelectedDocument(null);
+  };
+
+  // 📊 Fetch impact d'une formation sur le radar
+  const fetchFormationImpact = async (documentName: string, title: string) => {
+    setSelectedFormationTitle(title);
+    setIsDesktopStatsCollapsed(false); // auto-déplier le panneau
+    try {
+      const { data: mappings } = await (supabase as any)
+        .from('formation_criteria_mapping')
+        .select('competency_key, weight')
+        .eq('document_name', documentName);
+      if (mappings && mappings.length > 0) {
+        const newMap: Record<string, number> = {};
+        mappings.forEach((m: any) => { newMap[m.competency_key] = Number(m.weight) || 0; });
+        setFormationImpactMap(newMap);
+      } else {
+        setFormationImpactMap({});
+      }
+    } catch (err) {
+      console.error('fetchFormationImpact error:', err);
+      setFormationImpactMap({});
+    }
   };
 
   // Fonctions utilitaires pour les badges et labels
@@ -625,20 +662,21 @@ const Connaissances = () => {
                               ⚡ Dépêchez-vous de vous former !
                             </p>
                           )}
-                          <ResponsiveContainer width="100%" height={250}>
-                            <RadarChart data={radarData}>
-                              <PolarGrid stroke="#BBA57A" opacity={0.3} />
+                          <ResponsiveContainer width="100%" height={320}>
+                            <RadarChart data={radarData} outerRadius={110}>
+                              <PolarGrid gridType="circle" stroke="#BBA57A" opacity={0.4} />
                               <PolarAngleAxis 
                                 dataKey="category" 
-                                tick={{ fill: '#BBA57A', fontSize: 11 }}
+                                tick={{ fill: '#BBA57A', fontSize: 9 }}
                               />
-                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#BBA57A' }} />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                               <Radar 
                                 name="Score" 
                                 dataKey="score" 
-                                stroke="#BBA57A" 
+                                stroke="#DEAE35" 
+                                strokeWidth={2}
                                 fill="#BBA57A" 
-                                fillOpacity={0.6} 
+                                fillOpacity={0.5} 
                               />
                             </RadarChart>
                           </ResponsiveContainer>
@@ -891,58 +929,129 @@ const Connaissances = () => {
               // Layout desktop existant
               <>
                 {/* Barre latérale gauche - Standout Stats */}
-                <div className="w-1/4">
-                  <Card className="border-2 bg-[#1E1A37] border-[#1E1A37]">
-                    <CardHeader className="bg-[#1E1A37] pb-4 border-b border-[#BBA57A]/20">
-                      <h3 className="text-2xl font-bold text-white">{userFirstName} {userLastName}</h3>
-                      <p className="text-sm text-[#BBA57A] font-semibold tracking-wide">STANDOUT STATS</p>
-                    </CardHeader>
-                    <CardContent className="pt-6 bg-[#1E1A37] pb-6">
-                      {/* Graphique Radar */}
-                      <div className="mb-6 bg-[#2A2448] rounded-lg p-4">
-                        {isCompetencyEmpty && (
-                          <p className="text-center text-[#DEAE35] text-xs font-bold uppercase tracking-widest mb-3">
-                            ⚡ Dépêchez-vous de vous former !
-                          </p>
-                        )}
-                        <ResponsiveContainer width="100%" height={280}>
-                          <RadarChart data={radarData}>
-                            <PolarGrid stroke="#BBA57A" opacity={0.3} />
-                            <PolarAngleAxis 
-                              dataKey="category" 
-                              tick={{ fill: '#BBA57A', fontSize: 11 }}
-                            />
-                            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#BBA57A' }} />
-                            <Radar 
-                              name="Score" 
-                              dataKey="score" 
-                              stroke="#BBA57A" 
-                              fill="#BBA57A" 
-                              fillOpacity={0.6} 
-                            />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      </div>
+                <div
+                  className="relative flex-shrink-0 transition-all duration-300 ease-in-out"
+                  style={{ width: isDesktopStatsCollapsed ? '40px' : '520px' }}
+                >
+                  {/* Barre verticale toujours visible + bouton toggle */}
+                  <div className="absolute right-0 top-0 h-full w-10 bg-[#1E1A37] flex flex-col items-center justify-start pt-4 z-10 rounded-r-lg">
+                    <button
+                      onClick={() => setIsDesktopStatsCollapsed(prev => !prev)}
+                      className="text-[#BBA57A] hover:text-[#DEAE35] transition-colors"
+                    >
+                      {isDesktopStatsCollapsed ? (
+                        <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
+                      ) : (
+                        <ChevronUp className="h-5 w-5 rotate-[-90deg]" />
+                      )}
+                    </button>
+                  </div>
 
-                      {/* Barres de stats */}
-                      <div className="space-y-4">
-                        {radarData.map((stat) => (
-                          <div key={stat.category} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-white font-medium text-sm">{stat.category.toUpperCase()}</span>
-                              <span className="text-[#BBA57A] font-bold text-2xl">{stat.score}</span>
-                            </div>
-                            <div className="h-3 bg-[#2A2448] rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-[#BBA57A] to-[#DEAE35] transition-all duration-500"
-                                style={{ width: `${stat.score}%` }}
-                              />
-                            </div>
+                  {/* Contenu du panneau (masqué quand replié) */}
+                  <div
+                    className="overflow-hidden transition-all duration-300 ease-in-out h-full"
+                    style={{ width: isDesktopStatsCollapsed ? '0px' : '480px' }}
+                  >
+                    <Card className="border-2 bg-[#1E1A37] border-[#1E1A37] h-full">
+                      <CardHeader className="bg-[#1E1A37] pb-4 border-b border-[#BBA57A]/20">
+                        <h3 className="text-xl font-bold text-white">{userFirstName} {userLastName}</h3>
+                        <p className="text-sm text-[#BBA57A] font-semibold tracking-wide">STANDOUT STATS</p>
+                      </CardHeader>
+                      <CardContent className="pt-6 bg-[#1E1A37] pb-6 overflow-y-auto">
+                        {/* Titre formation sélectionnée */}
+                        {selectedFormationTitle && (
+                          <div className="mb-4 px-3 py-2 rounded-lg bg-[#2A2448] border border-[#3B82F6]/40">
+                            <p className="text-[#3B82F6] text-xs font-bold uppercase tracking-widest mb-0.5">Formation sélectionnée</p>
+                            <p className="text-white text-sm font-semibold truncate">{selectedFormationTitle}</p>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                        )}
+
+                        {/* Graphique Radar */}
+                        <div className="mb-4 bg-[#2A2448] rounded-lg p-4">
+                          {isCompetencyEmpty && Object.keys(formationImpactMap).length === 0 && (
+                            <p className="text-center text-[#DEAE35] text-xs font-bold uppercase tracking-widest mb-3">
+                              ⚡ Dépêchez-vous de vous former !
+                            </p>
+                          )}
+                          <ResponsiveContainer width="100%" height={380}>
+                            <RadarChart
+                              data={radarData.map((d: any) => ({
+                                ...d,
+                                impact: formationImpactMap[d.competency_key] ?? 0,
+                              }))}
+                              outerRadius={130}
+                            >
+                              <PolarGrid gridType="circle" stroke="#BBA57A" opacity={0.4} />
+                              <PolarAngleAxis
+                                dataKey="category"
+                                tick={{ fill: '#BBA57A', fontSize: 10 }}
+                              />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                              {/* Couche bleue — impact de la formation */}
+                              <Radar
+                                name="Impact formation"
+                                dataKey="impact"
+                                stroke="#3B82F6"
+                                strokeWidth={2}
+                                fill="#3B82F6"
+                                fillOpacity={0.3}
+                              />
+                              {/* Couche gold — scores actuels */}
+                              <Radar
+                                name="Score actuel"
+                                dataKey="score"
+                                stroke="#DEAE35"
+                                strokeWidth={2}
+                                fill="#BBA57A"
+                                fillOpacity={0.5}
+                              />
+                              {selectedFormationTitle && (
+                                <Legend
+                                  formatter={(value) => (
+                                    <span style={{ color: '#E0D3B4', fontSize: '11px' }}>{value}</span>
+                                  )}
+                                />
+                              )}
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        {/* Barres de stats */}
+                        <div className="space-y-3">
+                          {radarData.map((stat: any) => {
+                            const impact = formationImpactMap[stat.competency_key] ?? 0;
+                            return (
+                              <div key={stat.category} className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-white font-medium text-xs uppercase tracking-wide">{stat.category}</span>
+                                  <div className="flex items-center gap-2">
+                                    {impact > 0 && (
+                                      <span className="text-[#3B82F6] font-bold text-sm">+{impact}</span>
+                                    )}
+                                    <span className="text-[#BBA57A] font-bold text-xl">{stat.score}</span>
+                                  </div>
+                                </div>
+                                <div className="h-2.5 bg-[#2A2448] rounded-full overflow-hidden relative">
+                                  {/* Barre gold — score actuel */}
+                                  <div
+                                    className="absolute h-full bg-gradient-to-r from-[#BBA57A] to-[#DEAE35] rounded-full transition-all duration-500"
+                                    style={{ width: `${stat.score}%` }}
+                                  />
+                                  {/* Barre bleue — impact formation */}
+                                  {impact > 0 && (
+                                    <div
+                                      className="absolute h-full bg-[#3B82F6] rounded-full opacity-70 transition-all duration-500"
+                                      style={{ left: `${stat.score}%`, width: `${Math.min(impact, 100 - stat.score)}%` }}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
 
                 {/* Zone centrale desktop */}
@@ -1060,82 +1169,103 @@ const Connaissances = () => {
                             <Card 
                               key={training.id} 
                               className={cn(
-                                "hover:shadow-md transition-all cursor-pointer border-l-4 rounded-lg",
-                                training.type === 'retention' 
-                                  ? "border-l-[#BBA57A] hover:border-l-[#A89569] bg-[#BBA57A] text-white" 
-                                  : "border-l-[#BBA57A] hover:border-l-palace-navy bg-white"
+                                "hover:shadow-md transition-all rounded-lg border-l-4",
+                                selectedImpactId === training.id
+                                  ? "border-l-[#3B82F6] ring-1 ring-[#3B82F6]/30"
+                                  : training.type === 'retention'
+                                    ? "border-l-[#BBA57A] bg-[#BBA57A] text-white"
+                                    : "border-l-[#BBA57A] bg-white"
                               )}
-                              onClick={() => originalDocument ? handleDocumentView(originalDocument) : handleModuleSelect(training)}
                             >
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                
-                                {/* Informations principales - Gauche */}
-                                <div className="flex-1">
-                                  <h3 className="font-semibold text-lg mb-2">{training.title}</h3>
+                            <CardContent className="p-0">
+                              <div className="flex items-stretch">
+
+                                {/* Sélecteur radio — gauche */}
+                                <button
+                                  onClick={(e) => originalDocument ? handleSelectForRadar(e, originalDocument) : undefined}
+                                  className={cn(
+                                    "flex-shrink-0 w-12 flex items-center justify-center border-r transition-colors",
+                                    selectedImpactId === training.id
+                                      ? "bg-[#3B82F6]/10 border-[#3B82F6]/30"
+                                      : training.type === 'retention'
+                                        ? "bg-white/10 border-white/20 hover:bg-white/20"
+                                        : "bg-gray-50 border-gray-100 hover:bg-blue-50"
+                                  )}
+                                  title="Voir l'impact sur le radar"
+                                >
                                   <div className={cn(
-                                    "flex items-center gap-6 text-sm",
-                                    training.type === 'retention' ? "text-white/80" : "text-muted-foreground"
+                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                    selectedImpactId === training.id
+                                      ? "border-[#3B82F6] bg-[#3B82F6]"
+                                      : training.type === 'retention'
+                                        ? "border-white/60"
+                                        : "border-gray-300"
                                   )}>
-                                    
-                                    {/* Thématique */}
-                                    <span className="flex items-center gap-1">
-                                      <BookOpen className="h-4 w-4" />
-                                      {getCategoryLabel(training.category)}
-                                    </span>
-                                    
-                                    {/* Temps de lecture */}
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-4 w-4" />
-                                      {training.duration || 7} min
-                                    </span>
-                                    
-                                    {/* Progression */}
-                                    <span className="flex items-center gap-2">
-                                      <div className={cn(
-                                        "w-16 h-2 rounded-full overflow-hidden",
-                                        training.type === 'retention' ? "bg-white/30" : "bg-gray-200"
-                                      )}>
-                                        <div 
-                                          className={cn(
-                                            "h-full transition-all duration-300",
-                                            training.type === 'retention' ? "bg-white" : "bg-palace-navy"
-                                          )}
-                                          style={{ width: `${training.progress}%` }}
-                                        />
-                                      </div>
-                                      <span className="text-xs font-medium">{training.progress}%</span>
-                                    </span>
+                                    {selectedImpactId === training.id && (
+                                      <div className="w-2 h-2 rounded-full bg-white" />
+                                    )}
+                                  </div>
+                                </button>
+
+                                {/* Contenu de la carte — clic ouvre le modal */}
+                                <div
+                                  className="flex-1 p-4 cursor-pointer"
+                                  onClick={() => originalDocument ? handleDocumentView(originalDocument) : handleModuleSelect(training)}
+                                >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold text-lg mb-2">{training.title}</h3>
+                                    <div className={cn(
+                                      "flex items-center gap-6 text-sm",
+                                      training.type === 'retention' ? "text-white/80" : "text-muted-foreground"
+                                    )}>
+                                      <span className="flex items-center gap-1">
+                                        <BookOpen className="h-4 w-4" />
+                                        {getCategoryLabel(training.category)}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Clock className="h-4 w-4" />
+                                        {training.duration || 7} min
+                                      </span>
+                                      <span className="flex items-center gap-2">
+                                        <div className={cn(
+                                          "w-16 h-2 rounded-full overflow-hidden",
+                                          training.type === 'retention' ? "bg-white/30" : "bg-gray-200"
+                                        )}>
+                                          <div
+                                            className={cn(
+                                              "h-full transition-all duration-300",
+                                              training.type === 'retention' ? "bg-white" : "bg-palace-navy"
+                                            )}
+                                            style={{ width: `${training.progress}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-xs font-medium">{training.progress}%</span>
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="mr-6">
+                                    <Badge className={cn("text-sm px-3 py-1 border-2", getTypeBadgeClass(training.type))}>
+                                      {getTypeLabel(training.type)}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <Badge className={cn(
+                                      "text-xs border-2 font-medium px-2 py-1",
+                                      training.status === 'completed'
+                                        ? "bg-[#BBA57A] text-white border-[#BBA57A]"
+                                        : "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"
+                                    )}>
+                                      {training.status === 'in_learning' && 'In Progress'}
+                                      {training.status === 'completed' && 'Completed'}
+                                    </Badge>
+                                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                      <ArrowRight className="h-4 w-4 text-[#1E1A37]" />
+                                    </Button>
                                   </div>
                                 </div>
-
-                                {/* Type de formation - Centre */}
-                                <div className="mr-6">
-                                  <Badge className={cn("text-sm px-3 py-1 border-2", getTypeBadgeClass(training.type))}>
-                                    {getTypeLabel(training.type)}
-                                  </Badge>
                                 </div>
 
-                                {/* Statut et Action - Droite */}
-                                <div className="flex items-center gap-3">
-                                  {/* Badge de statut */}
-                                  <Badge 
-                                    className={cn(
-                                      "text-xs border-2 font-medium px-2 py-1",
-                                      training.status === 'completed' 
-                                        ? "bg-[#BBA57A] text-white border-[#BBA57A]" 
-                                        : "bg-[#E0D3B4] text-[#BBA57A] border-[#BBA57A]"
-                                    )}
-                                  >
-                                    {training.status === 'in_learning' && 'In Progress'}
-                                    {training.status === 'completed' && 'Completed'}
-                                  </Badge>
-                                  
-                                  {/* Bouton d'action */}
-                                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                    <ArrowRight className="h-4 w-4 text-[#1E1A37]" />
-                                  </Button>
-                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -1343,9 +1473,6 @@ const Connaissances = () => {
         </div>
       </div>
       
-      {/* Floating Upload Training Button */}
-      <UploadTraining />
-
       {/* Document Viewer Modal */}
       <DocumentViewerModal
         isOpen={isDocumentModalOpen}
@@ -1357,7 +1484,7 @@ const Connaissances = () => {
       <QuizzModal
         isOpen={isQuizzOpen}
         onClose={handleCloseQuizzModal}
-        title={selectedDocument?.formation_steps === 'qcm' ? `Quiz: ${selectedDocument.topic}` : "Knowledge Assessment"}
+        title={selectedDocument?.document_title ?? 'Knowledge Assessment'}
         selectedTask={selectedDocument}
       />
     </div>

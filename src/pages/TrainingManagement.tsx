@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
-import { UploadTraining } from '@/components/UploadTraining';
 import { DocumentViewerModal } from '@/components/modals/DocumentViewerModal';
 import TrainingTaskCreationModal from '@/components/modals/TrainingTaskCreationModal';
 import PdfViewerModal from '@/components/modals/PdfViewerModal';
@@ -25,7 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useKnowledgeQueries } from '@/hooks/useKnowledgeQueries';
+import { useMyAssignedQueries } from '@/hooks/useMyAssignedFormations';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { sendTaskMovedEvent } from '@/lib/webhookService';
@@ -241,7 +240,7 @@ const KanbanColumn = ({
 
 const TrainingManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { data: knowledgeQueries, isLoading: loading, error, refetch } = useKnowledgeQueries();
+  const { data: knowledgeQueries, isLoading: loading, error, refetch } = useMyAssignedQueries();
   const trainingTasks = knowledgeQueries || [];
   const [selectedTask, setSelectedTask] = useState<KnowledgeQuery | null>(null);
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
@@ -832,8 +831,6 @@ const TrainingManagement = () => {
         }}
       />
       
-      {/* Floating Upload Training Button */}
-      <UploadTraining />
     </div>
   );
 };

@@ -196,20 +196,21 @@ const TrainingStatistics = () => {
                       ⚡ Dépêchez-vous de vous former !
                     </p>
                   )}
-                  <ResponsiveContainer width="100%" height={280}>
-                    <RadarChart data={radarData}>
-                      <PolarGrid stroke={GOLD} opacity={0.3} />
+                  <ResponsiveContainer width="100%" height={380}>
+                    <RadarChart data={radarData} outerRadius={130}>
+                      <PolarGrid gridType="circle" stroke={GOLD} opacity={0.4} />
                       <PolarAngleAxis
                         dataKey="category"
-                        tick={{ fill: GOLD, fontSize: 11 }}
+                        tick={{ fill: GOLD, fontSize: 10 }}
                       />
-                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: GOLD }} />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
                       <Radar
                         name="Score"
                         dataKey="score"
-                        stroke={GOLD}
+                        stroke={YELLOW}
+                        strokeWidth={2}
                         fill={GOLD}
-                        fillOpacity={0.6}
+                        fillOpacity={0.5}
                       />
                     </RadarChart>
                   </ResponsiveContainer>

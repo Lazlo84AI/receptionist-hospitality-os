@@ -608,7 +608,7 @@ function TabAttribution() {
         description: `${selectedVideoIds.size} vidéo${selectedVideoIds.size > 1 ? 's' : ''} définie${selectedVideoIds.size > 1 ? 's' : ''} comme écran d'accueil Sokle`,
       });
       setSelectedVideoIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos'] });
+      queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos_admin'] });
       queryClient.invalidateQueries({ queryKey: ['onboarding_videos'] });
     } catch (err: any) { toast({ title: 'Erreur', description: err.message, variant: 'destructive' }); }
     finally { setIsSending(false); }

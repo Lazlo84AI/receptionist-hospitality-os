@@ -133,12 +133,45 @@ const QuizzModal = ({
     setShowResult(true);
   };
 
-  const handleNext = () => {
+  const saveQuizResult = async (score: number, correctCount: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const answersDetail = finalQuestions.map(q => ({
+        question_id: q.id,
+        question: q.question,
+        selected: selectedAnswers[q.id] ?? null,
+        correct: q.correct_answer,
+        is_correct: selectedAnswers[q.id] === q.correct_answer,
+      }));
+
+      await (supabase as any).from('training_results').insert({
+        user_id: user.id,
+        document_name: selectedTask?.document_name ?? 'inconnu',
+        thematic: selectedTask?.thematic ?? null,
+        total_questions: totalQuestions,
+        correct_answers: correctCount,
+        score_percent: score,
+        answers_detail: answersDetail,
+      });
+    } catch (err) {
+      console.error('❌ Erreur saveQuizResult:', err);
+    }
+  };
+
+  const handleNext = async () => {
     if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setShowResult(false);
     } else {
-      // Quiz terminé
+      // Quiz terminé — calcul du score et sauvegarde
+      let correct = 0;
+      finalQuestions.forEach(q => {
+        if (selectedAnswers[q.id] === q.correct_answer) correct++;
+      });
+      const score = Math.round((correct / totalQuestions) * 100);
+      await saveQuizResult(score, correct);
       setQuizCompleted(true);
     }
   };
@@ -225,11 +258,8 @@ const QuizzModal = ({
         <DialogContent className="max-w-none w-screen h-screen m-0 p-0 bg-gradient-to-br from-blue-50 to-purple-50 border-0">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+            <div className="bg-white border-b px-6 py-4">
               <h2 className="text-xl font-semibold text-palace-navy">Quiz Results</h2>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-5 w-5" />
-              </Button>
             </div>
 
             {/* Résultats */}
