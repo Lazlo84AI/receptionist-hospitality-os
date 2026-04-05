@@ -36,7 +36,7 @@ interface StaffRow {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const SERVICES = ['Réception', 'Housekeeping', 'Petit Dejeuner', 'Espace Bien Etre', 'Maintenance', 'Direction'];
+const SERVICES = ['Réception', 'Housekeeping', 'Petit Dejeuner', 'Maintenance', 'Direction'];
 const HIERARCHY_OPTIONS = ['Normal', 'Manager', 'Direction'];
 const DURATION_OPTIONS = [2, 3, 4, 5, 6];
 
@@ -126,11 +126,14 @@ function useChains() {
 
 // ─── Tab : Video Briefs ───────────────────────────────────────────────────────
 
-function TabVideoBriefs() {
+function TabVideoBriefs({ onEditVideo }: { onEditVideo: (id: string) => void }) {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { data: videos = [], isLoading } = useVideos();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   function getEmbedUrl(url: string): string {
     const loom = url.match(/loom\.com\/share\/([a-zA-Z0-9]+)/);
@@ -141,6 +144,22 @@ function TabVideoBriefs() {
     if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}?modestbranding=1&rel=0`;
     return url;
   }
+
+  const handleDelete = async (v: VideoItem) => {
+    if (!window.confirm(`Supprimer « ${v.title} » définitivement ?`)) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('platform_tutorial_videos').delete().eq('id', v.id);
+      if (error) throw error;
+      toast({ title: '✅ Vidéo supprimée', description: `« ${v.title} » a été supprimée.` });
+      setSelectedVideo(null);
+      queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos_admin'] });
+      queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos'] });
+      queryClient.invalidateQueries({ queryKey: ['onboarding_videos'] });
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally { setIsDeleting(false); }
+  };
 
   const categories = useMemo(() => Array.from(new Set(videos.map(v => v.category))).sort(), [videos]);
   const filtered = useMemo(() => videos.filter(v => {
@@ -274,10 +293,25 @@ function TabVideoBriefs() {
                     <Play className="h-3 w-3" /> Ouvrir dans l'onglet
                   </a>
                   <button
-                    onClick={() => setSelectedVideo(null)}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-red-500/20"
+                    onClick={e => { e.stopPropagation(); onEditVideo(selectedVideo.id); setSelectedVideo(null); }}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+                    title="Modifier cette vidéo"
                   >
-                    <X className="h-4 w-4 text-red-400" />
+                    <Edit3 className="h-4 w-4" style={{ color: '#BBA57A' }} />
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDelete(selectedVideo); }}
+                    disabled={isDeleting}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-red-500/20"
+                    title="Supprimer cette vidéo"
+                  >
+                    {isDeleting ? <Loader2 className="h-4 w-4 text-red-400 animate-spin" /> : <Trash2 className="h-4 w-4 text-red-400" />}
+                  </button>
+                  <button
+                    onClick={() => setSelectedVideo(null)}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+                  >
+                    <X className="h-4 w-4" style={{ color: 'rgba(187,165,122,0.6)' }} />
                   </button>
                 </div>
               </div>
@@ -585,9 +619,25 @@ function TabAttribution() {
     finally { setIsSending(false); }
   };
 
+  // ── FIX 1 : handleSetOnboarding corrigé ──────────────────────────────────
   const handleSetOnboarding = async () => {
-    if (selectedVideoIds.size === 0) {
-      toast({ title: 'Sélectionnez au moins une vidéo', variant: 'destructive' }); return;
+    // Détermine les IDs vidéos selon le contentMode
+    let videoIdsToSet: string[];
+    if (contentMode === 'videos') {
+      if (selectedVideoIds.size === 0) {
+        toast({ title: 'Sélectionnez au moins une vidéo', variant: 'destructive' }); return;
+      }
+      videoIdsToSet = Array.from(selectedVideoIds);
+    } else {
+      // mode 'okr'
+      if (!selectedChainId) {
+        toast({ title: 'Sélectionnez une chaîne de vidéos', variant: 'destructive' }); return;
+      }
+      const chain = chains.find(c => c.id === selectedChainId);
+      if (!chain || chain.video_ids.length === 0) {
+        toast({ title: 'Cette chaîne ne contient aucune vidéo', variant: 'destructive' }); return;
+      }
+      videoIdsToSet = chain.video_ids;
     }
     setIsSending(true);
     try {
@@ -595,21 +645,40 @@ function TabAttribution() {
       const { error: e1 } = await supabase
         .from('platform_tutorial_videos')
         .update({ is_onboarding: false })
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // update all
+        .neq('id', '00000000-0000-0000-0000-000000000000');
       if (e1) throw e1;
       // 2. Mettre les sélectionnées à true
       const { error: e2 } = await supabase
         .from('platform_tutorial_videos')
         .update({ is_onboarding: true })
-        .in('id', Array.from(selectedVideoIds));
+        .in('id', videoIdsToSet);
       if (e2) throw e2;
+      // 3. Créer une entrée dans video_assignments pour la traçabilité Suivi
+      const onboardingBase = {
+        assignment_name: assignmentName.trim() || `Écran d'accueil Sokle — ${new Date().toLocaleDateString('fr-FR')}`,
+        video_ids: contentMode === 'videos' ? Array.from(selectedVideoIds) : [],
+        chain_id: contentMode === 'okr' ? selectedChainId : null,
+        deadline: deadlineMode === 'date' ? (deadline || null) : null,
+        duration_days: deadlineMode === 'duration' ? duration : null,
+        status: 'pending',
+      };
+      const onboardingPayloads =
+        mode === 'service' && selectedServices.size > 0
+          ? Array.from(selectedServices).map(svc => ({ ...onboardingBase, service: svc, assigned_to: null }))
+          : mode === 'individual' && selectedStaffIds.size > 0
+          ? Array.from(selectedStaffIds).map(id => ({ ...onboardingBase, assigned_to: id, service: null }))
+          : [{ ...onboardingBase, assigned_to: null, service: null }];
+      const { error: e3 } = await supabase.from('video_assignments').insert(onboardingPayloads);
+      if (e3) throw e3;
       toast({
-        title: '✅ Vidéos d\'entrée mises à jour',
-        description: `${selectedVideoIds.size} vidéo${selectedVideoIds.size > 1 ? 's' : ''} définie${selectedVideoIds.size > 1 ? 's' : ''} comme écran d'accueil Sokle`,
+        title: '✅ Vidéos d\'accueil mises à jour',
+        description: `${videoIdsToSet.length} vidéo${videoIdsToSet.length > 1 ? 's' : ''} définie${videoIdsToSet.length > 1 ? 's' : ''} comme écran d'accueil Sokle`,
       });
       setSelectedVideoIds(new Set());
+      setSelectedChainId(null);
       queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos_admin'] });
       queryClient.invalidateQueries({ queryKey: ['onboarding_videos'] });
+      queryClient.invalidateQueries({ queryKey: ['video_assignments'] });
     } catch (err: any) { toast({ title: 'Erreur', description: err.message, variant: 'destructive' }); }
     finally { setIsSending(false); }
   };
@@ -797,22 +866,26 @@ function TabAttribution() {
 
         {/* Boutons actions */}
         <div className="flex flex-col gap-2">
-          <button onClick={handleSend} disabled={isSending}
+          <button onClick={handleSetOnboarding} disabled={isSending || (contentMode === 'videos' ? selectedVideoIds.size === 0 : !selectedChainId)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
-            style={{ backgroundColor: 'rgba(187,165,122,0.2)', color: '#BBA57A', border: '1px solid rgba(187,165,122,0.4)' }}>
-            {isSending
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours…</>
-              : <><Send className="h-4 w-4" /> Envoyer le programme</>}
-          </button>
-          <button onClick={handleSetOnboarding} disabled={isSending || contentMode !== 'videos' || selectedVideoIds.size === 0}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
             style={{
-              backgroundColor: (contentMode === 'videos' && selectedVideoIds.size > 0) ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.05)',
-              color: (contentMode === 'videos' && selectedVideoIds.size > 0) ? '#60a5fa' : 'rgba(96,165,250,0.3)',
-              border: `1px solid ${(contentMode === 'videos' && selectedVideoIds.size > 0) ? 'rgba(96,165,250,0.4)' : 'rgba(96,165,250,0.1)'}`,
+              backgroundColor: (contentMode === 'videos' ? selectedVideoIds.size > 0 : !!selectedChainId) ? 'rgba(187,165,122,0.2)' : 'rgba(187,165,122,0.07)',
+              color: (contentMode === 'videos' ? selectedVideoIds.size > 0 : !!selectedChainId) ? '#BBA57A' : 'rgba(187,165,122,0.3)',
+              border: `1px solid ${(contentMode === 'videos' ? selectedVideoIds.size > 0 : !!selectedChainId) ? 'rgba(187,165,122,0.4)' : 'rgba(187,165,122,0.15)'}`,
             }}>
-            <Monitor className="h-4 w-4" />
-            Changer les vidéos d'entrée sur Sokle
+            {isSending
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> En cours…</>
+              : <><Monitor className="h-4 w-4" /> Changer les vidéos d'entrée sur Sokle</>}
+          </button>
+          <button disabled
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed"
+            style={{
+              backgroundColor: 'rgba(96,165,250,0.05)',
+              color: 'rgba(96,165,250,0.3)',
+              border: '1px solid rgba(96,165,250,0.1)',
+            }}>
+            <Send className="h-4 w-4" />
+            Envoyer le programme par mail ou whatsapp
           </button>
         </div>
       </div>
@@ -828,11 +901,11 @@ function TabAttribution() {
 
         {/* Toggle Vidéos / OKR */}
         <div className="flex rounded-lg p-0.5" style={{ backgroundColor: 'rgba(15,12,36,0.6)', border: '1px solid rgba(187,165,122,0.12)' }}>
-          {([['videos', Video, 'Vidéos'], ['okr', Target, 'OKR Chains']] as const).map(([m, Icon, label]) => (
-            <button key={m} onClick={() => setContentMode(m)}
+          {([['videos', Video, 'Vidéos'], ['okr', null, '🔗 Chaîne de vidéos']] as const).map(([m, Icon, label]) => (
+            <button key={m} onClick={() => setContentMode(m as ContentSelectorMode)}
               className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all"
               style={{ backgroundColor: contentMode === m ? 'rgba(187,165,122,0.18)' : 'transparent', color: contentMode === m ? '#BBA57A' : 'rgba(187,165,122,0.4)' }}>
-              <Icon className="h-4 w-4" />{label}
+              {Icon && <Icon className="h-4 w-4" />}{label}
             </button>
           ))}
         </div>
@@ -942,6 +1015,8 @@ function daysRemaining(a: VideoAssignment): number | null {
 }
 
 function TabSuivi() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [serviceFilter, setServiceFilter] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -963,13 +1038,14 @@ function TabSuivi() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('staff_directory')
-        .select('id, full_name, first_name, last_name, service');
+        .select('id, full_name, first_name, last_name, service, is_active');
       if (error) throw error;
-      const map: Record<string, { name: string; service: string }> = {};
+      const map: Record<string, { name: string; service: string; isActive: boolean }> = {};
       for (const s of data) {
         map[s.id] = {
           name: s.full_name || `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim(),
           service: s.service ?? '',
+          isActive: s.is_active ?? true,
         };
       }
       return map;
@@ -991,17 +1067,16 @@ function TabSuivi() {
     return m;
   }, [chains]);
 
-  const services = useMemo(() => {
-    const set = new Set<string>();
-    assignments.forEach(a => {
-      if (a.service) set.add(a.service);
-      if (a.assigned_to && staffMap[a.assigned_to]?.service) set.add(staffMap[a.assigned_to].service);
-    });
-    return Array.from(set).sort();
-  }, [assignments, staffMap]);
-
   const filtered = useMemo(() => assignments.filter(a => {
-    if (serviceFilter !== 'all') {
+    if (serviceFilter === 'actifs') {
+      if (a.status === 'completed') return false;
+      const r = daysRemaining(a);
+      if (r !== null && r < 0) return false;
+    } else if (serviceFilter === 'passes') {
+      const r = daysRemaining(a);
+      const isOverdue = r !== null && r < 0 && a.status !== 'completed';
+      if (!isOverdue && a.status !== 'completed') return false;
+    } else if (serviceFilter !== 'all') {
       const svc = a.service ?? staffMap[a.assigned_to ?? '']?.service ?? '';
       if (svc !== serviceFilter) return false;
     }
@@ -1013,27 +1088,43 @@ function TabSuivi() {
     return true;
   }), [assignments, serviceFilter, search, staffMap]);
 
-  // KPI vidéos depuis platform_tutorial_videos
-  const { data: videoStats = { total: 0, active: 0 } } = useQuery({
-    queryKey: ['tutorial_videos_stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('platform_tutorial_videos')
-        .select('is_active');
-      if (error) throw error;
-      return {
-        total: data.length,
-        active: data.filter(v => v.is_active).length,
-      };
-    },
-    staleTime: 1000 * 60,
-  });
+  const activeCount = useMemo(() => assignments.filter(a => {
+    if (a.status === 'completed') return false;
+    const r = daysRemaining(a);
+    return r === null || r >= 0;
+  }).length, [assignments]);
 
   const aChanger = useMemo(() => assignments.filter(a => {
     if (a.status === 'completed') return false;
     const r = daysRemaining(a);
     return r !== null && r < 0;
   }).length, [assignments]);
+
+  const handleDeleteAssignment = async (id: string, name: string) => {
+    if (!window.confirm(`Supprimer le programme « ${name} » définitivement ?`)) return;
+    try {
+      const { error } = await supabase.from('video_assignments').delete().eq('id', id);
+      if (error) throw error;
+      toast({ title: '✅ Programme supprimé', description: `« ${name} » a été supprimé.` });
+      queryClient.invalidateQueries({ queryKey: ['video_assignments'] });
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const unconfiguredStaff = useMemo(() => {
+    const assignedIds = new Set(
+      assignments.filter(a => a.assigned_to).map(a => a.assigned_to!)
+    );
+    const assignedServices = new Set(
+      assignments.filter(a => a.service).map(a => a.service!)
+    );
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const normAssignedServices = new Set(Array.from(assignedServices).map(norm));
+    return Object.entries(staffMap)
+      .filter(([id, s]) => s.isActive && !assignedIds.has(id) && !normAssignedServices.has(norm(s.service)))
+      .sort((a, b) => a[1].service.localeCompare(b[1].service));
+  }, [staffMap, assignments]);
 
   const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
     pending:     { label: 'Non démarré', color: 'rgba(187,165,122,0.7)', bg: 'rgba(187,165,122,0.1)' },
@@ -1047,9 +1138,9 @@ function TabSuivi() {
       {/* KPI vidéos */}
       <div className="grid grid-cols-3 gap-3">
         {([
-          ['Total vidéos',  videoStats.total,  Video,        '#BBA57A'],
-          ['En ligne',      videoStats.active, CheckCircle2, '#4ade80'],
-          ['À changer',     aChanger,          AlertTriangle,'#DEAE35'],
+        ['Programmes',  assignments.length, Video,        '#BBA57A'],
+        ['Actifs',      activeCount,        CheckCircle2, '#4ade80'],
+        ['À changer',   aChanger,           AlertTriangle,'#DEAE35'],
         ] as const).map(([label, count, Icon, color]) => (
           <div key={label} className="rounded-xl border p-4 flex items-center gap-3" style={cardStyle}>
             <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}18` }}>
@@ -1075,7 +1166,13 @@ function TabSuivi() {
           className="rounded-lg px-3 py-1.5 text-xs border outline-none"
           style={{ backgroundColor: 'rgba(15,12,36,0.7)', borderColor: 'rgba(187,165,122,0.25)', color: '#BBA57A', cursor: 'pointer' }}>
           <option value="all">Tous les services</option>
-          {services.map(s => <option key={s} value={s}>{s}</option>)}
+          <option value="actifs">Actifs</option>
+          <option value="passes">Passés</option>
+          <option value="Direction">Direction</option>
+          <option value="Réception">Réception</option>
+          <option value="Housekeeping">Housekeeping</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Petit Dejeuner">Petit Dejeuner</option>
         </select>
         <span className="ml-auto text-xs" style={{ color: 'rgba(187,165,122,0.4)' }}>
           {filtered.length} assignation{filtered.length !== 1 ? 's' : ''}
@@ -1097,9 +1194,9 @@ function TabSuivi() {
       ) : (
         <div className="rounded-xl border overflow-hidden" style={cardStyle}>
           {/* Header */}
-          <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr] gap-4 px-5 py-3"
+          <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_36px] gap-4 px-5 py-3"
             style={{ backgroundColor: 'rgba(15,12,36,0.6)', borderBottom: '1px solid rgba(187,165,122,0.12)' }}>
-            {['Collaborateur / Service', 'Programme · Contenus', 'Statut', 'Temps restant', 'Deadline'].map((h, i) => (
+            {['Collaborateur / Service', 'Programme · Contenus', 'Statut', 'Temps restant', 'Deadline', ''].map((h, i) => (
               <span key={i} className="text-xs font-medium" style={{ color: 'rgba(187,165,122,0.45)' }}>{h}</span>
             ))}
           </div>
@@ -1119,8 +1216,8 @@ function TabSuivi() {
 
             return (
               <div key={a.id}
-                className="grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr] gap-4 px-5 py-3.5 items-center transition-colors hover:bg-white/[0.02]"
-                style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(187,165,122,0.07)' : 'none' }}>
+              className="grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_36px] gap-4 px-5 py-3.5 items-center transition-colors hover:bg-white/[0.02]"
+              style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(187,165,122,0.07)' : 'none' }}>
                 {/* Cible */}
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
@@ -1165,9 +1262,36 @@ function TabSuivi() {
                 <span className="text-sm" style={{ color: isOverdue ? '#f87171' : 'rgba(187,165,122,0.6)' }}>
                   {deadlineStr}
                 </span>
+                {/* Supprimer */}
+                <button
+                  onClick={() => handleDeleteAssignment(a.id, a.assignment_name)}
+                  className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-red-500/20 transition-colors"
+                  title="Supprimer ce programme">
+                  <Trash2 className="h-3.5 w-3.5 text-red-400 opacity-50 hover:opacity-100" />
+                </button>
               </div>
             );
           })}
+        </div>
+      )}
+      {/* Non configurés */}
+      {unconfiguredStaff.length > 0 && (
+        <div className="rounded-xl border p-4 flex flex-col gap-3" style={cardStyle}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5" style={{ color: 'rgba(248,113,113,0.7)' }} />
+            <p className="text-xs font-medium" style={{ color: 'rgba(248,113,113,0.7)' }}>
+              Non configurés — {unconfiguredStaff.length} collaborateur{unconfiguredStaff.length > 1 ? 's' : ''} sans programme
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {unconfiguredStaff.map(([id, s]) => (
+              <span key={id} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: 'rgba(248,113,113,0.08)', color: 'rgba(248,113,113,0.65)', border: '1px solid rgba(248,113,113,0.18)' }}>
+                <User className="h-3 w-3 flex-shrink-0" />
+                {s.name}{s.service ? ` · ${s.service}` : ''}
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -1230,6 +1354,20 @@ function TabRoleHierarchy() {
       service:    p.service    ?? '',
       hierarchy:  p.hierarchy  ?? 'Normal',
     });
+  };
+
+  const handleDelete = async (p: StaffRow, displayName: string) => {
+    if (!window.confirm(`Supprimer « ${displayName} » définitivement ?\n\nCette action est irréversible.`)) return;
+    try {
+      const { error } = await supabase.from('staff_directory').delete().eq('id', p.id);
+      if (error) throw error;
+      toast({ title: '✅ Collaborateur supprimé', description: `« ${displayName} » a été retiré du staff.` });
+      queryClient.invalidateQueries({ queryKey: ['staff_directory_all'] });
+      queryClient.invalidateQueries({ queryKey: ['staff_directory_active'] });
+      queryClient.invalidateQueries({ queryKey: ['staff_directory_count'] });
+    } catch (err: any) {
+      toast({ title: 'Erreur suppression', description: err.message, variant: 'destructive' });
+    }
   };
 
   const saveEdit = async (id: string) => {
@@ -1360,11 +1498,16 @@ function TabRoleHierarchy() {
                       {p.hierarchy ?? 'Normal'}
                     </span>
                     {/* Action */}
-                    <div className="flex justify-end">
+                    <div className="flex items-center gap-1 justify-end">
                       <button onClick={() => openEdit(p)}
                         className="h-7 w-7 rounded-md flex items-center justify-center transition-colors hover:bg-white/10"
                         style={{ color: 'rgba(187,165,122,0.4)' }}>
                         <Edit3 className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(p, displayName)}
+                        className="h-7 w-7 rounded-md flex items-center justify-center transition-colors hover:bg-red-500/20"
+                        title="Supprimer ce collaborateur">
+                        <Trash2 className="h-3.5 w-3.5 text-red-400 opacity-50 hover:opacity-100" />
                       </button>
                     </div>
                   </div>
@@ -1458,15 +1601,16 @@ function TabRoleHierarchy() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: 'role-hierarchy', label: 'Role & Hierarchy', icon: Shield   },
   { id: 'video-briefs',   label: 'Video Briefs',     icon: Video    },
   { id: 'team-focus',     label: 'Team Focus',       icon: Target   },
   { id: 'attribution',    label: 'Attribution',      icon: Users    },
   { id: 'suivi',          label: 'Suivi',            icon: BarChart2},
-  { id: 'role-hierarchy', label: 'Role & Hierarchy', icon: Shield   },
 ];
 
 export default function TeamManagement() {
-  const [activeTab, setActiveTab] = useState<TabId>('video-briefs');
+  const [activeTab, setActiveTab] = useState<TabId>('role-hierarchy');
+  const [editVideoId, setEditVideoId] = useState<string | null>(null);
 
   const { data: videos = [] } = useVideos();
   const { data: chains = [] } = useChains();
@@ -1500,7 +1644,7 @@ export default function TeamManagement() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <KpiCard label="Vidéos disponibles" value={videos.length} icon={Video}  accent="#BBA57A" />
           <KpiCard label="Catégories"          value={categoryCount}  icon={Star}   accent="#DEAE35" />
-          <KpiCard label="Chaînes OKR"         value={chains.length}  icon={Target} accent="#E0D3B4" />
+          <KpiCard label="Chaînes de vidéos"   value={chains.length}  icon={Target} accent="#E0D3B4" />
           <KpiCard label="Collaborateurs"      value={staffCount}     icon={User}   accent="#4ade80" />
         </div>
 
@@ -1514,7 +1658,7 @@ export default function TeamManagement() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'video-briefs'   && <TabVideoBriefs />}
+        {activeTab === 'video-briefs'   && <TabVideoBriefs onEditVideo={(id) => { setEditVideoId(id); }} />}
         {activeTab === 'team-focus'     && <TabTeamFocus />}
         {activeTab === 'attribution'    && <TabAttribution />}
         {activeTab === 'suivi'          && <TabSuivi />}
@@ -1523,7 +1667,11 @@ export default function TeamManagement() {
       </div>
 
       {/* Bouton flottant upload vidéo */}
-      <UploadTutorialVideo />
+      <UploadTutorialVideo
+        forceOpen={!!editVideoId}
+        initialVideoId={editVideoId}
+        onForceClose={() => setEditVideoId(null)}
+      />
 
     </AdminLayout>
   );

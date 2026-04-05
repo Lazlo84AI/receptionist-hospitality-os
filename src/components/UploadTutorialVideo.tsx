@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Upload, X, Loader2, FileVideo, Link2,
   Tag, AlignLeft, Plus, ChevronDown,
@@ -313,7 +313,13 @@ const EMPTY_FORM: FormState = {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function UploadTutorialVideo() {
+interface UploadTutorialVideoProps {
+  forceOpen?: boolean;
+  initialVideoId?: string | null;
+  onForceClose?: () => void;
+}
+
+export function UploadTutorialVideo({ forceOpen, initialVideoId, onForceClose }: UploadTutorialVideoProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -336,6 +342,22 @@ export function UploadTutorialVideo() {
   });
 
   const set = (patch: Partial<FormState>) => setForm(prev => ({ ...prev, ...patch }));
+
+  // ── Ouverture forcée depuis le parent (bouton Modifier du popup vidéo) ──
+  useEffect(() => {
+    if (forceOpen && initialVideoId) {
+      setIsOpen(true);
+      set({ mode: 'update', existingId: initialVideoId });
+    }
+  }, [forceOpen, initialVideoId]);
+
+  // ── Auto-remplissage quand les vidéos sont chargées après ouverture forcée ──
+  useEffect(() => {
+    if (form.mode === 'update' && form.existingId && !form.title && existingVideos.length > 0) {
+      handleSelectExisting(form.existingId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingVideos, form.existingId]);
 
   const handleSelectExisting = (id: string) => {
     const v = existingVideos.find(x => x.id === id);
@@ -394,11 +416,12 @@ export function UploadTutorialVideo() {
         if (error) throw error;
         toast({ title: '✅ Vidéo mise à jour', description: `"${form.title}" a été modifiée.` });
       }
-      queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos_admin'] });
-      queryClient.invalidateQueries({ queryKey: ['platform_tutorial_videos'] }); // HelpButton
-      queryClient.invalidateQueries({ queryKey: ['onboarding_videos'] });
+      queryClient.refetchQueries({ queryKey: ['platform_tutorial_videos_admin'] });
+      queryClient.refetchQueries({ queryKey: ['platform_tutorial_videos'] });
+      queryClient.refetchQueries({ queryKey: ['onboarding_videos'] });
       setForm(EMPTY_FORM);
       setIsOpen(false);
+      onForceClose?.();
     } catch (err: any) {
       toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
     } finally {
@@ -406,7 +429,7 @@ export function UploadTutorialVideo() {
     }
   };
 
-  const close = () => { if (!isSubmitting) { setIsOpen(false); setForm(EMPTY_FORM); } };
+  const close = () => { if (!isSubmitting) { setIsOpen(false); setForm(EMPTY_FORM); onForceClose?.(); } };
 
   return (
     <>
