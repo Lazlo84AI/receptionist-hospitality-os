@@ -21,7 +21,7 @@ interface VideoItem {
   objectif_fonctionnel: string | null; url: string;
   keywords: string[]; sort_order: number; is_active: boolean; created_at: string;
 }
-interface VideoChain { id: string; name: string; video_ids: string[]; created_at: string; }
+interface VideoChain { id: string; name: string; video_ids: string[]; created_at: string; is_default: boolean; }
 interface StaffRow {
   id: string;
   first_name: string | null;
@@ -38,7 +38,7 @@ interface StaffRow {
 
 const SERVICES = ['Réception', 'Housekeeping', 'Petit Dejeuner', 'Maintenance', 'Direction'];
 const HIERARCHY_OPTIONS = ['Normal', 'Manager', 'Direction'];
-const DURATION_OPTIONS = [2, 3, 4, 5, 6];
+const DURATION_OPTIONS = [7, 14, 21, 30];
 
 // ─── Video Category Config ────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ function useChains() {
     queryKey: ['video_chains'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('video_chains').select('id, name, video_ids, created_at')
+        .from('video_chains').select('id, name, video_ids, created_at, is_default')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as VideoChain[];
@@ -396,6 +396,18 @@ function TabTeamFocus() {
     } catch (err: any) { toast({ title: 'Erreur', description: err.message, variant: 'destructive' }); }
   };
 
+  const setDefaultChain = async (id: string) => {
+    try {
+      // Retire is_default de toutes les chaînes
+      await (supabase as any).from('video_chains').update({ is_default: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+      // Set is_default sur la chaîne choisie
+      const { error } = await (supabase as any).from('video_chains').update({ is_default: true }).eq('id', id);
+      if (error) throw error;
+      toast({ title: '⭐ Chaîne par défaut définie' });
+      queryClient.invalidateQueries({ queryKey: ['video_chains'] });
+    } catch (err: any) { toast({ title: 'Erreur', description: err.message, variant: 'destructive' }); }
+  };
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       {/* ── Colonne gauche ── */}
@@ -403,7 +415,7 @@ function TabTeamFocus() {
         {/* Nom de la chaîne */}
         <div className="rounded-xl border p-4" style={cardStyle}>
           <label className="text-xs block mb-1.5" style={{ color: 'rgba(187,165,122,0.6)' }}>
-            Nom de la chaîne de vidéos / Objective Key Results
+            Nom de la chaîne de vidéos
           </label>
           <input type="text" placeholder="Ex: Onboarding Réception — Printemps 2025"
             value={chainName} onChange={e => setChainName(e.target.value)}
@@ -481,6 +493,13 @@ function TabTeamFocus() {
                     {chain.video_ids.length} vidéo{chain.video_ids.length > 1 ? 's' : ''}
                   </p>
                 </div>
+                <button
+                  onClick={() => !chain.is_default && setDefaultChain(chain.id)}
+                  title={chain.is_default ? 'Chaîne par défaut lorsqu\'aucune autre sélectionnée' : 'Définir comme chaîne par défaut'}
+                  className="h-6 w-6 flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
+                  style={{ color: chain.is_default ? '#DEAE35' : 'rgba(187,165,122,0.2)', cursor: chain.is_default ? 'default' : 'pointer' }}>
+                  <Star className="h-3.5 w-3.5" fill={chain.is_default ? '#DEAE35' : 'none'} />
+                </button>
                 <button onClick={() => deleteChain(chain.id, chain.name)}
                   className="h-6 w-6 flex items-center justify-center rounded-md hover:bg-red-500/20 transition-colors flex-shrink-0">
                   <Trash2 className="h-3.5 w-3.5 text-red-400 opacity-60 hover:opacity-100" />
@@ -553,7 +572,7 @@ function TabAttribution() {
   const [staffSearch, setStaffSearch] = useState('');
   const [deadlineMode, setDeadlineMode] = useState<'date' | 'duration'>('date');
   const [deadline, setDeadline] = useState('');
-  const [duration, setDuration] = useState(3);
+  const [duration, setDuration] = useState(14);
   const [contentMode, setContentMode] = useState<ContentSelectorMode>('videos');
   const [contentSearch, setContentSearch] = useState('');
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
@@ -592,7 +611,7 @@ function TabAttribution() {
   const handleSend = async () => {
     if (!assignmentName.trim()) { toast({ title: 'Nom requis', variant: 'destructive' }); return; }
     if (contentMode === 'videos' && selectedVideoIds.size === 0) { toast({ title: 'Sélectionnez au moins une vidéo', variant: 'destructive' }); return; }
-    if (contentMode === 'okr' && !selectedChainId) { toast({ title: 'Sélectionnez une chaîne OKR', variant: 'destructive' }); return; }
+    if (contentMode === 'okr' && !selectedChainId) { toast({ title: 'Sélectionnez une chaîne de vidéos', variant: 'destructive' }); return; }
     if (mode === 'individual' && selectedStaffIds.size === 0) { toast({ title: 'Sélectionnez au moins une personne', variant: 'destructive' }); return; }
     if (mode === 'service' && selectedServices.size === 0) { toast({ title: 'Sélectionnez au moins un service', variant: 'destructive' }); return; }
     setIsSending(true);
@@ -858,7 +877,7 @@ function TabAttribution() {
               <select value={duration} onChange={e => setDuration(Number(e.target.value))}
                 className="w-full rounded-lg px-3 py-2 text-sm outline-none border"
                 style={{ ...inputStyle, cursor: 'pointer' }}>
-                {DURATION_OPTIONS.map(d => <option key={d} value={d}>{d} jours</option>)}
+                {DURATION_OPTIONS.map(d => <option key={d} value={d}>{d === 7 ? '1 semaine' : d === 14 ? '2 semaines' : d === 21 ? '3 semaines' : '1 mois'}</option>)}
               </select>
             )}
           </div>
@@ -951,7 +970,7 @@ function TabAttribution() {
           ) : filteredChains.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Target className="h-8 w-8 mb-2 opacity-20" style={{ color: '#BBA57A' }} />
-              <p className="text-sm" style={{ color: 'rgba(187,165,122,0.4)' }}>Aucune chaîne OKR créée</p>
+              <p className="text-sm" style={{ color: 'rgba(187,165,122,0.4)' }}>Aucune chaîne de vidéos créée</p>
               <p className="text-xs mt-1" style={{ color: 'rgba(187,165,122,0.3)' }}>Créez des chaînes dans l'onglet Team Focus</p>
             </div>
           ) : (
@@ -1196,7 +1215,7 @@ function TabSuivi() {
           {/* Header */}
           <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_36px] gap-4 px-5 py-3"
             style={{ backgroundColor: 'rgba(15,12,36,0.6)', borderBottom: '1px solid rgba(187,165,122,0.12)' }}>
-            {['Collaborateur / Service', 'Programme · Contenus', 'Statut', 'Temps restant', 'Deadline', ''].map((h, i) => (
+            {['Collaborateur / Service', 'Programme · Contenus', 'Statut', 'Temps restant', 'Échéance', ''].map((h, i) => (
               <span key={i} className="text-xs font-medium" style={{ color: 'rgba(187,165,122,0.45)' }}>{h}</span>
             ))}
           </div>
@@ -1208,7 +1227,7 @@ function TabSuivi() {
             const remaining = daysRemaining(a);
             const isOverdue = remaining !== null && remaining < 0 && a.status !== 'completed';
             const contentLabels = a.chain_id
-              ? [chainMap[a.chain_id] ?? 'Chaîne OKR']
+              ? [chainMap[a.chain_id] ?? 'Chaîne de vidéos']
               : a.video_ids.slice(0, 2).map(id => videoMap[id] ?? id).concat(a.video_ids.length > 2 ? [`+${a.video_ids.length - 2}`] : []);
             const deadlineStr = a.deadline
               ? new Date(a.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
@@ -1601,11 +1620,11 @@ function TabRoleHierarchy() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'role-hierarchy', label: 'Role & Hierarchy', icon: Shield   },
-  { id: 'video-briefs',   label: 'Video Briefs',     icon: Video    },
-  { id: 'team-focus',     label: 'Team Focus',       icon: Target   },
-  { id: 'attribution',    label: 'Attribution',      icon: Users    },
-  { id: 'suivi',          label: 'Suivi',            icon: BarChart2},
+  { id: 'role-hierarchy', label: 'Rôles & Hiérarchie', icon: Shield   },
+  { id: 'video-briefs',   label: 'Vidéothèque',        icon: Video    },
+  { id: 'team-focus',     label: 'Chaînes de vidéos',  icon: Target   },
+  { id: 'attribution',    label: 'Attribution',        icon: Users    },
+  { id: 'suivi',          label: 'Suivi',              icon: BarChart2},
 ];
 
 export default function TeamManagement() {
@@ -1633,10 +1652,10 @@ export default function TeamManagement() {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-1">
             <Users className="h-6 w-6" style={{ color: '#BBA57A' }} />
-            <h1 className="text-2xl font-semibold text-white">Team Management</h1>
+            <h1 className="text-2xl font-semibold text-white">Gestion de l'équipe</h1>
           </div>
           <p className="text-sm" style={{ color: 'rgba(187,165,122,0.5)' }}>
-            Vidéos · Chaînes OKR · Attribution · Rôles & hiérarchie
+            Vidéos · Chaînes de vidéos · Attribution · Rôles & hiérarchie
           </p>
         </div>
 

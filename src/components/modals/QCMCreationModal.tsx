@@ -45,47 +45,25 @@ export function QCMCreationModal({ isOpen, onClose }: QCMCreationModalProps) {
       return;
     }
 
-    setIsGenerating(true);
+    // Fire-and-forget — A2 prend ~3min, on n'attend pas la réponse
+    fetch('https://sokle.app.n8n.cloud/webhook/generate-qcm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        document_name: selectedFormation.document_name,
+        document_url: selectedFormation.document_url,
+        thematic: selectedFormation.thematic
+      })
+    }).catch(() => {}); // timeout attendu, on ignore
 
-    try {
-      // Appel du webhook N8N pour générer le QCM
-      const response = await fetch('https://sokle.app.n8n.cloud/webhook/generate-qcm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          document_name: selectedFormation.document_name,
-          document_url: selectedFormation.document_url,
-          thematic: selectedFormation.thematic
-        })
-      });
+    toast({
+      title: "✅ Génération lancée",
+      description: `Les questions pour "${selectedFormation.document_name}" sont en cours de création (2-3 min)`,
+    });
 
-      if (!response.ok) {
-        throw new Error(`Webhook failed with status: ${response.status}`);
-      }
-
-      toast({
-        title: "QCM generation started",
-        description: `QCM creation for "${selectedFormation.document_name}" has been initiated successfully`,
-        variant: "default",
-      });
-
-      // Réinitialiser et fermer
-      setSelectedFormationId(null);
-      setSearchQuery('');
-      onClose();
-
-    } catch (error) {
-      console.error('Error generating QCM:', error);
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred while generating the QCM",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+    setSelectedFormationId(null);
+    setSearchQuery('');
+    onClose();
   };
 
   const handleClose = () => {

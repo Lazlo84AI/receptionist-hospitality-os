@@ -36,6 +36,7 @@ export function OnboardingCarousel({ open, onClose }: OnboardingCarouselProps) {
   const { data: slides = [], isLoading } = useQuery({
     queryKey: ['onboarding_videos'],
     queryFn: async () => {
+      // 1. Vidéos marquées is_onboarding
       const { data, error } = await supabase
         .from('platform_tutorial_videos')
         .select('id, title, url, sort_order')
@@ -43,12 +44,29 @@ export function OnboardingCarousel({ open, onClose }: OnboardingCarouselProps) {
         .eq('is_onboarding', true)
         .order('sort_order');
       if (error) throw error;
-      return (data ?? []).map(v => ({
-        id: v.id,
-        title: v.title,
-        videoUrl: v.url,
-        sort_order: v.sort_order,
-      })) as OnboardingSlide[];
+
+      if (data && data.length > 0) {
+        return data.map(v => ({ id: v.id, title: v.title, videoUrl: v.url, sort_order: v.sort_order })) as OnboardingSlide[];
+      }
+
+      // 2. Fallback : chaîne is_default = true
+      const { data: defaultChain } = await (supabase as any)
+        .from('video_chains')
+        .select('video_ids')
+        .eq('is_default', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!defaultChain?.video_ids?.length) return [];
+
+      const { data: fallbackVideos } = await supabase
+        .from('platform_tutorial_videos')
+        .select('id, title, url, sort_order')
+        .in('id', defaultChain.video_ids)
+        .eq('is_active', true)
+        .order('sort_order');
+
+      return ((fallbackVideos ?? []).map(v => ({ id: v.id, title: v.title, videoUrl: v.url, sort_order: v.sort_order }))) as OnboardingSlide[];
     },
     staleTime: 1000 * 60 * 5,
   });

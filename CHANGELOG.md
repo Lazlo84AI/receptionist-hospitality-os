@@ -1,3 +1,27 @@
+## 2026-04-09
+
+### feat: Team Management — traductions FR, durées semaines, fallback vidéos, chaîne par défaut
+
+**`src/pages/admin/TeamOnboarding.tsx`**
+- Labels OKR supprimés : "/ Objective Key Results" retiré du label champ nom chaîne, toast "Sélectionnez une chaîne OKR" → "chaîne de vidéos", état vide "Aucune chaîne OKR créée" → "de vidéos", sous-titre header "Chaînes OKR" → "Chaînes de vidéos"
+- `DURATION_OPTIONS` : `[2,3,4,5,6]` jours → `[7,14,21,30]` jours avec labels lisibles (1 semaine / 2 semaines / 3 semaines / 1 mois)
+- Valeur par défaut `duration` : `3` → `14` (2 semaines)
+- Onglets traduits : 'Role & Hierarchy' → 'Rôles & Hiérarchie', 'Video Briefs' → 'Vidéothèque', 'Team Focus' → 'Chaînes de vidéos'
+- Titre page : 'Team Management' → 'Gestion de l\'équipe'
+- Colonne Suivi : 'Deadline' → 'Échéance'
+- Fallback label chaîne introuvable : 'Chaîne OKR' → 'Chaîne de vidéos'
+- Ajout colonne `is_default` dans l'interface `VideoChain` + fetch
+- Nouvelle fonction `setDefaultChain()` : reset toutes les chaînes à `false` puis set la sélectionnée à `true`
+- Bouton étoile ⭐ sur chaque chaîne existante : dorée = défaut actif, creuse au hover = définir comme défaut ; tooltip "Chaîne par défaut lorsqu'aucune autre sélectionnée"
+
+**`src/components/help/OnboardingCarousel.tsx`**
+- Fallback en 2 temps : Query 1 = vidéos `is_onboarding = true` ; Query 2 (si vide) = vidéos de la chaîne `is_default = true` → écran noir impossible
+
+**Supabase**
+- `ALTER TABLE video_chains ADD COLUMN is_default boolean DEFAULT false;`
+
+---
+
 ## 2026-04-02
 
 ### fix: Système de pièces jointes — upload Storage, affichage et suppression

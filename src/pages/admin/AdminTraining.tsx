@@ -12,6 +12,8 @@ import {
   Brain,
   Dumbbell,
   FlaskConical,
+  HelpCircle,
+  Hand,
   Search,
   Trash2,
   Eye,
@@ -94,7 +96,7 @@ const STEP_CONFIG: Record<string, {
   },
   training: {
     label: 'Training',
-    icon: Dumbbell,
+    icon: Brain,
     color: '#BBA57A',
     bg: 'rgba(187,165,122,0.12)',
     border: 'rgba(187,165,122,0.4)',
@@ -102,7 +104,7 @@ const STEP_CONFIG: Record<string, {
   },
   qcm: {
     label: 'QCM',
-    icon: Brain,
+    icon: HelpCircle,
     color: '#DEAE35',
     bg: 'rgba(222,174,53,0.1)',
     border: 'rgba(222,174,53,0.4)',
@@ -110,7 +112,7 @@ const STEP_CONFIG: Record<string, {
   },
   practice: {
     label: 'Practice',
-    icon: FlaskConical,
+    icon: Hand,
     color: '#8b83b8',
     bg: 'rgba(30,26,55,0.35)',
     border: 'rgba(139,131,184,0.35)',
@@ -274,10 +276,16 @@ function ItemCard({
       <div className="px-4 pt-4 pb-3 flex items-start justify-between">
         {/* Emoji thématique dans le carré */}
         <div
-          className="h-11 w-11 rounded-xl flex items-center justify-center text-2xl shadow-lg"
-          style={{ backgroundColor: themCfg.iconBg, backdropFilter: 'blur(4px)' }}
+          className="h-11 w-11 rounded-xl flex items-center justify-center shadow-lg"
+          style={{
+            backgroundColor: item.formation_steps === 'formation' ? themCfg.iconBg : cfg.bg,
+            backdropFilter: 'blur(4px)',
+          }}
         >
-          {themCfg.emoji}
+          {item.formation_steps === 'formation'
+            ? <span className="text-2xl">{themCfg.emoji}</span>
+            : <Icon className="h-6 w-6" style={{ color: cfg.color }} />
+          }
         </div>
 
         {/* Actions (visible on hover) */}
@@ -308,9 +316,9 @@ function ItemCard({
       <div className="px-4 pb-3 flex-1">
         <h3
           className="text-sm font-bold text-white mb-1 line-clamp-2 leading-snug drop-shadow-sm"
-          title={item.document_name}
+          title={item.document_title}
         >
-          {item.document_name}
+          {item.document_title}
         </h3>
         <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {item.thematic}
