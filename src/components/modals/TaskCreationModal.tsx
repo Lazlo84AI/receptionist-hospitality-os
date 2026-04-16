@@ -38,6 +38,7 @@ const services = [
   { id: 'reception', label: 'Reception', enumRole: 'receptionist' },
   { id: 'housekeeping', label: 'Housekeeping', enumRole: 'Housekeeping Supervisor' },
   { id: 'maintenance', label: 'Maintenance', enumRole: 'tech maintenance team' },
+  { id: 'direction', label: 'Direction', enumRole: 'Director' },
 ];
 
 interface TaskCreationModalProps {
@@ -550,6 +551,8 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
                             return member.department === 'Reception';
                           case 'maintenance':
                             return member.department === 'Maintenance';
+                          case 'direction':
+                            return member.service === 'Direction' || member.department === 'Direction';
                           default:
                             return false;
                         }

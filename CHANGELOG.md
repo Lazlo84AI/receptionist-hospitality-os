@@ -854,6 +854,46 @@ Refonte de la page `ServiceControl2` pour les managers : mise en avant des colon
 - Container : `flex gap-3 overflow-x-auto` — wrappers des colonnes en `flex-none w-12` (replié) ou `flex-none w-[85vw] md:flex-1` (ouvert) pour compatibilité mobile scroll horizontal + desktop flex
 - Resolved et Verified visibles immédiatement, occupent tout l'espace disponible
 
+## [2026-04-09 / 2026-04-10]
+
+### fix: Pipeline RAG + QCM — correction complète de bout en bout
+
+**Contexte**
+Après suppression et recréation manuelle de la collection Qdrant `RAGMistral2`, le pipeline A1 tournait en vert mais insérait 0 points dans Qdrant. A2 ne pouvait donc pas générer de QCMs. Plusieurs bugs en cascade ont été identifiés et corrigés.
+
+---
+
+**N8N A1 — The Trainer's Brain**
+
+- `Prepare Embedding` : les 3 expressions lisaient depuis `HTTP Request1` (retour Supabase INSERT vide). Corrigé avec `$if($('Edit Fields').isExecuted, ...)` couvrant les 3 branches d'exécution possibles (PDF sans images → `Edit Fields`, PDF avec images → `Edit Fields1`, fichier image direct → `Edit Fields3`)
+- `AI Agent1 - competences mapping` : le prompt lisait `$json.markdown` (undefined). Corrigé en `$json.finalMarkdown`
+- `HTTP Request RAG` : `On Error` passé de `Stop Workflow` à `Continue` pour absorber les timeout 524 Cloudflare (A2 prend 2-3 min, Cloudflare coupe à 100s)
+
+**N8N A2 — The Evaluator**
+
+- `Qdrant Vector Store1` : toggle `Rerank Results` désactivé (slot Reranker vide → Bad Request)
+- `Code in JavaScript` : bloc `catch` remplacé par `throw new Error(...)` — stoppe proprement le pipeline au lieu de passer un item corrompu à HTTP Request QCM
+- `Webhook` : headers CORS ajoutés (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`) pour autoriser les appels depuis le front
+- `HTTP Request QCM` : header `Prefer: resolution=merge-duplicates` ajouté pour gérer les upserts
+
+**Supabase SQL**
+
+- Trigger `sync_training_questions_to_knowledge_queries` : ajout de `ON CONFLICT (document_title) DO NOTHING` sur l'INSERT dans `knowledge_queries` — corrige le crash race condition quand plusieurs exécutions A2 parallèles tentent de créer le même `document_title`
+- Index Qdrant créés via console REST : `metadata.document_name` (keyword) et `metadata.thematic` (keyword) sur la collection `RAGMistral2` pour optimiser les recherches avec 30+ documents
+- Suppression des 15 questions orphelines sous `document = 'Votre role a l\'hotel dequesne'` (silo mort créé lors d'un test avec titre différent)
+
+**Frontend — `src/components/modals/QCMCreationModal.tsx`**
+
+- `handleCreateQCM` : transformé en fire-and-forget — le fetch N8N est lancé sans `await`, la modal se ferme immédiatement avec un toast de confirmation. Suppression du try/catch qui bloquait l'UI pendant 3 minutes avant de planter sur le timeout 524
+
+**Frontend — `src/pages/admin/AdminTraining.tsx`**
+
+- `STEP_CONFIG` : icônes mises à jour — `training` → `Brain`, `qcm` → `HelpCircle`, `practice` → `Hand`
+- `ItemCard` : pictogramme principal conditionnel — `formation` affiche l'emoji thématique, les autres types (`qcm`, `training`, `practice`) affichent l'icône de leur `STEP_CONFIG`
+- `ItemCard` : titre affiché depuis `document_title` au lieu de `document_name` — les QCMs affichent désormais `"Votre role au Duquesne Hotel - QCM v1"` / `"- QCM v2"` etc. au lieu du même nom pour tous
+
+---
+
 ### feat: My Analytics — Page de statistiques personnelles
 
 **Concept**
