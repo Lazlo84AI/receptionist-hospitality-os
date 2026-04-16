@@ -2,10 +2,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { AdminLayout } from './AdminLayout';
 import {
   BarChart3, Users, CheckCircle2, TrendingUp,
-  Activity, Award, Zap, Target,
+  Activity, Award, Zap, Target, Clock, AlertTriangle,
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   AreaChart, Area, ScatterChart, Scatter, ZAxis,
 } from 'recharts';
@@ -28,7 +28,7 @@ const SERVICE_COLORS: Record<string, string> = {
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AnalyticsTab = 'services' | 'individual' | 'trainingIndividual' | 'trainingServices';
+type AnalyticsTab = 'shiftServices' | 'shiftIndividual' | 'services' | 'individual' | 'trainingIndividual' | 'trainingServices';
 type IndivTrainTab = 'byIndividual' | 'byFormation' | 'byCompetence';
 type SvcTrainTab   = 'byService'   | 'byFormation' | 'byCompetence';
 
@@ -112,6 +112,88 @@ const MemberRow = ({ member, rank }: { member: UserTaskStats; rank: number }) =>
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// ─── Shift Member Row (individual shift management) ───────────────────────────
+const ShiftMemberRow = ({
+  row, rank, dailyData,
+}: {
+  row: any;
+  rank: number;
+  dailyData: { date: string; started: number; completed: number }[];
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const svcColor  = SERVICE_COLORS[row.service || ''] || GOLD;
+  const rateColor = row.rate >= 80 ? '#4ade80' : row.rate >= 50 ? YELLOW : '#f87171';
+  const initials  = row.display_name
+    ? (row.display_name.split(' ')[0]?.[0] || '') + (row.display_name.split(' ')[1]?.[0] || '')
+    : '?';
+
+  return (
+    <div className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}>
+
+      {/* Hover chart — apparaît au-dessus de la ligne */}
+      {hovered && dailyData.length > 0 && (
+        <div className="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-xl border p-4 shadow-2xl"
+          style={{ background: '#0F0C24', borderColor: svcColor + '44', minHeight: 130 }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: svcColor }}>
+            {row.display_name} — évolution shifts
+          </p>
+          <ResponsiveContainer width="100%" height={85}>
+            <LineChart data={dailyData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="started"   name="Démarrés"  stroke="#4ade80" strokeWidth={2} dot={{ fill: '#4ade80', r: 3 }} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="completed" name="Clôturés"  stroke={GOLD}    strokeWidth={2} dot={{ fill: GOLD, r: 3 }}    activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Ligne principale */}
+      <div className="flex items-center gap-4 rounded-xl px-4 py-3 transition-all duration-200 cursor-default"
+        style={{ background: hovered ? 'rgba(187,165,122,0.06)' : 'transparent', border: `1px solid ${hovered ? CARD_BORDER : 'transparent'}` }}>
+        <span className="text-sm font-bold w-6 text-center flex-shrink-0" style={{ color: rank <= 3 ? YELLOW : 'rgba(255,255,255,0.3)' }}>
+          {rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `#${rank}`}
+        </span>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+          style={{ background: `${svcColor}22`, color: svcColor, border: `1px solid ${svcColor}44` }}>
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white truncate">{row.display_name}</p>
+          <p className="text-xs" style={{ color: svcColor + '99' }}>{serviceLabel(row.service)}</p>
+        </div>
+        <div className="hidden md:flex items-center gap-5 text-xs">
+          <div className="text-center">
+            <p className="font-bold" style={{ color: YELLOW }}>{row.started}</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)' }}>démarrés</p>
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-green-400">{row.completed}</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)' }}>clôturés</p>
+          </div>
+          <div className="text-center">
+            <p className="font-bold" style={{ color: row.unclosed > 0 ? '#f87171' : 'rgba(255,255,255,0.2)' }}>{row.unclosed}</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)' }}>non fermés</p>
+          </div>
+        </div>
+        <div className="w-28 flex-shrink-0">
+          <div className="flex justify-between text-xs mb-1">
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>sérieux</span>
+            <span style={{ color: rateColor }} className="font-bold">{row.rate}%</span>
+          </div>
+          <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${row.rate}%`, background: rateColor }} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -286,7 +368,7 @@ function SubTabBar({ tabs, active, onChange }: {
   );
 }
 
-// ─── Formation cards (réutilisé dans les 2 sections training) ─────────────────
+// ─── Formation cards ─────────────────────────────────────────────────────────
 function FormationCards({ formationStats, trainingLoading }: { formationStats: any[]; trainingLoading: boolean }) {
   return (
     <div className="rounded-xl border" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
@@ -305,18 +387,9 @@ function FormationCards({ formationStats, trainingLoading }: { formationStats: a
             <div key={f.document_name} className="rounded-xl p-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(187,165,122,0.12)' }}>
               <p className="text-sm font-medium text-white mb-3 leading-snug">{f.document_name}</p>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-lg font-bold" style={{ color: YELLOW }}>{f.participant_count}</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>passants</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold" style={{ color: f.avg_score >= 70 ? '#4ade80' : f.avg_score >= 50 ? YELLOW : '#f87171' }}>{f.avg_score}%</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>score moyen</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold" style={{ color: f.success_rate >= 70 ? '#4ade80' : f.success_rate >= 50 ? GOLD : '#f87171' }}>{f.success_rate}%</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>réussite</p>
-                </div>
+                <div><p className="text-lg font-bold" style={{ color: YELLOW }}>{f.participant_count}</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>passants</p></div>
+                <div><p className="text-lg font-bold" style={{ color: f.avg_score >= 70 ? '#4ade80' : f.avg_score >= 50 ? YELLOW : '#f87171' }}>{f.avg_score}%</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>score moyen</p></div>
+                <div><p className="text-lg font-bold" style={{ color: f.success_rate >= 70 ? '#4ade80' : f.success_rate >= 50 ? GOLD : '#f87171' }}>{f.success_rate}%</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>réussite</p></div>
               </div>
               <div className="mt-3 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
                 <div className="h-1 rounded-full" style={{ width: `${f.success_rate}%`, background: f.success_rate >= 70 ? '#4ade80' : f.success_rate >= 50 ? GOLD : '#f87171' }} />
@@ -329,7 +402,7 @@ function FormationCards({ formationStats, trainingLoading }: { formationStats: a
   );
 }
 
-// ─── Competence radars (réutilisé dans les 2 sections training) ───────────────
+// ─── Competence radars ────────────────────────────────────────────────────────
 function CompetenceRadars({ serviceRadars, trainingLoading }: { serviceRadars: any[]; trainingLoading: boolean }) {
   return trainingLoading ? (
     <div className="p-8 text-center text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>Chargement…</div>
@@ -366,17 +439,47 @@ function CompetenceRadars({ serviceRadars, trainingLoading }: { serviceRadars: a
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function TeamAnalytics() {
-  const { teamStats, benchmarks, loading } = useMyStatistics();
-  const [periodFilter, setPeriodFilter] = useState<'day'|'week'|'month'>('month');
+  const { teamStats, benchmarks, loading, refetch: refetchStats } = useMyStatistics();
 
+  // ── Period filter state ────────────────────────────────────────────────────
+  const [periodFilter, setPeriodFilter] = useState<'day'|'week'|'month'|'custom'>('month');
+  const [pendingStart, setPendingStart] = useState<string>(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  const [pendingEnd,   setPendingEnd]   = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [appliedStart, setAppliedStart] = useState<string>(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  const [appliedEnd,   setAppliedEnd]   = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  // ── Raw per-user day data ──────────────────────────────────────────────────
+  const [rawDayRows,  setRawDayRows]  = useState<any[]>([]);
+  const [rawLoading,  setRawLoading]  = useState(true);
   const [allTimeseries, setAllTimeseries] = useState<TimeseriesEntry[]>([]);
+
+  // ── Shifts state ───────────────────────────────────────────────────────────
+  const [periodShifts,       setPeriodShifts]       = useState<{ started: number; completed: number } | null>(null);
+  const [periodShiftDetails, setPeriodShiftDetails] = useState<any[]>([]);
+
+  // ── Fetch timeseries ───────────────────────────────────────────────────────
   useEffect(() => {
+    setRawLoading(true);
     supabase
       .from('v_tasks_timeseries')
-      .select('period_type, period, period_label, tasks_created, tasks_completed')
+      .select('period_type, period, period_label, tasks_created, tasks_completed, staff_id, display_name, service')
       .order('period', { ascending: true })
       .then(({ data }) => {
-        if (!data) return;
+        if (!data) { setRawLoading(false); return; }
+        setRawDayRows(
+          data
+            .filter((r: any) => r.period_type === 'day')
+            .map((r: any) => ({
+              staff_id:        r.staff_id        || '',
+              display_name:    r.display_name    || '',
+              service:         r.service         || null,
+              period:          r.period          as string,
+              period_label:    r.period_label    as string,
+              tasks_created:   Number(r.tasks_created)   || 0,
+              tasks_completed: Number(r.tasks_completed) || 0,
+            }))
+        );
+        setRawLoading(false);
         const map = new Map<string, { period_label: string; tasks_created: number; tasks_completed: number }>();
         data.forEach((r: any) => {
           const key = `${r.period_type}__${r.period}`;
@@ -397,12 +500,189 @@ export default function TeamAnalytics() {
       });
   }, []);
 
-  const activeMembers     = teamStats.filter(m => !m.is_inactive).length;
-  const totalShiftsActive = teamStats.reduce((s, m) => s + m.shifts_active, 0);
-  const totalTasksToday   = teamStats.reduce((s, m) => s + m.tasks_created_today, 0);
-  const totalCreated      = teamStats.reduce((s, m) => s + m.tasks_created_total, 0);
-  const totalCompleted    = teamStats.reduce((s, m) => s + m.tasks_completed, 0);
-  const globalRate        = resolutionRate(totalCreated, totalCompleted);
+  // ── Active range ───────────────────────────────────────────────────────────
+  const activeRange = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    if (periodFilter === 'day') return { start: todayStr, end: todayStr };
+    if (periodFilter === 'week') {
+      const d = new Date(now);
+      const dow = d.getDay();
+      d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+      return { start: d.toISOString().slice(0, 10), end: todayStr };
+    }
+    if (periodFilter === 'month') return { start: `${todayStr.slice(0, 7)}-01`, end: todayStr };
+    return { start: appliedStart, end: appliedEnd };
+  }, [periodFilter, appliedStart, appliedEnd]);
+
+  // ── Fetch shifts for active range ──────────────────────────────────────────
+  useEffect(() => {
+    setPeriodShifts(null);
+    setPeriodShiftDetails([]);
+    supabase
+      .from('shifts')
+      .select('id, user_id, status, start_time, end_time, service')
+      .gte('start_time', `${activeRange.start}T00:00:00`)
+      .lte('start_time', `${activeRange.end}T23:59:59`)
+      .then(({ data }) => {
+        const rows = data || [];
+        setPeriodShiftDetails(rows);
+        setPeriodShifts({
+          started:   rows.length,
+          completed: rows.filter((s: any) => s.status === 'completed' && s.end_time != null).length,
+        });
+      });
+  }, [activeRange.start, activeRange.end]);
+
+  // ── Period KPIs (tasks) ────────────────────────────────────────────────────
+  const periodKPIs = useMemo(() => {
+    const filtered  = rawDayRows.filter(r => r.period >= activeRange.start && r.period <= activeRange.end);
+    const created   = filtered.reduce((s, r) => s + r.tasks_created,   0);
+    const completed = filtered.reduce((s, r) => s + r.tasks_completed, 0);
+    return { created, completed, rate: resolutionRate(created, completed) };
+  }, [rawDayRows, activeRange]);
+
+  // ── Period ranking ─────────────────────────────────────────────────────────
+  const periodRanking = useMemo((): UserTaskStats[] => {
+    const filtered = rawDayRows.filter(r => r.period >= activeRange.start && r.period <= activeRange.end);
+    const byStaff  = new Map<string, { display_name: string; service: string | null; created: number; completed: number }>();
+    filtered.forEach(r => {
+      if (!r.staff_id) return;
+      const prev = byStaff.get(r.staff_id);
+      if (prev) { prev.created += r.tasks_created; prev.completed += r.tasks_completed; }
+      else byStaff.set(r.staff_id, { display_name: r.display_name, service: r.service, created: r.tasks_created, completed: r.tasks_completed });
+    });
+    teamStats.forEach(m => {
+      if (!byStaff.has(m.staff_id))
+        byStaff.set(m.staff_id, { display_name: m.display_name, service: m.service, created: 0, completed: 0 });
+    });
+    return Array.from(byStaff.entries())
+      .map(([staff_id, d]) => {
+        const orig = teamStats.find(m => m.staff_id === staff_id);
+        return {
+          ...(orig ?? {}),
+          staff_id,
+          auth_user_id:             orig?.auth_user_id             ?? '',
+          display_name:             d.display_name,
+          service:                  d.service,
+          first_name:               orig?.first_name               ?? null,
+          last_name:                orig?.last_name                ?? null,
+          role:                     orig?.role                     ?? '',
+          department:               orig?.department               ?? null,
+          hierarchy:                orig?.hierarchy                ?? null,
+          is_active:                orig?.is_active                ?? true,
+          avatar_url:               orig?.avatar_url               ?? null,
+          tasks_created_total:      d.created,
+          tasks_completed:          d.completed,
+          tasks_in_progress:        orig?.tasks_in_progress        ?? 0,
+          tasks_pending:            orig?.tasks_pending            ?? 0,
+          incidents_count:          orig?.incidents_count          ?? 0,
+          client_requests_count:    orig?.client_requests_count    ?? 0,
+          follow_ups_count:         orig?.follow_ups_count         ?? 0,
+          internal_tasks_count:     orig?.internal_tasks_count     ?? 0,
+          tasks_assigned_total:     orig?.tasks_assigned_total     ?? 0,
+          tasks_assigned_completed: orig?.tasks_assigned_completed ?? 0,
+          tasks_created_today:      orig?.tasks_created_today      ?? 0,
+          tasks_created_this_week:  orig?.tasks_created_this_week  ?? 0,
+          tasks_created_this_month: orig?.tasks_created_this_month ?? 0,
+          shifts_total:             orig?.shifts_total             ?? 0,
+          shifts_active:            orig?.shifts_active            ?? 0,
+          shifts_completed:         orig?.shifts_completed         ?? 0,
+          shifts_today:             orig?.shifts_today             ?? 0,
+          shifts_this_week:         orig?.shifts_this_week         ?? 0,
+          shifts_this_month:        orig?.shifts_this_month        ?? 0,
+          last_shift_at:            orig?.last_shift_at            ?? null,
+          last_task_created_at:     orig?.last_task_created_at     ?? null,
+          is_inactive:              orig?.is_inactive              ?? false,
+        } as UserTaskStats;
+      })
+      .sort((a, b) => b.tasks_created_total - a.tasks_created_total);
+  }, [rawDayRows, activeRange, teamStats]);
+
+  // ── Shifts par service (inclut tous les services de l'equipe) ─────────────
+  const shiftsByService = useMemo(() => {
+    const acc: Record<string, { started: number; completed: number; unclosed: number }> = {};
+
+    // Pré-initialiser tous les services connus depuis teamStats (meme avec 0)
+    teamStats.forEach(m => {
+      const svc = m.service ? m.service.toLowerCase().trim() : null;
+      if (svc && !acc[svc]) acc[svc] = { started: 0, completed: 0, unclosed: 0 };
+    });
+
+    // Remplir avec les données réelles de shifts
+    periodShiftDetails.forEach(s => {
+      const memberSvc = teamStats.find(m => m.staff_id === s.user_id);
+      const svc = (s.service || memberSvc?.service || 'N/A').toLowerCase().trim();
+      if (!acc[svc]) acc[svc] = { started: 0, completed: 0, unclosed: 0 };
+      acc[svc].started++;
+      if (s.status === 'completed' && s.end_time != null) acc[svc].completed++;
+      else acc[svc].unclosed++;
+    });
+
+    return Object.entries(acc)
+      .map(([service, d]) => ({
+        service,
+        started:   d.started,
+        completed: d.completed,
+        unclosed:  d.unclosed,
+        rate:      d.started > 0 ? Math.round((d.completed / d.started) * 100) : 0,
+      }))
+      .sort((a, b) => b.started - a.started);
+  }, [periodShiftDetails, teamStats]);
+
+  // ── Shifts par individu (inclut tous les membres) ─────────────────────────
+  const shiftsByUser = useMemo(() => {
+    const acc: Record<string, { started: number; completed: number; unclosed: number; display_name: string; service: string | null }> = {};
+    periodShiftDetails.forEach(s => {
+      const uid = s.user_id;
+      if (!uid) return;
+      if (!acc[uid]) {
+        const member = teamStats.find(m => m.staff_id === uid);
+        acc[uid] = {
+          started:      0,
+          completed:    0,
+          unclosed:     0,
+          display_name: member?.display_name || 'Inconnu',
+          service:      s.service || member?.service || null,
+        };
+      }
+      acc[uid].started++;
+      if (s.status === 'completed' && s.end_time != null) acc[uid].completed++;
+      else acc[uid].unclosed++;
+    });
+    // Inclure TOUS les membres meme sans shift
+    teamStats.forEach(m => {
+      if (!acc[m.staff_id]) {
+        acc[m.staff_id] = { started: 0, completed: 0, unclosed: 0, display_name: m.display_name, service: m.service };
+      }
+    });
+    return Object.entries(acc)
+      .map(([user_id, d]) => ({ ...d, user_id, rate: d.started > 0 ? Math.round((d.completed / d.started) * 100) : 0 }))
+      .sort((a, b) => b.started - a.started);
+  }, [periodShiftDetails, teamStats]);
+
+  // ── Timeline de shifts par user (pour hover chart) ─────────────────────────
+  const userDailyShifts = useMemo(() => {
+    const dailyMap: Record<string, Record<string, { started: number; completed: number }>> = {};
+    periodShiftDetails.forEach(s => {
+      if (!s.user_id || !s.start_time) return;
+      const date = (s.start_time as string).slice(0, 10);
+      if (!dailyMap[s.user_id]) dailyMap[s.user_id] = {};
+      if (!dailyMap[s.user_id][date]) dailyMap[s.user_id][date] = { started: 0, completed: 0 };
+      dailyMap[s.user_id][date].started++;
+      if (s.status === 'completed' && s.end_time) dailyMap[s.user_id][date].completed++;
+    });
+    const result: Record<string, { date: string; started: number; completed: number }[]> = {};
+    Object.entries(dailyMap).forEach(([uid, dates]) => {
+      result[uid] = Object.entries(dates)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, d]) => ({ date: date.slice(5), ...d })); // MM-DD
+    });
+    return result;
+  }, [periodShiftDetails]);
+
+  // ── Shared computations ────────────────────────────────────────────────────
+  const activeMembers = teamStats.filter(m => !m.is_inactive).length;
 
   const serviceBarData = benchmarks.map(b => ({
     name: serviceLabel(b.service),
@@ -414,39 +694,45 @@ export default function TeamAnalytics() {
   const maxTasks  = Math.max(...benchmarks.map(b => b.avg_tasks_created), 1);
   const maxShifts = Math.max(...benchmarks.map(b => b.avg_shifts_completed), 1);
   const radarData = benchmarks.map(b => ({
-    subject: serviceLabel(b.service),
+    subject:    serviceLabel(b.service),
     tasks:      Math.round((b.avg_tasks_created / maxTasks) * 100),
     résolution: resolutionRate(b.avg_tasks_created, b.avg_tasks_completed),
     shifts:     Math.round((b.avg_shifts_completed / maxShifts) * 100),
   }));
 
-  const chartTimeseries = allTimeseries
-    .filter(t => t.period_type === periodFilter)
-    .map(t => ({ label: t.period_label, Créées: t.tasks_created, Closes: t.tasks_completed }));
+  const chartTimeseries = useMemo(() => {
+    if (periodFilter === 'custom') {
+      return allTimeseries
+        .filter(t => t.period_type === 'day' && t.period >= appliedStart && t.period <= appliedEnd)
+        .map(t => ({ label: t.period_label, Créées: t.tasks_created, Closes: t.tasks_completed }));
+    }
+    return allTimeseries
+      .filter(t => t.period_type === periodFilter)
+      .map(t => ({ label: t.period_label, Créées: t.tasks_created, Closes: t.tasks_completed }));
+  }, [allTimeseries, periodFilter, appliedStart, appliedEnd]);
 
   const categories = [
     { name: 'Incidents',       value: teamStats.reduce((s,m) => s + m.incidents_count, 0),       color: '#f87171' },
     { name: 'Demandes client', value: teamStats.reduce((s,m) => s + m.client_requests_count, 0), color: GOLD },
     { name: 'Follow-ups',      value: teamStats.reduce((s,m) => s + m.follow_ups_count, 0),      color: YELLOW },
-    { name: 'Tâches internes', value: teamStats.reduce((s,m) => s + m.internal_tasks_count, 0), color: '#6B8CBA' },
+    { name: 'Tâches internes', value: teamStats.reduce((s,m) => s + m.internal_tasks_count, 0),  color: '#6B8CBA' },
   ].filter(c => c.value > 0);
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  const [activeTab,          setActiveTab]          = useState<AnalyticsTab>('services');
-  const [indivTrainTab,      setIndivTrainTab]      = useState<IndivTrainTab>('byIndividual');
-  const [svcTrainTab,        setSvcTrainTab]        = useState<SvcTrainTab>('byService');
-  const [selectedMemberId,   setSelectedMemberId]   = useState<string | null>(null);
+  const periodLabel = periodFilter === 'day'   ? "aujourd'hui"
+    : periodFilter === 'week'  ? 'cette semaine'
+    : periodFilter === 'month' ? 'ce mois'
+    : `${activeRange.start} → ${activeRange.end}`;
+
+  const kpiLoading = loading || rawLoading;
+
+  // ── Sub-tabs state ─────────────────────────────────────────────────────────
+  const [activeTab,        setActiveTab]        = useState<AnalyticsTab>('shiftServices');
+  const [indivTrainTab,    setIndivTrainTab]    = useState<IndivTrainTab>('byIndividual');
+  const [svcTrainTab,      setSvcTrainTab]      = useState<SvcTrainTab>('byService');
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   const { memberStats, formationStats, serviceRadars, memberCompetencies, loading: trainingLoading } = useTrainingAnalytics();
 
-  const kpis = [
-    { label: 'Shifts actifs',   value: totalShiftsActive, icon: <Activity size={16}/>, color: '#4ade80' },
-    { label: 'Tâches du jour',  value: totalTasksToday,   icon: <Zap size={16}/>,      color: YELLOW },
-    { label: 'Taux résolution', value: `${globalRate}%`,  icon: <Target size={16}/>,   color: globalRate > 70 ? '#4ade80' : globalRate > 40 ? YELLOW : '#f87171' },
-    { label: 'Membres actifs',  value: activeMembers,     icon: <Users size={16}/>,    color: GOLD },
-  ];
-
-  // Par Service aggregation (computed)
   const byServiceAgg = useMemo(() => {
     const acc: any = {};
     memberStats.forEach(m => {
@@ -465,6 +751,14 @@ export default function TeamAnalytics() {
     }));
   }, [memberStats]);
 
+  const shiftBarData = shiftsByService.map(s => ({
+    name:         serviceLabel(s.service),
+    'Démarrés':   s.started,
+    'Clôturés':   s.completed,
+    'Non fermés': s.unclosed,
+  }));
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
       <div className="p-6 max-w-7xl mx-auto">
@@ -480,45 +774,265 @@ export default function TeamAnalytics() {
               Performance globale de l'équipe Decœur Hotels — vue Direction
             </p>
           </div>
-          <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: CARD_BORDER }}>
-            {(['day','week','month'] as const).map(p => (
-              <button key={p} onClick={() => setPeriodFilter(p)} className="px-3 py-1.5 text-xs font-medium transition-colors"
-                style={{ background: periodFilter === p ? GOLD : 'transparent', color: periodFilter === p ? '#13102B' : 'rgba(255,255,255,0.5)' }}>
-                {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois'}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: CARD_BORDER }}>
+              {(['day','week','month'] as const).map(p => (
+                <button key={p} onClick={() => setPeriodFilter(p)} className="px-3 py-1.5 text-xs font-medium transition-colors"
+                  style={{ background: periodFilter === p ? GOLD : 'transparent', color: periodFilter === p ? '#13102B' : 'rgba(255,255,255,0.5)' }}>
+                  {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois'}
+                </button>
+              ))}
+              <button onClick={() => setPeriodFilter('custom')} className="px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{ background: periodFilter === 'custom' ? GOLD : 'transparent', color: periodFilter === 'custom' ? '#13102B' : 'rgba(255,255,255,0.5)', borderLeft: `1px solid ${CARD_BORDER}` }}>
+                Periode
               </button>
-            ))}
+            </div>
+            {periodFilter === 'custom' && (
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>Du</span>
+                  <input type="date" value={pendingStart} onChange={e => setPendingStart(e.target.value)}
+                    className="rounded-lg px-2 py-1 text-xs outline-none"
+                    style={{ background: 'rgba(30,26,55,0.9)', border: `1px solid ${CARD_BORDER}`, color: GOLD, colorScheme: 'dark' }} />
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>au</span>
+                  <input type="date" value={pendingEnd} onChange={e => setPendingEnd(e.target.value)}
+                    className="rounded-lg px-2 py-1 text-xs outline-none"
+                    style={{ background: 'rgba(30,26,55,0.9)', border: `1px solid ${CARD_BORDER}`, color: GOLD, colorScheme: 'dark' }} />
+                </div>
+                <button
+                  onClick={() => { setAppliedStart(pendingStart); setAppliedEnd(pendingEnd); refetchStats(); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+                  style={{ background: GOLD, color: '#13102B' }}>
+                  Appliquer aux statistiques
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* KPI Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {kpis.map(kpi => (
-            <div key={kpi.label} className="rounded-xl p-5 border flex items-start gap-3" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${kpi.color}18`, color: kpi.color }}>{kpi.icon}</div>
-              <div>
-                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{kpi.label}</p>
-                <p className="text-2xl font-bold" style={{ color: loading ? 'rgba(255,255,255,0.2)' : kpi.color }}>{loading ? '—' : kpi.value}</p>
-              </div>
+          <div className="rounded-xl p-5 border flex items-start gap-3" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${YELLOW}18`, color: YELLOW }}><Zap size={16}/></div>
+            <div>
+              <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Tâches {periodLabel}</p>
+              <p className="text-2xl font-bold" style={{ color: kpiLoading ? 'rgba(255,255,255,0.2)' : YELLOW }}>{kpiLoading ? '—' : periodKPIs.created}</p>
             </div>
-          ))}
+          </div>
+          <div className="rounded-xl p-5 border flex items-start gap-3" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+            {(() => {
+              const c = periodKPIs.rate > 70 ? '#4ade80' : periodKPIs.rate > 40 ? YELLOW : '#f87171';
+              return (<>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${c}18`, color: c }}><Target size={16}/></div>
+                <div>
+                  <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Taux résolution</p>
+                  <p className="text-2xl font-bold" style={{ color: kpiLoading ? 'rgba(255,255,255,0.2)' : c }}>{kpiLoading ? '—' : `${periodKPIs.rate}%`}</p>
+                </div>
+              </>);
+            })()}
+          </div>
+          <div className="rounded-xl p-5 border flex items-start gap-3" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: '#4ade8018', color: '#4ade80' }}><Activity size={16}/></div>
+            <div className="flex-1">
+              <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Shifts {periodLabel}</p>
+              {kpiLoading || !periodShifts ? (
+                <p className="text-2xl font-bold" style={{ color: 'rgba(255,255,255,0.2)' }}>—</p>
+              ) : (
+                <div>
+                  <p className="text-xl font-bold leading-tight" style={{ color: '#4ade80' }}>
+                    {periodShifts.started}<span className="text-xs font-normal ml-1" style={{ color: 'rgba(255,255,255,0.35)' }}>démarrés</span>
+                  </p>
+                  <p className="text-sm font-semibold mt-0.5" style={{ color: GOLD }}>
+                    {periodShifts.completed}<span className="text-xs font-normal ml-1" style={{ color: 'rgba(255,255,255,0.35)' }}>clôturés</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl p-5 border flex items-start gap-3" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${GOLD}18`, color: GOLD }}><Users size={16}/></div>
+            <div>
+              <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Membres actifs</p>
+              <p className="text-2xl font-bold" style={{ color: loading ? 'rgba(255,255,255,0.2)' : GOLD }}>{loading ? '—' : activeMembers}</p>
+            </div>
+          </div>
         </div>
 
-        {/* ── Tab Navigation : 4 onglets ────────────────────────────────── */}
-        <div className="flex items-center gap-1 p-1 rounded-xl mb-6 w-fit"
+        {/* ── Tab Navigation : 6 onglets — pleine largeur ───────────────── */}
+        <div className="flex items-center p-1 rounded-xl mb-6 w-full"
           style={{ backgroundColor: 'rgba(30,26,55,0.9)', border: '1px solid rgba(187,165,122,0.15)' }}>
           {([
-            { id: 'services',          label: 'Services Task Management',   icon: BarChart3 },
-            { id: 'individual',        label: 'Individual Task Management', icon: Users },
-            { id: 'trainingIndividual',label: 'Individual Training Results', icon: Award },
-            { id: 'trainingServices',  label: 'Services Training Results',  icon: Target },
+            { id: 'shiftServices',      label: 'Services Shift',           icon: Clock },
+            { id: 'shiftIndividual',    label: 'Individual Shift',         icon: AlertTriangle },
+            { id: 'services',           label: 'Services Task Management', icon: BarChart3 },
+            { id: 'individual',         label: 'Individual Task',          icon: Users },
+            { id: 'trainingIndividual', label: 'Individual Training',      icon: Award },
+            { id: 'trainingServices',   label: 'Services Training',        icon: Target },
           ] as { id: AnalyticsTab; label: string; icon: any }[]).map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
+              className="flex flex-1 items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-all duration-200"
               style={activeTab === id ? { backgroundColor: 'rgba(187,165,122,0.18)', color: '#BBA57A' } : { color: 'rgba(187,165,122,0.45)' }}>
-              <Icon size={14} />{label}
+              <Icon size={13} />{label}
             </button>
           ))}
         </div>
+
+        {/* ══════════ SERVICES SHIFT MANAGEMENT ══════════ */}
+        {activeTab === 'shiftServices' && (
+          <div>
+            {periodShifts && (
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="rounded-xl p-5 border flex items-center gap-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#4ade8022', color: '#4ade80' }}><Activity size={18}/></div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Shifts démarrés</p>
+                    <p className="text-3xl font-bold" style={{ color: '#4ade80' }}>{periodShifts.started}</p>
+                  </div>
+                </div>
+                <div className="rounded-xl p-5 border flex items-center gap-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${GOLD}22`, color: GOLD }}><CheckCircle2 size={18}/></div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Shifts clôturés</p>
+                    <p className="text-3xl font-bold" style={{ color: GOLD }}>{periodShifts.completed}</p>
+                  </div>
+                </div>
+                <div className="rounded-xl p-5 border flex items-center gap-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${periodShifts.started - periodShifts.completed > 0 ? '#f87171' : '#4ade80'}22`, color: periodShifts.started - periodShifts.completed > 0 ? '#f87171' : '#4ade80' }}><AlertTriangle size={18}/></div>
+                  <div>
+                    <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Non fermés</p>
+                    <p className="text-3xl font-bold" style={{ color: periodShifts.started - periodShifts.completed > 0 ? '#f87171' : '#4ade80' }}>
+                      {periodShifts.started - periodShifts.completed}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="rounded-xl border p-5" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock size={14} style={{ color: GOLD }} />
+                  <p className="text-sm font-semibold text-white">Shifts par service</p>
+                  <span className="text-xs ml-1 px-2 py-0.5 rounded-md" style={{ background: 'rgba(187,165,122,0.12)', color: GOLD }}>{periodLabel}</span>
+                </div>
+                {shiftBarData.length === 0 ? (
+                  <div className="h-52 flex items-center justify-center text-sm" style={{ color: 'rgba(255,255,255,0.2)' }}>Aucune donnée</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={shiftBarData} barCategoryGap="30%">
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(187,165,122,0.05)' }} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }} />
+                      <Bar dataKey="Démarrés"   fill="#4ade80" radius={[4,4,0,0]} />
+                      <Bar dataKey="Clôturés"   fill={GOLD}    radius={[4,4,0,0]} />
+                      <Bar dataKey="Non fermés" fill="#f87171" radius={[4,4,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+              <div className="space-y-3">
+                {shiftsByService.length === 0 ? (
+                  <div className="rounded-xl border p-10 text-center text-sm" style={{ background: CARD_BG, borderColor: CARD_BORDER, color: 'rgba(255,255,255,0.2)' }}>
+                    Aucun shift sur cette période
+                  </div>
+                ) : shiftsByService.map(s => {
+                  const svcColor  = SERVICE_COLORS[s.service?.toLowerCase() || ''] || GOLD;
+                  const rateColor = s.rate >= 80 ? '#4ade80' : s.rate >= 50 ? YELLOW : '#f87171';
+                  return (
+                    <div key={s.service} className="rounded-xl border p-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: svcColor }} />
+                        <p className="text-sm font-semibold text-white">{serviceLabel(s.service)}</p>
+                        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-md" style={{ background: `${rateColor}22`, color: rateColor }}>
+                          {s.rate}% sérieux
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 text-center mb-3">
+                        <div><p className="text-xl font-bold" style={{ color: '#4ade80' }}>{s.started}</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>démarrés</p></div>
+                        <div><p className="text-xl font-bold" style={{ color: GOLD }}>{s.completed}</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>clôturés</p></div>
+                        <div><p className="text-xl font-bold" style={{ color: s.unclosed > 0 ? '#f87171' : 'rgba(255,255,255,0.2)' }}>{s.unclosed}</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>non fermés</p></div>
+                      </div>
+                      <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                        <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${s.rate}%`, background: rateColor }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════ INDIVIDUAL SHIFT MANAGEMENT ══════════ */}
+        {activeTab === 'shiftIndividual' && (
+          <div>
+            {periodShifts && (
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="rounded-xl p-5 border flex items-center gap-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#4ade8022', color: '#4ade80' }}><Activity size={18}/></div>
+                  <div><p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Shifts démarrés</p><p className="text-3xl font-bold" style={{ color: '#4ade80' }}>{periodShifts.started}</p></div>
+                </div>
+                <div className="rounded-xl p-5 border flex items-center gap-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${GOLD}22`, color: GOLD }}><CheckCircle2 size={18}/></div>
+                  <div><p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Shifts clôturés</p><p className="text-3xl font-bold" style={{ color: GOLD }}>{periodShifts.completed}</p></div>
+                </div>
+                <div className="rounded-xl p-5 border flex items-center gap-4" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#f8717122', color: '#f87171' }}><AlertTriangle size={18}/></div>
+                  <div><p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Non fermés</p><p className="text-3xl font-bold" style={{ color: periodShifts.started - periodShifts.completed > 0 ? '#f87171' : '#4ade80' }}>{periodShifts.started - periodShifts.completed}</p></div>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-xl border" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+              <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: CARD_BORDER }}>
+                <AlertTriangle size={15} style={{ color: GOLD }} />
+                <p className="text-sm font-semibold text-white">Classement shifts — sérieux de déclaration</p>
+                <span className="text-xs ml-2 px-2 py-0.5 rounded-md" style={{ background: 'rgba(187,165,122,0.12)', color: GOLD }}>{periodLabel}</span>
+                <span className="ml-auto text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{shiftsByUser.length} membres</span>
+              </div>
+              <div className="hidden md:flex items-center gap-4 px-5 py-2 border-b text-xs" style={{ borderColor: 'rgba(187,165,122,0.06)', color: 'rgba(255,255,255,0.3)' }}>
+                <span className="w-6 flex-shrink-0" /><span className="w-8 flex-shrink-0" /><span className="flex-1" />
+                <div className="flex items-center gap-5 mr-4">
+                  <span className="w-16 text-center">démarrés</span>
+                  <span className="w-16 text-center">clôturés</span>
+                  <span className="w-16 text-center" style={{ color: '#f87171' }}>non fermés</span>
+                </div>
+                <span className="w-28 text-right">taux sérieux</span>
+              </div>
+              {!periodShifts ? (
+                <div className="p-6 space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-12 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }} />)}</div>
+              ) : shiftsByUser.length === 0 ? (
+                <div className="p-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.2)' }}>Aucun shift sur cette période</div>
+              ) : (
+                <div className="p-3 space-y-1">
+                  {shiftsByUser.map((row, i) => (
+                    <ShiftMemberRow
+                      key={row.user_id || row.display_name + i}
+                      row={row}
+                      rank={i + 1}
+                      dailyData={userDailyShifts[row.user_id] || []}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {periodShifts && (periodShifts.started - periodShifts.completed) > 0 && (
+              <div className="mt-4 rounded-xl border px-5 py-4 flex items-start gap-3" style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.25)' }}>
+                <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#f87171' }} />
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#f87171' }}>
+                    {periodShifts.started - periodShifts.completed} shift{periodShifts.started - periodShifts.completed > 1 ? 's' : ''} non fermé{periodShifts.started - periodShifts.completed > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(248,113,113,0.7)' }}>
+                    Ces shifts ont été démarrés mais jamais clôturés. Rappeler aux membres concernés de fermer leur shift après chaque prise de service.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ══════════ SERVICES TASK MANAGEMENT ══════════ */}
         {activeTab === 'services' && (<>
@@ -636,14 +1150,15 @@ export default function TeamAnalytics() {
             <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: CARD_BORDER }}>
               <Users size={15} style={{ color: GOLD }} />
               <p className="text-sm font-semibold text-white">Classement équipe</p>
-              <span className="ml-auto text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{teamStats.length} membres</span>
+              <span className="text-xs ml-2 px-2 py-0.5 rounded-md" style={{ background: 'rgba(187,165,122,0.12)', color: GOLD }}>{periodLabel}</span>
+              <span className="ml-auto text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{periodRanking.length} membres</span>
             </div>
-            {loading ? (
+            {kpiLoading ? (
               <div className="p-6 space-y-2">{[1,2,3,4,5].map(i => <div key={i} className="h-12 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }} />)}</div>
-            ) : teamStats.length === 0 ? (
+            ) : periodRanking.length === 0 ? (
               <div className="p-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.2)' }}>Aucun membre trouvé</div>
             ) : (
-              <div className="p-3 space-y-1">{teamStats.map((m, i) => <MemberRow key={m.staff_id} member={m} rank={i + 1} />)}</div>
+              <div className="p-3 space-y-1">{periodRanking.map((m, i) => <MemberRow key={m.staff_id} member={m} rank={i + 1} />)}</div>
             )}
           </div>
           <IndividualBubbleChart teamStats={teamStats} loading={loading} />
@@ -661,16 +1176,12 @@ export default function TeamAnalytics() {
               active={indivTrainTab}
               onChange={(id) => setIndivTrainTab(id as IndivTrainTab)}
             />
-
-            {/* Par Individu */}
             {indivTrainTab === 'byIndividual' && (
               <div className="rounded-xl border" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
                 <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: CARD_BORDER }}>
                   <Users size={15} style={{ color: GOLD }} />
                   <p className="text-sm font-semibold text-white">Résultats par membre</p>
-                  <span className="ml-auto text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    {memberStats.length} membres — cliquer pour voir le radar
-                  </span>
+                  <span className="ml-auto text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{memberStats.length} membres — cliquer pour voir le radar</span>
                 </div>
                 {trainingLoading ? (
                   <div className="p-8 text-center text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>Chargement…</div>
@@ -688,9 +1199,9 @@ export default function TeamAnalytics() {
                       </thead>
                       <tbody>
                         {memberStats.map((m, i) => {
-                          const svcColor  = SERVICE_COLORS[m.service || ''] || GOLD;
+                          const svcColor   = SERVICE_COLORS[m.service || ''] || GOLD;
                           const isSelected = selectedMemberId === m.user_id;
-                          const dateStr   = m.last_completed_at
+                          const dateStr    = m.last_completed_at
                             ? (() => { try { return format(parseISO(m.last_completed_at), 'd MMM yyyy', { locale: fr }); } catch { return '—'; } })()
                             : '—';
                           return (
@@ -710,13 +1221,9 @@ export default function TeamAnalytics() {
                                   </div>
                                 </td>
                                 <td className="px-5 py-3">
-                                  <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: svcColor + '20', color: svcColor }}>
-                                    {serviceLabel(m.service)}
-                                  </span>
+                                  <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: svcColor + '20', color: svcColor }}>{serviceLabel(m.service)}</span>
                                 </td>
-                                <td className="px-5 py-3 text-center">
-                                  <span className="font-bold" style={{ color: YELLOW }}>{m.quiz_count}</span>
-                                </td>
+                                <td className="px-5 py-3 text-center"><span className="font-bold" style={{ color: YELLOW }}>{m.quiz_count}</span></td>
                                 <td className="px-5 py-3">
                                   <div className="flex items-center gap-2">
                                     <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', minWidth: 60 }}>
@@ -725,15 +1232,12 @@ export default function TeamAnalytics() {
                                     <span className="text-xs font-bold w-10 text-right" style={{ color: m.avg_score >= 70 ? '#4ade80' : m.avg_score >= 50 ? YELLOW : '#f87171' }}>{m.avg_score}%</span>
                                   </div>
                                 </td>
-                                <td className="px-5 py-3 text-center">
-                                  <span className="font-bold" style={{ color: GOLD }}>{m.best_score}%</span>
-                                </td>
+                                <td className="px-5 py-3 text-center"><span className="font-bold" style={{ color: GOLD }}>{m.best_score}%</span></td>
                                 <td className="px-5 py-3 text-xs" style={{ color: 'rgba(255,255,255,0.45)', maxWidth: 200 }}>
                                   <p className="truncate">{m.last_document}</p>
                                   <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>{dateStr}</p>
                                 </td>
                               </tr>
-                              {/* Radar expand */}
                               {isSelected && (() => {
                                 const radar  = memberCompetencies[m.user_id];
                                 const sColor = SERVICE_COLORS[m.service || ''] || GOLD;
@@ -772,16 +1276,8 @@ export default function TeamAnalytics() {
                 )}
               </div>
             )}
-
-            {/* Par Formation */}
-            {indivTrainTab === 'byFormation' && (
-              <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} />
-            )}
-
-            {/* Par Compétence */}
-            {indivTrainTab === 'byCompetence' && (
-              <CompetenceRadars serviceRadars={serviceRadars} trainingLoading={trainingLoading} />
-            )}
+            {indivTrainTab === 'byFormation' && <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} />}
+            {indivTrainTab === 'byCompetence' && <CompetenceRadars serviceRadars={serviceRadars} trainingLoading={trainingLoading} />}
           </div>
         )}
 
@@ -797,8 +1293,6 @@ export default function TeamAnalytics() {
               active={svcTrainTab}
               onChange={(id) => setSvcTrainTab(id as SvcTrainTab)}
             />
-
-            {/* Par Service */}
             {svcTrainTab === 'byService' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {trainingLoading ? (
@@ -814,22 +1308,10 @@ export default function TeamAnalytics() {
                         <p className="text-sm font-semibold text-white">{serviceLabel(sd.service)}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xl font-bold" style={{ color: YELLOW }}>{sd.quizzes}</p>
-                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>QCMs passés</p>
-                        </div>
-                        <div>
-                          <p className="text-xl font-bold" style={{ color: GOLD }}>{sd.members}</p>
-                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>membres</p>
-                        </div>
-                        <div>
-                          <p className="text-xl font-bold" style={{ color: sd.avg_score >= 70 ? '#4ade80' : sd.avg_score >= 50 ? YELLOW : '#f87171' }}>{sd.avg_score}%</p>
-                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>score moyen</p>
-                        </div>
-                        <div>
-                          <p className="text-xl font-bold" style={{ color: sd.success_rate >= 70 ? '#4ade80' : sd.success_rate >= 50 ? GOLD : '#f87171' }}>{sd.success_rate}%</p>
-                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>réussite</p>
-                        </div>
+                        <div><p className="text-xl font-bold" style={{ color: YELLOW }}>{sd.quizzes}</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>QCMs passés</p></div>
+                        <div><p className="text-xl font-bold" style={{ color: GOLD }}>{sd.members}</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>membres</p></div>
+                        <div><p className="text-xl font-bold" style={{ color: sd.avg_score >= 70 ? '#4ade80' : sd.avg_score >= 50 ? YELLOW : '#f87171' }}>{sd.avg_score}%</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>score moyen</p></div>
+                        <div><p className="text-xl font-bold" style={{ color: sd.success_rate >= 70 ? '#4ade80' : sd.success_rate >= 50 ? GOLD : '#f87171' }}>{sd.success_rate}%</p><p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>réussite</p></div>
                       </div>
                       <div className="mt-3 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
                         <div className="h-1 rounded-full" style={{ width: `${sd.avg_score}%`, background: svcColor }} />
@@ -839,16 +1321,8 @@ export default function TeamAnalytics() {
                 })}
               </div>
             )}
-
-            {/* Par Formation */}
-            {svcTrainTab === 'byFormation' && (
-              <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} />
-            )}
-
-            {/* Par Compétence */}
-            {svcTrainTab === 'byCompetence' && (
-              <CompetenceRadars serviceRadars={serviceRadars} trainingLoading={trainingLoading} />
-            )}
+            {svcTrainTab === 'byFormation' && <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} />}
+            {svcTrainTab === 'byCompetence' && <CompetenceRadars serviceRadars={serviceRadars} trainingLoading={trainingLoading} />}
           </div>
         )}
 
