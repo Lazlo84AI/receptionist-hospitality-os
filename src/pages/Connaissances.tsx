@@ -150,6 +150,10 @@ const Connaissances = () => {
   // 📊 Données radar (scores de compétences depuis Supabase)
   const [radarData, setRadarData] = useState<any[]>(STANDOUT_STATS);
   const [isCompetencyEmpty, setIsCompetencyEmpty] = useState(false);
+  // Radar Manager transversal (service=NULL, hierarchy='Manager')
+  const [managerRadarData, setManagerRadarData] = useState<any[]>([]);
+  const [isManagerRadar, setIsManagerRadar] = useState(false);
+  const [isManagerRadarEmpty, setIsManagerRadarEmpty] = useState(true);
   // 🎯 Formation sélectionnée — impact sur le radar
   const [selectedFormationTitle, setSelectedFormationTitle] = useState<string | null>(null);
   const [formationImpactMap, setFormationImpactMap] = useState<Record<string, number>>({});
@@ -175,13 +179,24 @@ const Connaissances = () => {
             setUserLastName(staffData.last_name || '');
           }
 
+          // Lecture hierarchy via v_user_task_stats (meme pattern que useStaffService.ts)
+          const { data: userStats } = await (supabase as any)
+            .from('v_user_task_stats')
+            .select('hierarchy')
+            .eq('auth_user_id', user.id)
+            .maybeSingle();
+          const userHierarchy: string = userStats?.hierarchy || 'Collaborator';
+          const showManagerRadar = userHierarchy === 'Manager';
+          setIsManagerRadar(showManagerRadar);
+
           // 1. Récupérer tous les axes du service de l'employé
           const userService = staffData?.service || null;
           if (userService) {
             const { data: profileAxes, error: axesError } = await (supabase as any)
               .from('service_competency_profiles')
               .select('competency_key, label')
-              .eq('service', userService);
+              .eq('service', userService)
+              .eq('hierarchy', 'Collaborator');
 
             // 2. Récupérer les scores réels de l'employé
             const { data: compScores, error: compError } = await (supabase as any)
@@ -211,6 +226,34 @@ const Connaissances = () => {
             } else {
               setRadarData(EMPTY_RADAR_DATA);
               setIsCompetencyEmpty(true);
+            }
+
+            // Si Manager: recuperer aussi les axes transversaux (service=NULL, hierarchy='Manager')
+            if (showManagerRadar) {
+              const { data: managerAxes } = await (supabase as any)
+                .from('service_competency_profiles')
+                .select('competency_key, label')
+                .is('service', null)
+                .eq('hierarchy', 'Manager');
+
+              if (managerAxes && managerAxes.length > 0) {
+                const mgrScoreMap: Record<string, number> = {};
+                (compScores || []).forEach((row: any) => {
+                  mgrScoreMap[row.competency_key] = Number(row.current_score) || 0;
+                });
+                const managerMapped = managerAxes.map((axis: any) => ({
+                  category: axis.label,
+                  competency_key: axis.competency_key,
+                  score: mgrScoreMap[axis.competency_key] ?? 0,
+                  fullMark: 100,
+                  definition: '',
+                }));
+                setManagerRadarData(managerMapped);
+                setIsManagerRadarEmpty(managerMapped.every((a: any) => a.score === 0));
+              } else {
+                setManagerRadarData([]);
+                setIsManagerRadarEmpty(true);
+              }
             }
           } else {
             setRadarData(EMPTY_RADAR_DATA);
@@ -699,6 +742,61 @@ const Connaissances = () => {
                             </div>
                           ))}
                         </div>
+
+                        {/* Radar Manager transversal mobile */}
+                        {isManagerRadar && managerRadarData.length > 0 && (
+                          <div className="mb-6 bg-[#2A2448] rounded-lg p-4">
+                            <p className="text-[#BBA57A] text-xs font-bold uppercase tracking-widest mb-2">
+                              Compétences management
+                            </p>
+                            {isManagerRadarEmpty && (
+                              <p className="text-center text-[#DEAE35] text-xs font-bold uppercase tracking-widest mb-3">
+                                ⚡ Dépêchez-vous de vous former !
+                              </p>
+                            )}
+                            <ResponsiveContainer width="100%" height={320}>
+                              <RadarChart data={managerRadarData} outerRadius={110}>
+                                <PolarGrid gridType="circle" stroke="#BBA57A" opacity={0.4} />
+                                <PolarAngleAxis 
+                                  dataKey="category" 
+                                  tick={{ fill: '#BBA57A', fontSize: 9 }}
+                                />
+                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                                <Radar 
+                                  name="Score" 
+                                  dataKey="score" 
+                                  stroke="#DEAE35" 
+                                  strokeWidth={2}
+                                  fill="#BBA57A" 
+                                  fillOpacity={0.5} 
+                                />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+
+                        {/* Barres de stats Manager mobile */}
+                        {isManagerRadar && managerRadarData.length > 0 && (
+                          <div className="space-y-4">
+                            <p className="text-[#BBA57A] text-xs font-bold uppercase tracking-widest mb-2">
+                              Compétences management
+                            </p>
+                            {managerRadarData.map((stat: any) => (
+                              <div key={stat.category} className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-white font-medium text-sm">{stat.category.toUpperCase()}</span>
+                                  <span className="text-[#BBA57A] font-bold text-2xl">{stat.score}</span>
+                                </div>
+                                <div className="h-3 bg-[#2A2448] rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-[#BBA57A] to-[#DEAE35] transition-all duration-500"
+                                    style={{ width: `${stat.score}%` }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </CardContent>
                     </CollapsibleContent>
                   </Card>
@@ -1049,6 +1147,89 @@ const Connaissances = () => {
                             );
                           })}
                         </div>
+
+                        {/* Radar Manager transversal - visible si hierarchy='Manager' */}
+                        {isManagerRadar && managerRadarData.length > 0 && (
+                          <div className="mb-4 bg-[#2A2448] rounded-lg p-4">
+                            <p className="text-[#BBA57A] text-xs font-bold uppercase tracking-widest mb-2">
+                              Compétences management
+                            </p>
+                            {isManagerRadarEmpty && Object.keys(formationImpactMap).length === 0 && (
+                              <p className="text-center text-[#DEAE35] text-xs font-bold uppercase tracking-widest mb-3">
+                                ⚡ Dépêchez-vous de vous former !
+                              </p>
+                            )}
+                            <ResponsiveContainer width="100%" height={380}>
+                              <RadarChart
+                                data={managerRadarData.map((d: any) => ({
+                                  ...d,
+                                  impact: formationImpactMap[d.competency_key] ?? 0,
+                                }))}
+                                outerRadius={130}
+                              >
+                                <PolarGrid gridType="circle" stroke="#BBA57A" opacity={0.4} />
+                                <PolarAngleAxis
+                                  dataKey="category"
+                                  tick={{ fill: '#BBA57A', fontSize: 10 }}
+                                />
+                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                                <Radar
+                                  name="Impact formation"
+                                  dataKey="impact"
+                                  stroke="#3B82F6"
+                                  strokeWidth={2}
+                                  fill="#3B82F6"
+                                  fillOpacity={0.3}
+                                />
+                                <Radar
+                                  name="Score actuel"
+                                  dataKey="score"
+                                  stroke="#DEAE35"
+                                  strokeWidth={2}
+                                  fill="#BBA57A"
+                                  fillOpacity={0.5}
+                                />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+
+                        {/* Barres de stats Manager */}
+                        {isManagerRadar && managerRadarData.length > 0 && (
+                          <div className="space-y-3">
+                            <p className="text-[#BBA57A] text-xs font-bold uppercase tracking-widest mb-2">
+                              Compétences management
+                            </p>
+                            {managerRadarData.map((stat: any) => {
+                              const impact = formationImpactMap[stat.competency_key] ?? 0;
+                              return (
+                                <div key={stat.category} className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-white font-medium text-xs uppercase tracking-wide">{stat.category}</span>
+                                    <div className="flex items-center gap-2">
+                                      {impact > 0 && (
+                                        <span className="text-[#3B82F6] font-bold text-sm">+{impact}</span>
+                                      )}
+                                      <span className="text-[#BBA57A] font-bold text-xl">{stat.score}</span>
+                                    </div>
+                                  </div>
+                                  <div className="h-2.5 bg-[#2A2448] rounded-full overflow-hidden relative">
+                                    <div
+                                      className="absolute h-full bg-gradient-to-r from-[#BBA57A] to-[#DEAE35] rounded-full transition-all duration-500"
+                                      style={{ width: `${stat.score}%` }}
+                                    />
+                                    {impact > 0 && (
+                                      <div
+                                        className="absolute h-full bg-[#3B82F6] rounded-full opacity-70 transition-all duration-500"
+                                        style={{ left: `${stat.score}%`, width: `${Math.min(impact, 100 - stat.score)}%` }}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
