@@ -11,12 +11,12 @@ interface AdminProtectedRouteProps {
 /**
  * AdminProtectedRoute
  * Guards all /admin/* routes.
- * Allows access only if authenticated AND service === 'direction'.
+ * Allows access only if authenticated AND (service === 'direction' OR hierarchy === 'Manager').
  * Redirects to /shift otherwise.
  */
 const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { isDirection, loading: serviceLoading } = useStaffService();
+  const { canAccessAdmin, loading: serviceLoading } = useStaffService();
   const navigate = useNavigate();
 
   const loading = authLoading || serviceLoading;
@@ -25,11 +25,11 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
     if (!loading) {
       if (!user) {
         navigate('/auth');
-      } else if (!isDirection) {
+      } else if (!canAccessAdmin) {
         navigate('/shift');
       }
     }
-  }, [user, isDirection, loading, navigate]);
+  }, [user, canAccessAdmin, loading, navigate]);
 
   if (loading) {
     return (
@@ -44,7 +44,7 @@ const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
     );
   }
 
-  if (!user || !isDirection) return null;
+  if (!user || !canAccessAdmin) return null;
 
   return <>{children}</>;
 };

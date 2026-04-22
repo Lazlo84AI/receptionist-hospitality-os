@@ -730,8 +730,45 @@ export default function TeamAnalytics() {
   const [indivTrainTab,    setIndivTrainTab]    = useState<IndivTrainTab>('byIndividual');
   const [svcTrainTab,      setSvcTrainTab]      = useState<SvcTrainTab>('byService');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [selectedFormation, setSelectedFormation] = useState<string | null>(null);
+  const [formationRadarData, setFormationRadarData] = useState<any[]>([]);
 
   const { memberStats, formationStats, serviceRadars, memberCompetencies, loading: trainingLoading } = useTrainingAnalytics();
+
+  // ── Effect pour charger le radar de formation sélectionnée ──────────────
+  useEffect(() => {
+    if (!selectedFormation) {
+      setFormationRadarData([]);
+      return;
+    }
+
+    // Query formation_criteria_mapping pour cette formation
+    const fetchFormationRadar = async () => {
+      try {
+        const { data: mappings } = await (supabase as any)
+          .from('formation_criteria_mapping')
+          .select('competency_key, weight')
+          .ilike('document_name', `%${selectedFormation}%`);
+
+        if (mappings && mappings.length > 0) {
+          // Transformer en données radar
+          const radarData = mappings.map((m: any) => ({
+            subject: m.competency_key,
+            score: Math.round(m.weight * 10), // Convertir 0-10 vers 0-100
+            potential: Math.round(m.weight * 10), // Score potentiel identique
+          }));
+          setFormationRadarData(radarData);
+        } else {
+          setFormationRadarData([]);
+        }
+      } catch (err) {
+        console.error('Erreur formation radar:', err);
+        setFormationRadarData([]);
+      }
+    };
+
+    fetchFormationRadar();
+  }, [selectedFormation]);
 
   const byServiceAgg = useMemo(() => {
     const acc: any = {};
@@ -1276,7 +1313,7 @@ export default function TeamAnalytics() {
                 )}
               </div>
             )}
-            {indivTrainTab === 'byFormation' && <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} />}
+            {indivTrainTab === 'byFormation' && <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} selectedFormation={selectedFormation} onFormationSelect={setSelectedFormation} formationRadarData={formationRadarData} />}
             {indivTrainTab === 'byCompetence' && <CompetenceRadars serviceRadars={serviceRadars} trainingLoading={trainingLoading} />}
           </div>
         )}
@@ -1321,7 +1358,7 @@ export default function TeamAnalytics() {
                 })}
               </div>
             )}
-            {svcTrainTab === 'byFormation' && <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} />}
+            {svcTrainTab === 'byFormation' && <FormationCards formationStats={formationStats} trainingLoading={trainingLoading} selectedFormation={selectedFormation} onFormationSelect={setSelectedFormation} formationRadarData={formationRadarData} />}
             {svcTrainTab === 'byCompetence' && <CompetenceRadars serviceRadars={serviceRadars} trainingLoading={trainingLoading} />}
           </div>
         )}

@@ -913,4 +913,226 @@ Nouvelle page `MyStatistics` donnant à chaque membre une vision complète de se
 - Design brand-compliant : Gold `#BBA57A`, Navy `#1E1A37`, Yellow `#DEAE35`
 - Responsive, chargement avec spinner `Loader2`
 
+---
+
+## [2026-04-22]
+
+### feat: T16 — Profils de compétences Direction & Manager (base SQL)
+
+**Contexte**
+Première étape de l'implémentation du ticket T16 (Profil Direction & Manager). Objectif : permettre l'évaluation des managers sur un double radar (leur service métier + un bloc transversal de critères managériaux) et évaluer les membres du service `direction` (Thibault, Juliette) sur un profil dédié. Critères validés explicitement par Thibault via WhatsApp.
+
+---
+
+**Supabase — `service_competency_profiles`**
+
+Avant migration : 24 lignes (reception, housekeeping, maintenance, restauration), aucune pour direction. Contrainte UNIQUE sur `(service, competency_key)`. Colonne `service` NOT NULL.
+
+Script exécuté en transaction (BEGIN...COMMIT) :
+
+1. **Ajout colonne `hierarchy text`** — nullable le temps du backfill
+2. **Backfill** : `UPDATE ... SET hierarchy = 'Collaborator' WHERE hierarchy IS NULL` sur les 24 lignes existantes. Valeur `Collaborator` alignée avec les données réelles de `profiles.hierarchy` (aucun `Normal` en production).
+3. **`ALTER COLUMN hierarchy SET NOT NULL`** — rend la colonne obligatoire une fois remplie
+4. **`ALTER COLUMN service DROP NOT NULL`** — autorise `service = NULL` pour les critères Manager transversaux
+5. **Contrainte UNIQUE élargie** : `DROP CONSTRAINT service_competency_profiles_service_competency_key_key`, puis `ADD CONSTRAINT service_competency_profiles_service_competency_hierarchy_key UNIQUE (service, competency_key, hierarchy)`. Permet qu'une même `competency_key` (ex. `experience_client_globale`, `application_procedures`) coexiste dans plusieurs profils (Direction Collaborator + Manager transversal).
+
+**INSERT — 5 critères Direction** (`service = 'direction'`, `hierarchy = 'Collaborator'`) :
+- `connaissance_hotel` → Connaissance Hotel
+- `experience_client_globale` → Experience Client Globale
+- `gestion_economique_hotel` → Gestion Economique Hotel (encaissements, facturation, VAD, virement, dépôt garantie, espèces, débiteurs, clôtures de caisse)
+- `gestion_rh` → Gestion RH (connaissance métiers, recrutement, contrats, cohésion équipe, carrières, paie)
+- `application_procedures` → Application Procedures (intègre Sokle)
+
+**INSERT — 5 critères Manager** (`service = NULL`, `hierarchy = 'Manager'`) :
+- `experience_client_globale` → Experience Client Globale (inclut bonne tenue et présentation de l'hôtel)
+- `gestion_litiges_collecte_avis` → Gestion Litiges Collecte Avis (litiges client + avis internet)
+- `pilotage_cohesion_equipe` → Pilotage Cohesion Equipe (management + entraide entre collaborateurs)
+- `gestion_achats_commandes` → Gestion Achats Commandes (stocks, anticipation, coûts, durabilité)
+- `application_procedures` → Application Procedures (respect des process dont utilisation de Sokle)
+
+**Correction en cours de route**
+Les 5 lignes Direction ont été initialement insérées avec `hierarchy = 'Director'`. Correction appliquée via `UPDATE service_competency_profiles SET hierarchy = 'Collaborator' WHERE service = 'direction' AND hierarchy = 'Director'`. Raison : dans `profiles`, Thibault et Juliette sont tous deux `hierarchy = 'Collaborator'`. Aucun utilisateur n'a `hierarchy = 'Director'` en production — la valeur `Director` aurait rendu les critères invisibles sur le front.
+
+---
+
+**État final — 34 lignes**
+- 24 lignes `Collaborator` par service métier (reception 7, housekeeping 6, maintenance 5, restauration 6)
+- 5 lignes Direction `Collaborator` (`service = 'direction'`)
+- 5 lignes Manager `Manager` (`service = NULL`, transversal)
+
+---
+
+**Logique fonctionnelle de requêtage (pour le front — à implémenter étapes 4 et 5)**
+
+Pour un utilisateur donné (`staff_directory.service`, `staff_directory.hierarchy`) :
+- **Collaborator Réception** → `WHERE service = 'reception' AND hierarchy = 'Collaborator'` → radar simple 7 axes
+- **Collaborator Direction** (Thibault, Juliette) → `WHERE service = 'direction' AND hierarchy = 'Collaborator'` → radar Direction 5 axes
+- **Manager** (Drichelle Réception, Lopez Maintenance, Boncoeur Housekeeping, etc.) → 2 requêtes : `service = <son_service> AND hierarchy = 'Collaborator'` (radar métier) + `hierarchy = 'Manager'` (radar managérial transversal 5 axes)
+
+Les critères partagés entre Direction et Manager (`experience_client_globale`, `application_procedures`) coexistent en base grâce à la contrainte UNIQUE élargie à `(service, competency_key, hierarchy)`.
+
+---
+
+**Décisions d'architecture documentées**
+- **`service` nullable** retenu (Option B3 du brief) plutôt que de stocker `service = 'manager'` comme valeur conventionnelle (Option B1), ou de dupliquer les critères Manager par service (Option B2, qui aurait donné 20 lignes au lieu de 5 avec update multiple sur changement de libellé).
+- **`hierarchy` ajoutée** à `service_competency_profiles` pour matcher la granularité déjà présente dans `profiles.hierarchy` et `staff_directory.hierarchy`.
+- **Aucune suppression de données existantes**. Uniquement des INSERTS additifs + ALTER non destructifs. La table `formation_criteria_mapping` (108+ lignes) n'a pas été touchée.
+
+---
+
+**Étapes T16 restantes (non faites)**
+1. ⏳ N8N A1 "Criteria Mapper" — mettre à jour le prompt pour inclure les 10 nouveaux critères (5 Direction + 5 Manager), sinon aucun document uploadé ne sera mappé vers ces critères et les radars resteront à 0
+2. ⏳ Re-upload des documents depuis Vercel (après fix N8N) — re-génération `formation_criteria_mapping`
+3. ⏳ Front `src/pages/Connaissances.tsx` — radar double pour les managers
+4. ⏳ Front `src/pages/admin/TeamAnalytics.tsx` — radars compétences managers
+
+---
+
+## [2026-04-22] (suite)
+
+### fix: T16 — Correction du décalage critiques/brief (3 critères manquants)
+
+**Contexte**
+En relisant le PDF de proposition initial envoyé à Thibault + sa réponse WhatsApp corrective du 20 avril, il a été constaté que le brief Wilfried donné à Claude en début de session ne reflétait pas fidèlement la liste finale validée par Thibault. Trois critères manquaient en base.
+
+**Gap identifié**
+- `pilotage_equipe` : présent dans le PDF pour Direction, non remis en cause par Thibault, absent du brief initial → manquait en base pour Direction
+- `connaissance_hotel` (socle Manager) : présent dans le PDF comme "socle commun" du profil Manager, non remis en cause par Thibault, absent du brief initial → manquait en base pour Manager
+- `prise_responsabilite` : présent dans le PDF pour Manager, non remis en cause par Thibault, absent du brief initial → manquait en base pour Manager
+
+**Supabase — 3 INSERT additifs (zero suppression)**
+```sql
+INSERT INTO service_competency_profiles (service, competency_key, label, hierarchy) VALUES
+  ('direction', 'pilotage_equipe',      'Pilotage Equipe',         'Collaborator'),
+  (NULL,        'connaissance_hotel',   'Connaissance Hotel',      'Manager'),
+  (NULL,        'prise_responsabilite', 'Prise Responsabilite',    'Manager');
+```
+
+**État final — 37 lignes (vs 34 précédemment)**
+- 24 lignes métier Collaborator inchangées
+- **6 lignes Direction Collaborator** (+1 : pilotage_equipe)
+- **7 lignes Manager** (+2 : connaissance_hotel, prise_responsabilite)
+
+---
+
+### feat: T16 — Ajout colonne `hierarchy` à `formation_criteria_mapping`
+
+**Contexte**
+Le pipeline N8N A1 insère les mappings document→critères dans `formation_criteria_mapping`. Pour distinguer les mappings destinés aux collaborateurs vs aux managers (critique avec l'activation du profil Manager), il faut une colonne `hierarchy` sur cette table.
+
+**SQL exécuté**
+```sql
+ALTER TABLE formation_criteria_mapping
+  ADD COLUMN hierarchy text NOT NULL DEFAULT 'Collaborator';
+```
+
+**Effet**
+- Les 108+ lignes existantes sont automatiquement taguées `hierarchy = 'Collaborator'` via DEFAULT
+- Les futurs inserts peuvent passer `hierarchy = 'Manager'` pour les mappings destinés au bloc transversal
+- Aucune suppression ni modification de l'existant
+
+---
+
+### feat: T16 — Pipeline N8N A1 mis à jour (Criteria Mapper + Flatten + Insert)
+
+**Contexte**
+Option B retenue après discussion : un document peut concerner à la fois Collaborator ET Manager (cas mixte). Le JSON de sortie du Criteria Mapper doit donc produire un tableau `mappings[]` au lieu d'un mapping plat, pour séparer les deux blocs hiérarchiques.
+
+**Trois nœuds modifiés (aucun nœud ajouté)**
+
+**1. Nœud `AI Agent1 - competences mapping` — nouveau System Message**
+- Ajout bloc DIRECTION (5 critères + connaissance_hotel transversal)
+- Ajout bloc MANAGER transversal (6 critères + connaissance_hotel transversal)
+- Nouvelle règle : un document peut contenir plusieurs hiérarchies (Collaborator + Manager mixtes)
+- Structure JSON de sortie : passage de `{services, criteria_mapping}` à `{mappings: [{hierarchy, services, criteria_mapping}, ...]}`
+- Règle Manager : `connaissance_hotel` à 5% obligatoire (aligné avec les autres blocs)
+- Exemples de sortie fournis pour cas simple et cas mixte (2 blocs)
+
+**2. Nœud `Code in JavaScript1` — double boucle + fallback legacy**
+```javascript
+// Fallback : si l'IA retourne l'ancien format (sans mappings[]), on l'enveloppe
+if (!mapping.mappings && mapping.criteria_mapping) {
+  mapping.mappings = [{
+    hierarchy: 'Collaborator',
+    services: mapping.services || [],
+    criteria_mapping: mapping.criteria_mapping
+  }];
+}
+
+// Double boucle : chaque bloc hiérarchique × chaque critère → 1 ligne à insérer
+const rows = [];
+for (const block of mapping.mappings) {
+  for (const criterion of block.criteria_mapping) {
+    rows.push({
+      document_name, formation_name: mapping.formation_name,
+      hierarchy: block.hierarchy,     // NOUVEAU
+      services: block.services,        // désormais pris depuis block (pas mapping)
+      competency_key: criterion.competency_key,
+      weight: criterion.weight,
+      confidence: mapping.confidence,
+      justification: mapping.justification,
+      validated: false
+    });
+  }
+}
+```
+
+**3. Nœud `HTTP Request1` — ajout 1 ligne au body JSON**
+```json
+"hierarchy": "{{ $json.hierarchy }}"
+```
+Sans cet ajout, le DEFAULT `'Collaborator'` de la table serait utilisé pour toutes les insertions, rendant les mappings Manager invisibles.
+
+---
+
+### 🚧 Statut actuel T16 — modifs faites, test bout-en-bout en attente
+
+**Ce qui est FAIT et validé techniquement** ✅
+1. ~~SQL Supabase — INSERT 10 critères Direction + Manager~~
+2. ~~SQL Supabase — Correction 3 critères manquants (pilotage_equipe Direction, connaissance_hotel Manager, prise_responsabilite Manager)~~
+3. ~~SQL Supabase — ALTER formation_criteria_mapping ADD COLUMN hierarchy~~
+4. ~~N8N A1 Criteria Mapper — nouveau System Message avec 5 profils Collaborator + 1 profil Manager~~
+5. ~~N8N A1 Code in JavaScript1 — double boucle + fallback legacy~~
+6. ~~N8N A1 HTTP Request1 — transmission du champ hierarchy~~
+
+**Ce qui RESTE à faire** ⏳
+1. ⏳ **Test bout-en-bout du pipeline A1** avec un vrai document (demande faite à Thibault/Juliette d'un document managerial ou mixte pour éviter de polluer le RAG avec du fake data)
+2. ⏳ Re-upload progressif des documents existants depuis Vercel (si nécessaire pour re-mapper vers les nouveaux critères)
+3. ⏳ Front `src/pages/Connaissances.tsx` — radar double pour les managers (service + Manager transversal)
+4. ⏳ Front `src/pages/admin/TeamAnalytics.tsx` — affichage radars complémentaires Manager dans les onglets training
+
+**Décision produit documentée — pourquoi ne pas tester avec un fake PDF**
+Pour éviter de polluer Qdrant (collection `RAGMistral2`) avec des points vectoriels bidon, d'insérer du fake data dans `formation_criteria_mapping` et de déclencher la génération de QCMs fantaisistes via le trigger `sync_training_questions_to_knowledge_queries`, Wilfried a fait le choix de demander à Thibault un vrai document de formation à la place. Le premier test servira donc aussi de première mise en service utile de la fonctionnalité.
+
+---
+
+## [2026-04-16] — Front T16 préalable (modifs réalisées en avril, committées le 22 avril)
+
+### Conversation du 16 avril 2026 — "Analyse bugs formation et architecture système agentique"
+
+**Objectif** : permettre aux Managers (Drichelle, Lopez, Boncoeur) d'accéder à l'admin, pas seulement à la Direction.
+
+Fichiers impactés :
+- `src/hooks/useStaffService.ts`
+- `src/components/AdminProtectedRoute.tsx`
+
+---
+
+### Conversation du 16 avril 2026 — "Récupération du système de score preview disparu"
+
+**Objectif** : permettre de cliquer sur une formation dans la liste pour afficher son radar d'impact sur les compétences.
+
+Fichiers impactés :
+- `src/pages/admin/TeamAnalytics.tsx`
+
+---
+
+### Conversation des 2-3 avril 2026 — "Radar overlay sur modal de formation"
+
+**Objectif** : afficher le radar overlay quand on ouvre un document de formation. Le debug a été ajouté pour chercher un bug qui n'existait pas (en fait il manquait juste les critères Direction en base).
+
+Fichier impacté :
+- `src/components/modals/DocumentViewerModal.tsx` — **non inclus dans le commit du 22 avril**, nettoyage du debug prévu dans un commit ultérieur dédié.
+
+---
 
