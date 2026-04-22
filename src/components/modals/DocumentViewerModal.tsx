@@ -310,7 +310,7 @@ export const DocumentViewerModal = ({
         const { data: mappings } = await (supabase as any)
           .from('formation_criteria_mapping')
           .select('competency_key, weight')
-          .eq('document_name', document.document_name);
+          .ilike('document_name', `%${document.document_name}%`);
 
         // Construction des maps
         const scoreMap: Record<string, number> = {};
@@ -322,12 +322,6 @@ export const DocumentViewerModal = ({
         (mappings || []).forEach((row: any) => {
           weightMap[row.competency_key] = Number(row.weight) || 0;
         });
-
-        // DEBUG — à retirer après validation
-        console.log('📄 document_name utilisé pour la query:', document.document_name);
-        console.log('📊 Mappings trouvés:', mappings);
-        console.log('🎯 Axes du service:', profileAxes);
-        console.log('💯 Scores actuels:', compScores);
 
         // Vérifier si au moins un mapping existe
         const hasMappings = (mappings || []).length > 0;
