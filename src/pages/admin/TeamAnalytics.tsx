@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useMyStatistics, UserTaskStats, TimeseriesEntry } from '@/hooks/useMyStatistics';
 import { useTrainingAnalytics } from '@/hooks/useTrainingAnalytics';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -735,6 +736,58 @@ export default function TeamAnalytics() {
 
   const { memberStats, formationStats, serviceRadars, memberCompetencies, loading: trainingLoading } = useTrainingAnalytics();
 
+  // ── Modal radar membre (Individual Training) ───────────────────────────────
+  const [modalMemberId, setModalMemberId] = useState<string | null>(null);
+  const [modalMetierAxes, setModalMetierAxes] = useState<{ subject: string; score: number; competency_key: string }[]>([]);
+  const [modalManagerAxes, setModalManagerAxes] = useState<{ subject: string; score: number; competency_key: string }[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  useEffect(() => {
+    if (!modalMemberId) {
+      setModalMetierAxes([]);
+      setModalManagerAxes([]);
+      return;
+    }
+    const member = memberStats.find(m => m.user_id === modalMemberId);
+    if (!member) return;
+
+    const fetchModalData = async () => {
+      setModalLoading(true);
+      try {
+        // Cles metier (service du membre, hierarchy=Collaborator)
+        const { data: metierKeys } = await (supabase as any)
+          .from('service_competency_profiles')
+          .select('competency_key')
+          .eq('service', member.service)
+          .eq('hierarchy', 'Collaborator');
+
+        // Si Manager: cles transversales (service=NULL, hierarchy=Manager)
+        let managerKeys: any[] = [];
+        if (member.hierarchy === 'Manager') {
+          const { data } = await (supabase as any)
+            .from('service_competency_profiles')
+            .select('competency_key')
+            .is('service', null)
+            .eq('hierarchy', 'Manager');
+          managerKeys = data || [];
+        }
+
+        const userScores = memberCompetencies[modalMemberId] || [];
+        const metierKeySet = new Set((metierKeys || []).map((k: any) => k.competency_key));
+        const managerKeySet = new Set(managerKeys.map((k: any) => k.competency_key));
+
+        setModalMetierAxes(userScores.filter(s => metierKeySet.has(s.competency_key)));
+        setModalManagerAxes(userScores.filter(s => managerKeySet.has(s.competency_key)));
+      } catch (err) {
+        console.error('Modal radar fetch error:', err);
+      } finally {
+        setModalLoading(false);
+      }
+    };
+
+    fetchModalData();
+  }, [modalMemberId, memberStats, memberCompetencies]);
+
   // ── Effect pour charger le radar de formation sélectionnée ──────────────
   useEffect(() => {
     if (!selectedFormation) {
@@ -1237,74 +1290,44 @@ export default function TeamAnalytics() {
                       <tbody>
                         {memberStats.map((m, i) => {
                           const svcColor   = SERVICE_COLORS[m.service || ''] || GOLD;
-                          const isSelected = selectedMemberId === m.user_id;
                           const dateStr    = m.last_completed_at
                             ? (() => { try { return format(parseISO(m.last_completed_at), 'd MMM yyyy', { locale: fr }); } catch { return '—'; } })()
                             : '—';
                           return (
-                            <>
-                              <tr key={m.user_id}
-                                onClick={() => setSelectedMemberId(isSelected ? null : m.user_id)}
-                                className="cursor-pointer transition-all"
-                                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: isSelected ? `${svcColor}12` : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
-                                <td className="px-5 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                      style={{ background: svcColor + '22', color: svcColor, border: `1px solid ${isSelected ? svcColor : svcColor + '44'}` }}>
-                                      {(m.display_name.split(' ')[0]?.[0] || '') + (m.display_name.split(' ')[1]?.[0] || '')}
-                                    </div>
-                                    <span className="text-white font-medium">{m.display_name}</span>
-                                    {isSelected && <span className="text-xs ml-1" style={{ color: svcColor }}>▾</span>}
+                            <tr key={m.user_id}
+                              onClick={() => setModalMemberId(m.user_id)}
+                              className="cursor-pointer transition-all hover:opacity-90"
+                              style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                              <td className="px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                    style={{ background: svcColor + '22', color: svcColor, border: `1px solid ${svcColor}44` }}>
+                                    {(m.display_name.split(' ')[0]?.[0] || '') + (m.display_name.split(' ')[1]?.[0] || '')}
                                   </div>
-                                </td>
-                                <td className="px-5 py-3">
-                                  <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: svcColor + '20', color: svcColor }}>{serviceLabel(m.service)}</span>
-                                </td>
-                                <td className="px-5 py-3 text-center"><span className="font-bold" style={{ color: YELLOW }}>{m.quiz_count}</span></td>
-                                <td className="px-5 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', minWidth: 60 }}>
-                                      <div className="h-1.5 rounded-full" style={{ width: `${m.avg_score}%`, background: m.avg_score >= 70 ? '#4ade80' : m.avg_score >= 50 ? YELLOW : '#f87171' }} />
-                                    </div>
-                                    <span className="text-xs font-bold w-10 text-right" style={{ color: m.avg_score >= 70 ? '#4ade80' : m.avg_score >= 50 ? YELLOW : '#f87171' }}>{m.avg_score}%</span>
+                                  <span className="text-white font-medium">{m.display_name}</span>
+                                  {m.hierarchy === 'Manager' && (
+                                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: `${YELLOW}22`, color: YELLOW }}>MGR</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: svcColor + '20', color: svcColor }}>{serviceLabel(m.service)}</span>
+                              </td>
+                              <td className="px-5 py-3 text-center"><span className="font-bold" style={{ color: YELLOW }}>{m.quiz_count}</span></td>
+                              <td className="px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', minWidth: 60 }}>
+                                    <div className="h-1.5 rounded-full" style={{ width: `${m.avg_score}%`, background: m.avg_score >= 70 ? '#4ade80' : m.avg_score >= 50 ? YELLOW : '#f87171' }} />
                                   </div>
-                                </td>
-                                <td className="px-5 py-3 text-center"><span className="font-bold" style={{ color: GOLD }}>{m.best_score}%</span></td>
-                                <td className="px-5 py-3 text-xs" style={{ color: 'rgba(255,255,255,0.45)', maxWidth: 200 }}>
-                                  <p className="truncate">{m.last_document}</p>
-                                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>{dateStr}</p>
-                                </td>
-                              </tr>
-                              {isSelected && (() => {
-                                const radar  = memberCompetencies[m.user_id];
-                                const sColor = SERVICE_COLORS[m.service || ''] || GOLD;
-                                return (
-                                  <tr key={`radar-${m.user_id}`} style={{ background: `${sColor}08` }}>
-                                    <td colSpan={6} className="px-6 py-4">
-                                      <div className="flex items-start gap-6">
-                                        <div className="flex-shrink-0">
-                                          <p className="text-xs font-semibold mb-1" style={{ color: sColor }}>Radar compétences</p>
-                                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{m.display_name}</p>
-                                        </div>
-                                        {!radar || radar.length === 0 ? (
-                                          <p className="text-xs py-2" style={{ color: 'rgba(255,255,255,0.25)' }}>Aucune donnée de compétence pour ce membre</p>
-                                        ) : (
-                                          <ResponsiveContainer width="100%" height={200}>
-                                            <RadarChart data={radar}>
-                                              <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                                              <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} />
-                                              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} />
-                                              <Tooltip content={<CustomTooltip />} />
-                                              <Radar name="Score" dataKey="score" stroke={sColor} fill={sColor} fillOpacity={0.2} />
-                                            </RadarChart>
-                                          </ResponsiveContainer>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })()}
-                            </>
+                                  <span className="text-xs font-bold w-10 text-right" style={{ color: m.avg_score >= 70 ? '#4ade80' : m.avg_score >= 50 ? YELLOW : '#f87171' }}>{m.avg_score}%</span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-3 text-center"><span className="font-bold" style={{ color: GOLD }}>{m.best_score}%</span></td>
+                              <td className="px-5 py-3 text-xs" style={{ color: 'rgba(255,255,255,0.45)', maxWidth: 200 }}>
+                                <p className="truncate">{m.last_document}</p>
+                                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>{dateStr}</p>
+                              </td>
+                            </tr>
                           );
                         })}
                       </tbody>
@@ -1369,6 +1392,97 @@ export default function TeamAnalytics() {
         </p>
 
       </div>
+
+      {/* Modal radar membre - apparait au clic sur une ligne du tableau Individual Training */}
+      <Dialog open={!!modalMemberId} onOpenChange={(open) => { if (!open) setModalMemberId(null); }}>
+        <DialogContent className="max-w-5xl bg-[#1E1A37] border-[#BBA57A]/20 text-white">
+          <DialogHeader>
+            <DialogTitle style={{ color: GOLD }}>
+              {modalMemberId ? memberStats.find(m => m.user_id === modalMemberId)?.display_name : ''}
+              <span className="ml-2 text-sm font-normal" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                — {serviceLabel(memberStats.find(m => m.user_id === modalMemberId)?.service ?? null)}
+              </span>
+              {memberStats.find(m => m.user_id === modalMemberId)?.hierarchy === 'Manager' && (
+                <span className="ml-2 px-2 py-0.5 rounded-md text-xs font-bold" style={{ background: `${YELLOW}22`, color: YELLOW }}>
+                  MANAGER
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {modalLoading ? (
+            <div className="py-12 text-center text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Chargement…</div>
+          ) : (
+            <div className={modalManagerAxes.length > 0 ? "grid grid-cols-2 gap-6" : "grid grid-cols-1"}>
+              {/* Bloc metier */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: GOLD }}>
+                  Compétences {serviceLabel(memberStats.find(m => m.user_id === modalMemberId)?.service ?? null).toLowerCase()}
+                </p>
+                {modalMetierAxes.length === 0 ? (
+                  <p className="text-xs py-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Aucun score sur ce profil</p>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RadarChart data={modalMetierAxes}>
+                        <PolarGrid stroke="rgba(255,255,255,0.08)" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 10 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Radar name="Score" dataKey="score" stroke={GOLD} fill={GOLD} fillOpacity={0.3} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 mt-3">
+                      {modalMetierAxes.map((axis: any) => (
+                        <div key={axis.competency_key} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.7)' }}>{axis.subject}</span>
+                            <span className="font-bold" style={{ color: GOLD }}>{axis.score}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                            <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${axis.score}%`, background: `linear-gradient(to right, ${GOLD}, ${YELLOW})` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Bloc Manager (si applicable) */}
+              {modalManagerAxes.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: GOLD }}>
+                    Compétences management
+                  </p>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <RadarChart data={modalManagerAxes}>
+                      <PolarGrid stroke="rgba(255,255,255,0.08)" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 10 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Radar name="Score" dataKey="score" stroke={YELLOW} fill={YELLOW} fillOpacity={0.3} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-2 mt-3">
+                    {modalManagerAxes.map((axis: any) => (
+                      <div key={axis.competency_key} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.7)' }}>{axis.subject}</span>
+                          <span className="font-bold" style={{ color: YELLOW }}>{axis.score}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                          <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${axis.score}%`, background: `linear-gradient(to right, ${GOLD}, ${YELLOW})` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

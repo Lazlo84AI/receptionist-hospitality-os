@@ -7,6 +7,7 @@ export interface MemberTrainingStats {
   user_id: string;
   display_name: string;
   service: string | null;
+  hierarchy: string | null;          // NOUVEAU — pour discriminer Collaborator/Manager dans la modal
   quiz_count: number;
   avg_score: number;
   best_score: number;
@@ -26,7 +27,8 @@ export interface ServiceRadarData {
   data: { subject: string; score: number }[];
 }
 
-export type MemberCompetencies = Record<string, { subject: string; score: number }[]>;
+// NOUVEAU — competency_key ajouté pour pouvoir splitter les axes Collaborator/Manager
+export type MemberCompetencies = Record<string, { competency_key: string; subject: string; score: number }[]>;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -51,16 +53,17 @@ export const useTrainingAnalytics = () => {
 
       const { data: staffRaw, error: sErr } = await (supabase as any)
         .from('staff_directory')
-        .select('id, first_name, last_name, service')
+        .select('id, first_name, last_name, service, hierarchy')   // NOUVEAU : hierarchy
         .eq('is_active', true);
       if (sErr) throw sErr;
 
-      // Map staff id → { display_name, service }
-      const staffById: Record<string, { display_name: string; service: string | null }> = {};
+      // Map staff id → { display_name, service, hierarchy }
+      const staffById: Record<string, { display_name: string; service: string | null; hierarchy: string | null }> = {};
       (staffRaw || []).forEach((s: any) => {
         staffById[s.id] = {
           display_name: `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Inconnu',
           service: s.service || null,
+          hierarchy: s.hierarchy || null,    // NOUVEAU
         };
       });
 
@@ -78,6 +81,7 @@ export const useTrainingAnalytics = () => {
           user_id:           uid,
           display_name:      staffById[uid]?.display_name || 'Inconnu',
           service:           staffById[uid]?.service || null,
+          hierarchy:         staffById[uid]?.hierarchy || null,    // NOUVEAU
           quiz_count:        d.scores.length,
           avg_score:         Math.round(d.scores.reduce((s, v) => s + v, 0) / d.scores.length),
           best_score:        Math.round(Math.max(...d.scores)),
@@ -155,6 +159,7 @@ export const useTrainingAnalytics = () => {
         const indiv: MemberCompetencies = {};
         Object.entries(byUserComp).forEach(([uid, compMap]) => {
           indiv[uid] = Object.entries(compMap).map(([key, score]) => ({
+            competency_key: key,                  // NOUVEAU — pour permettre le split Collaborator/Manager
             subject: labelMap[key] || key,
             score,
           }));

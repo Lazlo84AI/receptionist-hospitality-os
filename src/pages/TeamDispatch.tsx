@@ -9,6 +9,8 @@ import { CardFaceModal } from '@/components/shared/CardFaceModal';
 import EnhancedTaskDetailModal from '@/components/modals/EnhancedTaskDetailModal';
 import { VoiceCommandButton } from '@/components/VoiceCommandButton';
 import { useTasks, useProfiles } from '@/hooks/useSupabaseData';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { formatTimeElapsed } from '@/utils/timeUtils';
 import {
   Dialog,
@@ -55,29 +57,80 @@ const TeamDispatch = () => {
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   
+  // Récupération du user connecté
+  const { user } = useAuth();
+  
   // Nouveaux états pour la gestion des colonnes
-  // Persistance localStorage : on relit les colonnes sauvegardées au montage
-  const [selectedColumns, setSelectedColumns] = useState<(string | null)[]>(() => {
-    try {
-      const saved = localStorage.getItem('teamDispatch_columns');
-      return saved ? JSON.parse(saved) : [null];
-    } catch {
-      return [null];
-    }
-  });
+  // Persistance Supabase : hydratation depuis user_view_configurations au montage
+  const [selectedColumns, setSelectedColumns] = useState<(string | null)[]>([null]);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [isSelectingMember, setIsSelectingMember] = useState(false);
   const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null);
   // État pour le bandeau mobile collapsible
   const [isMobileStatsExpanded, setIsMobileStatsExpanded] = useState(false);
 
-  // Sauvegarde automatique des colonnes dans localStorage à chaque changement
+  // 1. Chargement initial des colonnes depuis Supabase (au montage / changement user)
+  //    Avec migration douce : si Supabase vide mais localStorage contient une config, on l'hydrate.
   useEffect(() => {
-    try {
-      localStorage.setItem('teamDispatch_columns', JSON.stringify(selectedColumns));
-    } catch {
-      // localStorage indisponible, on ignore silencieusement
-    }
-  }, [selectedColumns]);
+    if (!user) return;
+
+    const loadConfig = async () => {
+      const { data, error } = await supabase
+        .from('user_view_configurations')
+        .select('team_dispatch_columns')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading view config:', error);
+        setIsConfigLoaded(true);
+        return;
+      }
+
+      if (data?.team_dispatch_columns) {
+        // Config Supabase existante -> on l'utilise comme source de vérité
+        setSelectedColumns(data.team_dispatch_columns as (string | null)[]);
+      } else {
+        // Pas de config Supabase -> fallback migration douce depuis localStorage
+        try {
+          const legacy = localStorage.getItem('teamDispatch_columns');
+          if (legacy) {
+            const parsed = JSON.parse(legacy);
+            setSelectedColumns(parsed);
+            // On pousse immédiatement vers Supabase pour les futurs devices
+            await supabase.from('user_view_configurations').upsert({
+              user_id: user.id,
+              team_dispatch_columns: parsed,
+            }, { onConflict: 'user_id' });
+          }
+        } catch {
+          // localStorage indisponible, on reste sur [null]
+        }
+      }
+
+      setIsConfigLoaded(true);
+    };
+
+    loadConfig();
+  }, [user]);
+
+  // 2. Sauvegarde automatique vers Supabase à chaque changement (après hydratation)
+  useEffect(() => {
+    if (!user || !isConfigLoaded) return;
+
+    const saveConfig = async () => {
+      const { error } = await supabase
+        .from('user_view_configurations')
+        .upsert({
+          user_id: user.id,
+          team_dispatch_columns: selectedColumns,
+        }, { onConflict: 'user_id' });
+
+      if (error) console.error('Error saving view config:', error);
+    };
+
+    saveConfig();
+  }, [selectedColumns, user, isConfigLoaded]);
   
   // Hooks de données
   const { tasks, loading: tasksLoading, error: tasksError, refetch } = useTasks();

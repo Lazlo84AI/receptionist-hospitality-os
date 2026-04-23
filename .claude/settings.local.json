@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"/c/Users/Wilfried de Renty/receptionist-hospitality-os/src\" -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"Context\\\\|Provider\" {} \\\\;)"
+    ]
+  }
+}
