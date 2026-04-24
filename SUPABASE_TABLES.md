@@ -33,6 +33,8 @@
 
 **⚠️ IMPORTANT** : C'est la table de référence pour les employés, utilisée par `shifts.user_id`
 
+> 📌 **Documentation exhaustive et à jour** — le schéma décrit ci-dessus est partiellement obsolète (valeurs `hierarchy`, colonne `department`, valeurs polluées de `service`, triggers...). Pour la référence complète sur `staff_directory`, son lien avec `profiles` et les règles métier actuelles, voir **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** (mise à jour : 2026-04-24).
+
 ---
 
 ### 2️⃣ `profiles` - PROFILS AUTH (LÉGERS)
@@ -54,6 +56,8 @@
 | `updated_at` | timestamptz | YES | now() | Dernière modif |
 
 **Note** : Préférer `staff_directory` pour les requêtes principales
+
+> 📌 **Référence à jour** — la note ci-dessus (« préférer staff_directory ») n'est **plus valide** pour les champs `email`, `service`, `hierarchy` quand un compte Sokle existe (`auth_user_id IS NOT NULL`). La règle métier actuelle est : **`profiles` fait foi dès qu'un compte Sokle existe**. Pour la référence complète sur `profiles`, les triggers (`handle_new_user`, `sync_profiles_to_staff_directory`), les RLS policies et la règle métier détaillée, voir **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** (mise à jour : 2026-04-24).
 
 ---
 

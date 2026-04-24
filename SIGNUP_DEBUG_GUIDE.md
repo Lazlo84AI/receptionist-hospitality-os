@@ -1,3 +1,14 @@
+> ⚠️ **DOCUMENT OBSOLÈTE — NE PAS UTILISER COMME RÉFÉRENCE**
+>
+> Ce guide décrit un état ancien du système de signup (septembre 2025) qui ne reflète plus la réalité en production. Le trigger `handle_new_user` a été réécrit depuis, et le mapping `job_role` → `service_type` a changé. Les instructions « appliquer la migration », « rétablir la contrainte » etc. ne sont **plus valides**.
+>
+> **Pour la documentation à jour sur `profiles`, `staff_directory`, les triggers et les RLS, voir :**
+> **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** — dernière mise à jour : 2026-04-24.
+>
+> Ce fichier est conservé pour archive historique uniquement.
+
+---
+
 # Guide de Configuration - Résolution du Problème d'Inscription
 
 ## 🔍 **Problème Identifié**

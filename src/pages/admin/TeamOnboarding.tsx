@@ -32,12 +32,22 @@ interface StaffRow {
   service: string | null;
   hierarchy: string | null;
   is_active: boolean;
+  auth_user_id: string | null;
+  // ── Champs venant de profiles (via JOIN sur auth_user_id) ──
+  // Source de vérité quand la personne a un compte Sokle.
+  profile_email:     string | null;
+  profile_service:   string | null;
+  profile_hierarchy: string | null;
+  // ── Valeurs effectives à afficher (calculées : profiles si compte, staff_directory sinon) ──
+  display_email:     string | null;
+  display_service:   string | null;
+  display_hierarchy: string | null;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SERVICES = ['Réception', 'Housekeeping', 'Petit Dejeuner', 'Maintenance', 'Direction'];
-const HIERARCHY_OPTIONS = ['Normal', 'Manager', 'Direction'];
+const HIERARCHY_OPTIONS = ['Collaborator', 'Manager'];
 const DURATION_OPTIONS = [7, 14, 21, 30];
 
 // ─── Video Category Config ────────────────────────────────────────────────────
@@ -1320,9 +1330,8 @@ function TabSuivi() {
 // ─── Tab : Role & Hierarchy ───────────────────────────────────────────────────
 
 const HIERARCHY_COLORS: Record<string, { color: string; bg: string }> = {
-  'Normal':    { color: 'rgba(187,165,122,0.7)', bg: 'rgba(187,165,122,0.1)'  },
-  'Manager':   { color: '#DEAE35',               bg: 'rgba(222,174,53,0.12)'  },
-  'Direction': { color: '#4ade80',               bg: 'rgba(74,222,128,0.1)'   },
+  'Collaborator': { color: 'rgba(187,165,122,0.7)', bg: 'rgba(187,165,122,0.1)'  },
+  'Manager':      { color: '#DEAE35',               bg: 'rgba(222,174,53,0.12)'  },
 };
 
 interface EditValues {
@@ -1339,7 +1348,7 @@ function TabRoleHierarchy() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<EditValues>({
-    first_name: '', last_name: '', email: '', phone: '', service: '', hierarchy: 'Normal',
+    first_name: '', last_name: '', email: '', phone: '', service: '', hierarchy: 'Collaborator',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
@@ -1348,19 +1357,51 @@ function TabRoleHierarchy() {
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff_directory_all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Lire toutes les lignes staff_directory
+      const { data: sdRows, error: sdErr } = await supabase
         .from('staff_directory')
-        .select('id, first_name, last_name, full_name, email, phone, service, hierarchy, is_active')
+        .select('id, first_name, last_name, full_name, email, phone, service, hierarchy, is_active, auth_user_id')
         .order('first_name');
-      if (error) throw error;
-      return data as StaffRow[];
+      if (sdErr) throw sdErr;
+
+      // 2. Lire les profiles correspondants (uniquement ceux liés par auth_user_id)
+      const authIds = (sdRows ?? []).map(r => r.auth_user_id).filter(Boolean) as string[];
+      let profilesMap: Record<string, { email: string | null; service: string | null; hierarchy: string | null }> = {};
+      if (authIds.length > 0) {
+        const { data: pRows, error: pErr } = await supabase
+          .from('profiles')
+          .select('id, email, service, hierarchy')
+          .in('id', authIds);
+        if (pErr) throw pErr;
+        for (const p of pRows ?? []) {
+          profilesMap[p.id] = {
+            email: p.email ?? null,
+            service: (p as any).service ?? null,
+            hierarchy: p.hierarchy ?? null,
+          };
+        }
+      }
+
+      // 3. Merger : profiles fait foi quand auth_user_id existe, sinon staff_directory
+      return (sdRows ?? []).map(r => {
+        const p = r.auth_user_id ? profilesMap[r.auth_user_id] : null;
+        return {
+          ...r,
+          profile_email:     p?.email     ?? null,
+          profile_service:   p?.service   ?? null,
+          profile_hierarchy: p?.hierarchy ?? null,
+          display_email:     p?.email     ?? r.email,
+          display_service:   p?.service   ?? r.service,
+          display_hierarchy: p?.hierarchy ?? r.hierarchy,
+        } as StaffRow;
+      });
     },
   });
 
   const filtered = staff.filter(p => {
     if (!search) return true;
     const name = (p.full_name || `${p.first_name ?? ''} ${p.last_name ?? ''}`).toLowerCase();
-    return name.includes(search.toLowerCase()) || (p.email ?? '').toLowerCase().includes(search.toLowerCase());
+    return name.includes(search.toLowerCase()) || (p.display_email ?? '').toLowerCase().includes(search.toLowerCase());
   });
 
   const openEdit = (p: StaffRow) => {
@@ -1368,58 +1409,86 @@ function TabRoleHierarchy() {
     setEditValues({
       first_name: p.first_name ?? '',
       last_name:  p.last_name  ?? '',
-      email:      p.email      ?? '',
+      // Email → affiché depuis profiles si compte Sokle, sinon staff_directory
+      email:      p.display_email ?? '',
       phone:      p.phone      ?? '',
-      service:    p.service    ?? '',
-      hierarchy:  p.hierarchy  ?? 'Normal',
+      // Service & hierarchy → affichés depuis profiles si compte Sokle, sinon staff_directory
+      service:    p.display_service ?? '',
+      hierarchy:  p.display_hierarchy ?? 'Collaborator',
     });
   };
 
-  const handleDelete = async (p: StaffRow, displayName: string) => {
-    if (!window.confirm(`Supprimer « ${displayName} » définitivement ?\n\nCette action est irréversible.`)) return;
+  // ── Suppression : pop-in custom (pas window.confirm) ──
+  const [deleteTarget, setDeleteTarget] = useState<{ p: StaffRow; displayName: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      const { error } = await supabase.from('staff_directory').delete().eq('id', p.id);
+      // Supprime UNIQUEMENT la ligne staff_directory.
+      // Si la personne a un compte Sokle (auth_user_id), profiles et auth.users restent intacts —
+      // mais le lien est cassé. Pour cette V1 on ne supprime pas le compte Sokle automatiquement.
+      const { error } = await supabase.from('staff_directory').delete().eq('id', deleteTarget.p.id);
       if (error) throw error;
-      toast({ title: '✅ Collaborateur supprimé', description: `« ${displayName} » a été retiré du staff.` });
+      toast({ title: '✅ Collaborateur supprimé', description: `« ${deleteTarget.displayName} » a été retiré du staff.` });
+      setDeleteTarget(null);
       queryClient.invalidateQueries({ queryKey: ['staff_directory_all'] });
       queryClient.invalidateQueries({ queryKey: ['staff_directory_active'] });
       queryClient.invalidateQueries({ queryKey: ['staff_directory_count'] });
     } catch (err: any) {
       toast({ title: 'Erreur suppression', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const askDelete = (p: StaffRow, displayName: string) => {
+    setDeleteTarget({ p, displayName });
   };
 
   const saveEdit = async (id: string) => {
     setIsSaving(true);
     try {
+      const row = staff.find(s => s.id === id);
+      const hasAuth = !!row?.auth_user_id;
       const fullName = `${editValues.first_name.trim()} ${editValues.last_name.trim()}`.trim();
 
-      // 1. Mettre à jour staff_directory (source de vérité RH)
+      // ── ÉTAPE 1 : champs identitaires TOUJOURS dans staff_directory ──
+      // (first_name, last_name, full_name, email, phone)
+      // Service et hierarchy NE SONT PAS écrits ici si le user a un compte Sokle
+      // (le trigger de sync depuis profiles s'en chargera).
+      const sdPayload: Record<string, any> = {
+        first_name: editValues.first_name.trim() || null,
+        last_name:  editValues.last_name.trim()  || null,
+        full_name:  fullName || null,
+        email:      editValues.email.trim()  || null,
+        phone:      editValues.phone.trim()  || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (!hasAuth) {
+        // Pas de compte Sokle → staff_directory fait foi pour service/hierarchy
+        sdPayload.service   = editValues.service       || null;
+        sdPayload.hierarchy = editValues.hierarchy     || 'Collaborator';
+      }
       const { error: sdErr } = await supabase
         .from('staff_directory')
-        .update({
-          first_name: editValues.first_name.trim() || null,
-          last_name:  editValues.last_name.trim()  || null,
-          full_name:  fullName || null,
-          email:      editValues.email.trim()  || null,
-          phone:      editValues.phone.trim()  || null,
-          service:    editValues.service       || null,
-          hierarchy:  editValues.hierarchy     || 'Normal',
-          updated_at: new Date().toISOString(),
-        })
+        .update(sdPayload)
         .eq('id', id);
       if (sdErr) throw sdErr;
 
-      // 2. Synchroniser tous les champs pertinents dans profiles (via staff_directory_id)
-      await supabase
-        .from('profiles')
-        .update({
-          first_name: editValues.first_name.trim() || null,
-          last_name:  editValues.last_name.trim()  || null,
-          service:    editValues.service           || null,
-          hierarchy:  editValues.hierarchy         || 'Normal',
-        })
-        .eq('staff_directory_id', id);
+      // ── ÉTAPE 2 : si compte Sokle, service/hierarchy passent par profiles ──
+      // Le trigger trigger_sync_profiles_to_staff propagera vers staff_directory.
+      if (hasAuth) {
+        const { error: pErr } = await supabase
+          .from('profiles')
+          .update({
+            service:    editValues.service       || null,
+            hierarchy:  editValues.hierarchy     || 'Collaborator',
+          })
+          .eq('id', row!.auth_user_id);
+        if (pErr) throw pErr;
+      }
 
       toast({ title: '✅ Collaborateur mis à jour' });
       setEditingId(null);
@@ -1474,9 +1543,10 @@ function TabRoleHierarchy() {
               <p className="text-sm text-white opacity-40">Aucun collaborateur trouvé</p>
             </div>
           ) : filtered.map((p, idx) => {
-            const displayName = (p.full_name || `${p.first_name ?? ''} ${p.last_name ?? ''}`).trim() || p.email || '—';
+            const displayName = (p.full_name || `${p.first_name ?? ''} ${p.last_name ?? ''}`).trim() || p.display_email || '—';
             const isEditing = editingId === p.id;
-            const hiCfg = HIERARCHY_COLORS[p.hierarchy ?? 'Normal'] ?? HIERARCHY_COLORS['Normal'];
+            const hiCfg = HIERARCHY_COLORS[p.display_hierarchy ?? 'Collaborator'] ?? HIERARCHY_COLORS['Collaborator'];
+            const hasSokleAccess = !!p.auth_user_id;
 
             return (
               <div key={p.id} style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(187,165,122,0.07)' : 'none' }}>
@@ -1496,25 +1566,34 @@ function TabRoleHierarchy() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-white truncate">{displayName}</p>
-                        <p className="text-xs" style={{ color: 'rgba(187,165,122,0.35)' }}>
-                          {p.is_active ? 'Actif' : 'Inactif'}
-                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs" style={{ color: 'rgba(187,165,122,0.35)' }}>
+                            {p.is_active ? 'Actif' : 'Inactif'}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                            style={hasSokleAccess
+                              ? { backgroundColor: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }
+                              : { backgroundColor: 'rgba(222,174,53,0.10)', color: '#DEAE35', border: '1px solid rgba(222,174,53,0.3)' }}
+                            title={hasSokleAccess ? 'Le collaborateur a un compte Sokle actif' : 'Le collaborateur n\'a pas encore créé son compte Sokle'}>
+                            {hasSokleAccess ? '✓ Accès Sokle' : 'Pas encore inscrit'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    {/* Email / Phone */}
+                    {/* Email / Phone — email vient de profiles si compte Sokle */}
                     <div className="min-w-0">
-                      <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{p.email || '—'}</p>
+                      <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{p.display_email || '—'}</p>
                       <p className="text-xs truncate" style={{ color: 'rgba(187,165,122,0.4)' }}>{p.phone || '—'}</p>
                     </div>
-                    {/* Service */}
+                    {/* Service — vient de profiles si compte Sokle */}
                     <span className="text-sm truncate"
-                      style={{ color: p.service ? 'rgba(255,255,255,0.8)' : 'rgba(187,165,122,0.3)' }}>
-                      {p.service || '—'}
+                      style={{ color: p.display_service ? 'rgba(255,255,255,0.8)' : 'rgba(187,165,122,0.3)' }}>
+                      {p.display_service || '—'}
                     </span>
-                    {/* Hiérarchie */}
+                    {/* Hiérarchie — vient de profiles si compte Sokle */}
                     <span className="text-xs font-medium px-2.5 py-1 rounded-full w-fit"
                       style={{ backgroundColor: hiCfg.bg, color: hiCfg.color }}>
-                      {p.hierarchy ?? 'Normal'}
+                      {p.display_hierarchy ?? 'Collaborator'}
                     </span>
                     {/* Action */}
                     <div className="flex items-center gap-1 justify-end">
@@ -1523,7 +1602,7 @@ function TabRoleHierarchy() {
                         style={{ color: 'rgba(187,165,122,0.4)' }}>
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(p, displayName)}
+                      <button onClick={() => askDelete(p, displayName)}
                         className="h-7 w-7 rounded-md flex items-center justify-center transition-colors hover:bg-red-500/20"
                         title="Supprimer ce collaborateur">
                         <Trash2 className="h-3.5 w-3.5 text-red-400 opacity-50 hover:opacity-100" />
@@ -1611,6 +1690,62 @@ function TabRoleHierarchy() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Modal de confirmation de suppression ── */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+          onClick={() => !isDeleting && setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: 'linear-gradient(135deg, #2a1a3a 0%, #1E1A37 100%)', border: '1px solid rgba(248,113,113,0.4)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-3 flex items-start gap-4">
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(248,113,113,0.15)' }}>
+                <AlertTriangle className="h-5 w-5" style={{ color: '#f87171' }} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-white mb-1">Supprimer ce collaborateur ?</h3>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                  « <span className="font-medium text-white">{deleteTarget.displayName}</span> » sera retiré définitivement du staff_directory.
+                </p>
+                {deleteTarget.p.auth_user_id && (
+                  <p className="text-xs mt-2 px-3 py-2 rounded-lg"
+                    style={{ backgroundColor: 'rgba(222,174,53,0.1)', color: '#DEAE35', border: '1px solid rgba(222,174,53,0.3)' }}>
+                    ⚠️ Cette personne a un compte Sokle. Son compte d'authentification reste actif (à supprimer manuellement si besoin via Supabase Auth).
+                  </p>
+                )}
+                <p className="text-xs mt-2" style={{ color: 'rgba(248,113,113,0.7)' }}>Cette action est irréversible.</p>
+              </div>
+            </div>
+            <div className="px-6 pb-5 pt-3 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
+                style={{ color: 'rgba(187,165,122,0.7)', border: '1px solid rgba(187,165,122,0.25)' }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                style={{ backgroundColor: 'rgba(248,113,113,0.2)', color: '#f87171', border: '1px solid rgba(248,113,113,0.5)' }}
+              >
+                {isDeleting
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Suppression…</>
+                  : <><Trash2 className="h-3.5 w-3.5" /> Supprimer définitivement</>
+                }
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

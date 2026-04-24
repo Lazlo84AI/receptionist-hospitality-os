@@ -1,3 +1,71 @@
+## [2026-04-24]
+
+### fix: RLS profiles — déblocage lecture/écriture admin pour l'onglet Rôles & Hiérarchies
+
+**Symptôme**
+L'onglet `/admin/onboarding > Rôles & Hiérarchie` affichait des valeurs polluées pour les users ayant un compte Sokle :
+- Alioune Coulibaly → service `Réception` (capitalisé avec accent) au lieu de `reception`
+- Islem Salhi → service `Petit Dejeuner` au lieu de `reception` (valeur enum réelle dans profiles)
+- Drichelle Astom → colonne email vide alors que `profiles.email = drichelle.nina@gmail.com`
+
+**Diagnostic (4h d'investigation méthodique)**
+1. Vérification que `profiles` contient bien les bonnes valeurs en base (confirmé via SQL Editor en service_role).
+2. Vérification que le JOIN `staff_directory.auth_user_id = profiles.id` fonctionne (confirmé, aucun `join_broken`).
+3. Vérification que le code React fait bien la bonne requête avec le bon merger `display_email = p?.email ?? r.email` etc. (confirmé, code correct).
+4. Découverte : les policies RLS sur `profiles` limitent chaque user à lire/modifier uniquement son propre profile (`auth.uid() = id`). Quand le front fait `.in('id', [17 UUIDs])`, PostgREST filtre silencieusement et ne renvoie qu'1 ligne. Le fallback JS se déclenche pour tous les autres → affichage des valeurs polluées de `staff_directory`.
+
+**Fix SQL (additif, zéro suppression)**
+Trois éléments ajoutés sur la base Supabase :
+1. **Fonction `public.can_access_admin()`** — SECURITY DEFINER, évite la récursion RLS, reproduit exactement la logique de `useStaffService.ts` (`service = 'direction' OR hierarchy = 'Manager'`).
+2. **Policy SELECT additive `admins_can_view_all_profiles`** — les admins peuvent lire tous les profiles, en plus de la policy existante "own profile". PostgreSQL combine les deux en OU logique.
+3. **Policy UPDATE additive `admins_can_update_all_profiles`** — les admins peuvent update tous les profiles (indispensable pour que le bouton Sauvegarder de l'édition inline fonctionne).
+
+```sql
+CREATE OR REPLACE FUNCTION public.can_access_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $func$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND (service = 'direction' OR hierarchy = 'Manager')
+  );
+$func$;
+
+CREATE POLICY "admins_can_view_all_profiles"
+  ON public.profiles FOR SELECT TO authenticated
+  USING (public.can_access_admin());
+
+CREATE POLICY "admins_can_update_all_profiles"
+  ON public.profiles FOR UPDATE TO authenticated
+  USING (public.can_access_admin())
+  WITH CHECK (public.can_access_admin());
+```
+
+**Ce qui n'a PAS été modifié**
+Aucune ligne de code frontend. Le composant `TabRoleHierarchy` dans `src/pages/admin/TeamOnboarding.tsx` était déjà fonctionnellement correct (merger `display_* = p?.X ?? r.X` bien implémenté, logique de save distinguant `auth_user_id IS NOT NULL` vs NULL, pop-in de suppression, etc.). Le bug était 100 % côté base de données.
+
+**Tests de validation après fix (tous passés)**
+- Alioune Coulibaly → service `reception` ✅
+- Islem Salhi → service `reception` ✅
+- Drichelle Astom → email `drichelle.nina@gmail.com` ✅
+- Mélanie Tavares "Pas encore inscrit" → continue d'afficher `staff_directory` (comportement attendu) ✅
+
+**Règle métier reproduite dans `can_access_admin()`**
+`service = 'direction' OR hierarchy = 'Manager'`. Exactement la même condition que celle implémentée côté front dans `src/hooks/useStaffService.ts` (`canAccessAdmin`) et utilisée par `src/components/AdminProtectedRoute.tsx`. Toute évolution de cette règle doit être faite aux deux endroits en même temps (SQL + TypeScript).
+
+**Documentation durable**
+Cette investigation a mis au jour une dette technique structurelle autour du couple `profiles` ↔ `staff_directory` (triggers, flow signup, valeurs polluées historiques, RLS incohérentes entre policies, colonnes mortes). La connaissance complète est capitalisée dans **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** (nouveau fichier) — doc de référence pour toute évolution future sur ces tables.
+
+**Docs marquées obsolètes**
+- `SIGNUP_DEBUG_GUIDE.md` : bandeau d'obsolescence ajouté en tête, pointe vers la nouvelle doc.
+- `ARCHITECTURE_FONCTIONNELLE.md` (sections 1.4 et 1.5) et `SUPABASE_TABLES.md` (sections profiles + staff_directory) : pointeurs courts ajoutés vers la nouvelle doc, contenu existant non modifié.
+
+---
+
 ## [2026-04-23]
 
 ### fix: Team Dispatch multi-device sync via Supabase (nouvelle table `user_view_configurations`)

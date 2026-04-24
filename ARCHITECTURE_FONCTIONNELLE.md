@@ -127,6 +127,8 @@ cancelled → ❌ Archivé uniquement
 
 **Fonction business** : Centralise les données utilisateurs avec synchronisation automatique auth/profil
 
+> 📌 **Documentation exhaustive et à jour** — pour les détails complets sur les triggers (`handle_new_user`, `sync_profiles_to_staff_directory`), les RLS policies, la règle métier « profiles fait foi si `auth_user_id IS NOT NULL` », les valeurs historiquement polluées et la dette technique identifiée, voir **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** (mise à jour : 2026-04-24).
+
 ---
 
 ### 1.5 Table `staff_directory` - Annuaire Personnel Étendu
@@ -145,6 +147,8 @@ cancelled → ❌ Archivé uniquement
 - Mapping UUID → Nom pour affichage dans les tâches
 - Filtrage des tâches par service (via staff_directory.service)
 - Peut contenir du personnel non-utilisateur du système (ex: externes)
+
+> 📌 **Documentation exhaustive et à jour** — pour le schéma réel des colonnes (dont `auth_user_id`, `role`, `hierarchy`, compteurs analytics), le lien canonique avec `profiles`, les valeurs polluées en prod (`Réception`, `Petit Dejeuner`, etc.) et les règles d'écriture à respecter, voir **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** (mise à jour : 2026-04-24).
 
 ---
 
