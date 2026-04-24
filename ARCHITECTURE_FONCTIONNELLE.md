@@ -1,5 +1,23 @@
 # HospitalityOS - Architecture Fonctionnelle
 
+> ℹ️ **Document daté : 29 Janvier 2026 — mises à jour partielles 17 Février 2026 et 24 Avril 2026.**
+>
+> Ce document décrit l'architecture fonctionnelle haut-niveau à son état de janvier/février 2026. **Plusieurs détails SQL (enums, colonnes, triggers) ont depuis évolué.** Pour les **faits actuels** sur la base, utiliser par priorité :
+>
+> 1. **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** — référence complète `profiles` + `staff_directory` + triggers + RLS (mise à jour 2026-04-24)
+> 2. **`CHANGELOG.md`** — chronologie des modifications de schéma et de feature
+> 3. Audit SQL direct via `information_schema` et `pg_catalog` si un doute subsiste
+>
+> **Points spécifiquement obsolètes dans ce document** (liste non exhaustive) :
+> - Le compte de « 15 tables » est sous-estimé (la base en contient 30+ au 24 avril 2026, incluant `notifications`, `assistant_conversations`, `assistant_documents`, `task_comments`, `platform_tutorial_videos`, `user_view_configurations`, `training_assignments`, `training_results`, `training_workflow_rules`, `competency_scores`, `service_competency_profiles`, `video_assignments`, `video_chains`, etc.)
+> - Enum `priority_level` en prod : **`normal, urgent`** (2 valeurs), pas `low/medium/high/urgent`
+> - Enum `service_type` en prod : **5 valeurs** (`reception, housekeeping, maintenance, direction, ai_team`), pas de `restaurant`
+> - Enum `user_role` en prod : 9 valeurs avec doublons de casse (enum pollué), pas une liste propre
+> - Triggers de notifications PostgreSQL natifs (`fn_notify_task_assigned`, `fn_notify_task_comment`, `fn_notify_training_assigned`) non documentés ici — sujet à dedier dans un doc `docs/ARCHITECTURE_NOTIFICATIONS.md` futur
+> - Trigger `trigger_auto_refill_qcm` sur `knowledge_queries` non documenté ici — potentiellement lié au blocage A2 « < 20 questions »
+
+---
+
 **Version** : 1.0  
 **Date** : 29 Janvier 2026  
 **Auteur** : Wilfried de Renty  
@@ -1924,8 +1942,8 @@ Bouton final : "Commencez" → redirection vers `/shift-management`
 ---
 
 **Document Version** : 1.2  
-**Dernière mise à jour** : 17 Février 2026  
+**Dernière mise à jour** : 17 Février 2026 (sections 5 et 6) — bandeau d'actualisation ajouté le 24 Avril 2026 en tête du document  
 **Auteur** : Wilfried de Renty  
-**Statut** : ✅ Production-Ready
+**Statut** : ✅ Production-Ready (architecture fonctionnelle globale) — ⚠️ Détails SQL partiellement obsolètes, voir bandeau en tête
 
 © 2026 Catapulz - HospitalityOS

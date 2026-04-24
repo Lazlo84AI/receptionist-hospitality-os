@@ -74,7 +74,7 @@ auth.users.id ═══ profiles.id ═══ staff_directory.auth_user_id
 | `last_name` | `text` | YES | Idem | |
 | `role` | `text` | YES | **Colonne morte** — toujours NULL en prod | À ne pas utiliser, ne pas confondre avec `staff_directory.role` qui est différent |
 | `hierarchy` | `text` | YES | Valeurs métier valides : `'Collaborator'`, `'Manager'` | Default `'Normal'` dans le schéma mais posé à `'Collaborator'` par le trigger. **Une ligne parasite `'Normal'` subsiste en prod** (Shami Martin, à nettoyer) |
-| `service` | `service_type` (enum) | YES | Enum strict. Valeurs en prod : `reception`, `housekeeping`, `maintenance`, `direction`, `restaurant`, `ai_team` | ⚠️ `restaurant` peut ne pas être dans l'enum selon l'état du repo — vérifier avec `SELECT unnest(enum_range(NULL::service_type))`. Le trigger mappe `job_role` → `service_type` via un CASE |
+| `service` | `service_type` (enum) | YES | Enum strict à **5 valeurs** (confirmé 2026-04-24 via `SELECT unnest(enum_range(NULL::service_type))`) : `reception`, `housekeeping`, `maintenance`, `direction`, `ai_team` | 🔴 Le trigger `handle_new_user` mappe `job_role` → `service_type` via un CASE qui produit 2 valeurs **absentes de l'enum** : `'restaurant'` et `'artificial_intelligence'`. Voir section 4 pour les bugs actifs. |
 | `staff_directory_id` | `uuid` | YES | FK vers `staff_directory.id`, posé par le trigger au signup | Redondant avec `staff_directory.auth_user_id`. Lien inverse peu utilisé |
 | `permissions` | `jsonb` | YES | `{}` par défaut, non utilisé aujourd'hui | Prévu pour évolution futures |
 | `created_at` | `timestamptz` | YES | `now()` | |
@@ -82,11 +82,24 @@ auth.users.id ═══ profiles.id ═══ staff_directory.auth_user_id
 
 ### Enum `service_type`
 
-Valeurs théoriques : `reception | housekeeping | maintenance | direction | restaurant | ai_team`.
+**Valeurs réelles en prod** (confirmé 2026-04-24 via `SELECT unnest(enum_range(NULL::service_type))`) :
+`reception`, `housekeeping`, `maintenance`, `direction`, `ai_team`.
 
-⚠️ **Bug latent identifié** : le trigger `handle_new_user` (section 4) mappe `'Restaurant staff'` → `'restaurant'`, mais `'restaurant'` peut ne pas exister dans l'enum `service_type` selon l'état de la base. Si un user signup avec ce job_role, l'INSERT dans `profiles` plantera silencieusement.
+**5 valeurs. Ni `restaurant` ni `artificial_intelligence` n'existent.**
 
-**À faire** (non fait au 24 avril) : `ALTER TYPE service_type ADD VALUE IF NOT EXISTS 'restaurant';`
+🔴 **2 bugs actifs dans `handle_new_user`** (section 4) — le trigger tente d'écrire des valeurs qui n'existent pas dans l'enum :
+- `'Restaurant staff'` → `'restaurant'` ❌
+- `'AI Engineer'` → `'artificial_intelligence'` ❌
+
+Tout user qui signup avec l'un de ces 2 job_roles verra son INSERT dans `profiles` planter avec `invalid input value for enum service_type`, faisant échouer tout le signup (rollback en cascade depuis le trigger).
+
+**À faire** (non fait au 24 avril, à traiter en session dédiée) :
+```sql
+ALTER TYPE service_type ADD VALUE IF NOT EXISTS 'restaurant';
+-- Pour "AI Engineer", décision produit à prendre avant d'exécuter :
+--   soit ALTER TYPE pour ajouter 'artificial_intelligence',
+--   soit réécrire le CASE pour qu'il mappe vers 'ai_team' (valeur existante).
+```
 
 ---
 
@@ -102,7 +115,7 @@ Valeurs théoriques : `reception | housekeeping | maintenance | direction | rest
 | `email` | `text` | YES | Peut être différent de `profiles.email` ! | Exemple en prod : Thibault a `staff_directory.email = Thibault.desaintmartin@decoeur.com` et `profiles.email = tsm@decoeur.com`. Ne **jamais** considérer `staff_directory.email` comme la vérité pour un user avec compte Sokle |
 | `phone` | `text` | YES | Champ opérationnel important | N'existe que dans `staff_directory` — pas dans `profiles` |
 | `avatar_url` | `text` | YES | | |
-| `role` | `user_role` (enum) | NO | **Ne pas confondre avec hierarchy**. C'est le `job_role` brut saisi au signup | Enum pollué avec doublons de casse (`receptionist` minuscule existe pour 4 lignes historiques). Valeurs théoriques : `Receptionist`, `Director`, `Housekeeping Supervisor`, `Room Attendant`, `Restaurant staff`, `Tech maintenance team`, `AI Engineer` |
+| `role` | `user_role` (enum) | NO | **Ne pas confondre avec hierarchy**. C'est le `job_role` brut saisi au signup | L'**enum lui-même est pollué** avec 9 valeurs dont 4 paires de doublons de casse (`receptionist` + `Receptionist`, `restaurant staff` + `Restaurant staff`, `tech maintenance team` + `Tech maintenance team`, `Housekeeping Supervisor`, `Room Attendant`, `Director`). Contrairement à ce qu'on pourrait croire, **`AI Engineer` n'est pas dans l'enum**. Voir section "Enum `user_role`" pour détail. |
 | `department` | `text` | YES | Hardcodé à `'Reception'` par le trigger à la création, jamais mis à jour | **Colonne fonctionnellement inutilisée** — à ne pas se fier |
 | `service` | `text` (libre, pas d'enum) | YES | ⚠️ Valeurs polluées en prod | Voir section 8. Mélange de casses et de libellés FR : `reception`, `Réception`, `housekeeping`, `Housekeeping`, `Petit Dejeuner`, `maintenance`, `direction`, NULL |
 | `hierarchy` | `text` | YES | CHECK : `IN ('Collaborator', 'Manager', 'Director')` | 1 ligne `Director` en prod (à nettoyer vers `Manager`). Valeurs métier : uniquement `Collaborator` et `Manager` |
@@ -117,9 +130,22 @@ Valeurs théoriques : `reception | housekeeping | maintenance | direction | rest
 
 ### Enum `user_role`
 
-Déclaré : `Receptionist`, `Director`, `Housekeeping Supervisor`, `Room Attendant`, `Restaurant staff`, `Tech maintenance team`, `AI Engineer`.
+**Valeurs réelles en prod** (confirmé 2026-04-24) — 9 valeurs, dont 4 paires de doublons de casse :
 
-⚠️ **Pollué historiquement** : 4 lignes avec `receptionist` minuscule existent, non-conformes à la casse de l'enum. Ces valeurs sont acceptées parce que l'enum les a reçues avant un `ALTER TYPE` de normalisation. À nettoyer lors d'un chantier dédié.
+```
+receptionist                Receptionist
+restaurant staff            Restaurant staff
+tech maintenance team       Tech maintenance team
+Housekeeping Supervisor     (pas de doublon minuscule)
+Room Attendant              (pas de doublon minuscule)
+Director                    (pas de doublon minuscule)
+```
+
+⚠️ Le trigger 2 (`sync_profiles_to_staff_directory`) INSERT avec `role = 'receptionist'` (minuscule hardcodé dans le code de la fonction), ce qui explique l'existence des variantes minuscules. Les majuscules viennent du dropdown de signup et des imports historiques.
+
+⚠️ **Absence notable** : `'AI Engineer'` n'existe **pas** dans l'enum, alors que le front propose probablement cette valeur au signup. Un user qui choisirait "AI Engineer" comme job_role verrait probablement son INSERT dans `staff_directory` planter (en plus du bug du mapping `service_type` côté `profiles` — double effet de bord).
+
+À nettoyer lors d'un chantier dédié.
 
 ---
 
@@ -146,8 +172,8 @@ Trois triggers sont impliqués dans le cycle de vie d'un user. **Ne jamais les m
      - `'Housekeeping Supervisor'` → `housekeeping`
      - `'Room Attendant'` → `housekeeping`
      - `'Tech maintenance team'` → `maintenance`
-     - `'Restaurant staff'` → `restaurant` ⚠️ (voir bug latent section 2)
-     - `'AI Engineer'` → `ai_team` (ou `artificial_intelligence` selon version du trigger — à vérifier)
+     - `'Restaurant staff'` → `'restaurant'` 🔴 **BUG ACTIF** — valeur absente de l'enum `service_type`, INSERT plante, signup échoue
+     - `'AI Engineer'` → `'artificial_intelligence'` 🔴 **BUG ACTIF** — valeur absente de l'enum `service_type`, INSERT plante, signup échoue (la valeur correcte dans l'enum serait `'ai_team'`)
      - default → `reception`
 2. **Ne touche JAMAIS `staff_directory`** (c'est le trigger 2 qui s'en charge, en cascade).
 3. **Ne remplit JAMAIS `profiles.role`** (reste NULL — colonne morte).
@@ -161,7 +187,7 @@ Trois triggers sont impliqués dans le cycle de vie d'un user. **Ne jamais les m
 
 **Logique (⚠️ complexe et défectueuse à plusieurs endroits, à comprendre avant tout refactor)** :
 
-1. Cherche une ligne existante dans `staff_directory` **par `last_name` (lowercase + trim)**. ⚠️ **Pas par email, pas par `auth_user_id`**. Logique fragile si deux staff ont le même nom ou si le nom contient des espaces/accents.
+1. Cherche une ligne existante dans `staff_directory` **par `first_name` + `last_name`, tous deux en `LOWER(TRIM(...))`** (déduit du code de la fonction utilitaire `align_all_uuids` qui reproduit cette logique de matching — le code source complet de `sync_profiles_to_staff_directory` reste à récupérer pour confirmation définitive). ⚠️ **Pas par email, pas par `auth_user_id`**. Logique fragile si deux staff ont le même prénom **et** même nom, ou si l'orthographe diffère entre la saisie signup et la ligne existante de `staff_directory` (accents, tirets, espaces multiples).
 2. **Si trouvé** :
    - Change l'id de la ligne `staff_directory` pour qu'il **matche `NEW.id`** (= l'UUID auth du user). Ça veut dire que `staff_directory.id` devient égal à `auth.users.id`.
    - Met à jour `auth_user_id = NEW.id`, `email = COALESCE(NEW.email, existing.email)`, `first_name`, `service`, `hierarchy` avec la même logique `COALESCE(NEW.x, existing.x)` (garde l'existant si NEW est NULL).
@@ -392,11 +418,12 @@ Capitalisée ici pour orienter les chantiers futurs. **Aucune action n'est urgen
 | 3 | `staff_directory.department` hardcodé `'Reception'` par trigger | Moyen | 30 min | Colonne inutilisable, potentielle source de confusion |
 | 4 | `staff_directory.service` text libre pollué | **Élevé** | 2-3 h | Affichage incohérent si la règle "profiles fait foi" est oubliée ; requêtes par service fragiles |
 | 5 | Trigger 2 matche par `last_name` lowercase | **Critique fragile** | 2 h | Collision si homonymes, erreurs silencieuses |
-| 6 | Enum `user_role` pollué avec doublons de casse | Moyen | 1 h | Affichage incohérent, filtres cassés |
-| 7 | Enum `service_type` sans `'restaurant'` (non confirmé, à vérifier) | Faible | 5 min | Signup d'un `Restaurant staff` plante silencieusement |
+| 6 | Enum `user_role` pollué avec 4 paires de doublons de casse **dans l'enum lui-même** (pas juste dans les données) | Moyen | 1 h | Affichage incohérent, filtres cassés. `AI Engineer` absent de l'enum malgré présence dans le dropdown de signup |
+| 7 | Enum `service_type` sans `'restaurant'` ni `'artificial_intelligence'` | **🔴 CRITIQUE ACTIF** | 30 min | **Confirmé 2026-04-24** : tout user qui signup comme "Restaurant staff" ou "AI Engineer" voit son signup **planter entièrement** (rollback cascade depuis `handle_new_user`). Aucun message d'erreur clair côté front. Voir aussi ligne 11 |
 | 8 | Policy `staff_directory_write` mentionne `'Direction'` (ancien vocab) | Moyen | 15 min | Users service=direction bloqués en écriture sur `staff_directory` |
 | 9 | ~~Pas de policy SELECT admin sur profiles~~ | ~~Critique~~ | ~~Fait 24 avril~~ | ✅ Résolu |
 | 10 | ~~Pas de policy UPDATE admin sur profiles~~ | ~~Critique~~ | ~~Fait 24 avril~~ | ✅ Résolu |
+| 11 | `handle_new_user` mappe `'AI Engineer'` → `'artificial_intelligence'` (inexistant) au lieu de `'ai_team'` | **🔴 CRITIQUE ACTIF** | 10 min (peut être fait avec la ligne 7) | Décision produit à prendre : soit `ALTER TYPE` pour ajouter les 2 valeurs manquantes, soit réécrire le CASE du trigger pour mapper `'AI Engineer'` → `'ai_team'` et `'Restaurant staff'` → une valeur valide existante |
 
 **Stratégie recommandée** : nettoyage chirurgical opportuniste (à chaque fois qu'on touche une zone, on nettoie en même temps). Pas de chantier dédié tant que le produit ne change pas de stack.
 
@@ -445,3 +472,10 @@ Non exhaustif — pour orienter un dev/IA cherchant à comprendre les impacts d'
 ## 12. Historique des modifications de cette doc
 
 - **2026-04-24** : création initiale, suite au fix RLS `admins_can_view/update_all_profiles`. Rédaction basée sur l'inspection exhaustive de la base en prod (Supabase SQL Editor), du code `TabRoleHierarchy`, des hooks `useStaffService` et `useAuth`, et des triggers SQL en place.
+- **2026-04-24 (suite)** : mise à jour factuelle après audit complet de la base via 7 requêtes SQL (pack "Audit Archi" — `information_schema.columns`, `pg_policies`, `pg_trigger`, `pg_proc`, `information_schema.views`, FKs, `pg_enum`). Corrections apportées :
+  - **Enum `service_type` contient 5 valeurs en prod** (pas 6) : `reception`, `housekeeping`, `maintenance`, `direction`, `ai_team`. `restaurant` n'existe pas dans l'enum.
+  - **2 bugs critiques passent de "latents" à "confirmés actifs"** dans le trigger `handle_new_user` : mapping vers `'restaurant'` et `'artificial_intelligence'` qui font planter les signups "Restaurant staff" et "AI Engineer" (cascade rollback depuis le trigger → signup échoue entièrement sans message d'erreur clair).
+  - **Enum `user_role`** : 9 valeurs en prod avec **4 paires de doublons de casse dans l'enum lui-même** (pas juste dans les données, comme indiqué initialement). `AI Engineer` absent de l'enum.
+  - **Trigger 2 matching** : logique précisée — c'est `first_name + last_name` en LOWER+TRIM (déduit du code de `align_all_uuids`), pas uniquement `last_name`. À reconfirmer quand le code source complet de `sync_profiles_to_staff_directory` sera disponible (tronqué dans l'export SQL du 24 avril).
+  - **Ajout entrée 11** à la table de dette technique (bug AI Engineer / artificial_intelligence).
+  - **À documenter dans sessions futures** : plusieurs mécanismes découverts lors de l'audit mais hors scope de cette doc (profiles + staff_directory uniquement) — système de notifications PostgreSQL natif via triggers `fn_notify_*` sur `task` et `training_assignments`, trigger `trigger_auto_refill_qcm` sur `knowledge_queries` (qui pourrait résoudre le blocage A2 « < 20 questions »), chaîne `training_assignments → task` via `trg_create_task_on_training_assignment`. Ces sujets méritent leur propre doc (ex: `docs/ARCHITECTURE_NOTIFICATIONS.md`, `docs/ARCHITECTURE_TRAINING_RAG.md`).

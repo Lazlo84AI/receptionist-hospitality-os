@@ -1,5 +1,24 @@
 # 📊 SUPABASE DATABASE REFERENCE - HospitalityOS
 
+> 🔴 **BANDEAU D'OBSOLESCENCE — ajouté le 2026-04-24**
+>
+> Ce document date du **01 octobre 2025**. Il reste utile comme point d'entrée historique mais **plusieurs éléments ont évolué ou étaient déjà incomplets à l'époque**. À ne **pas utiliser comme référence primaire**.
+>
+> **Sources de vérité à consulter en priorité** :
+> 1. **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** — référence complète `profiles` + `staff_directory` + triggers + RLS (2026-04-24)
+> 2. **`CHANGELOG.md`** — chronologie des modifications de schéma
+> 3. Audit SQL direct via `information_schema` et `pg_catalog`
+>
+> **Éléments de ce document spécifiquement corrigés le 2026-04-24** :
+> - Section "ENUMS DISPONIBLES" : valeurs réelles remises (`user_role` était totalement faux, `task_status` manquait `archived`, `service_type` était vide, `task_origin` absent)
+> - Pointeurs sur les sections `staff_directory` et `profiles` (déjà posés en tête de chaque section)
+>
+> **Tables importantes qui n'étaient PAS documentées ici** (ajoutées depuis ou simplement omises) : `notifications`, `assistant_conversations`, `assistant_documents`, `task_comments` (différent de `comments`), `platform_tutorial_videos`, `user_view_configurations`, `training_assignments`, `training_questions`, `training_results`, `training_workflow_rules`, `competency_scores`, `service_competency_profiles`, `video_assignments`, `video_chains`, `knowledge_queries`, `knowledge_formations`.
+>
+> **Note** : la table `shift_handovers` décrite ci-dessous avec `handover_data` JSONB a aussi évolué vers des colonnes structurées `archived_tasks` + `transferred_tasks` (voir `ARCHITECTURE_FONCTIONNELLE.md` section 1.3, qui est plus récente).
+
+---
+
 > **Date** : 01 octobre 2025  
 > **Project ID** : ypxmzacmwqqvlciwahzw  
 > **Source** : Structure actuelle en production
@@ -428,14 +447,19 @@
 
 ## 🔐 ENUMS DISPONIBLES
 
+> ⚠️ **Section mise à jour 2026-04-24** après audit `SELECT unnest(enum_range(...))` sur tous les enums en prod. Les valeurs d'origine (01 octobre 2025) contenaient plusieurs erreurs factuelles.
+
 ### `user_role`
 ```
-'receptionist'
-'Housekeeping Supervisor'
-'Room Attendant'
-'restaurant staff'
-'tech maintenance team'
+receptionist                Receptionist
+restaurant staff            Restaurant staff
+tech maintenance team       Tech maintenance team
+Housekeeping Supervisor
+Room Attendant
+Director
 ```
+
+**9 valeurs au total**, dont **4 paires de doublons de casse** (l'enum lui-même est pollué, pas juste les données). À nettoyer lors d'un chantier dédié. ⚠️ `'AI Engineer'` **n'existe pas** dans l'enum malgré sa présence dans le dropdown signup — tout signup avec ce rôle plante. Voir `docs/ARCHITECTURE_USERS_AND_STAFF.md` section 3 pour détail.
 
 ### `task_category`
 ```
@@ -459,6 +483,15 @@
 'in_progress'
 'completed'
 'cancelled'
+'archived'
+```
+(`'archived'` ajouté post-octobre 2025 via `ALTER TYPE`)
+
+### `task_origin` ✨ _absent du doc original_
+```
+'client'
+'team'
+'maintenance'
 ```
 
 ### `priority_level`
@@ -466,6 +499,7 @@
 'normal'
 'urgent'
 ```
+(2 valeurs seulement — pas de `low/medium/high`)
 
 ### `shift_status`
 ```
@@ -507,10 +541,16 @@
 'custom'
 ```
 
-### `service_type` (pour profiles)
-```sql
--- À vérifier dans Supabase, probablement similaire à task_service
+### `service_type` (pour `profiles.service`)
 ```
+'reception'
+'housekeeping'
+'maintenance'
+'direction'
+'ai_team'
+```
+
+**5 valeurs en prod au 2026-04-24.** ⚠️ Ni `'restaurant'` ni `'artificial_intelligence'` ne sont dans l'enum, alors que le trigger `handle_new_user` tente de les écrire pour les `job_role = 'Restaurant staff'` et `'AI Engineer'`. **Résultat : les signups de ces 2 profils plantent entièrement.** Détail + plan de résolution : `docs/ARCHITECTURE_USERS_AND_STAFF.md` section 9 (dette technique, lignes 7 et 11).
 
 ---
 
@@ -597,4 +637,4 @@ ORDER BY priority DESC, created_at ASC;
 
 ---
 
-**Dernière mise à jour** : 01 octobre 2025
+**Dernière mise à jour** : 01 octobre 2025 (original) — bandeau d'obsolescence + enums factuels remis à jour le 24 avril 2026 (voir tête du document)

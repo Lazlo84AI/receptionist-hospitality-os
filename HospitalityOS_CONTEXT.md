@@ -1,5 +1,13 @@
 # Receptionist Hospitality OS - PROJECT_CONTEXT
 
+> ℹ️ **Document partiellement daté (Mars 2026, Version 2.0).** Le contenu produit/features reste globalement pertinent, mais **plusieurs enums et types TypeScript ci-dessous ont été corrigés le 2026-04-24** après audit complet de la base (voir `CHANGELOG.md` entrée du 24 avril).
+>
+> **Pour la vérité actuelle sur les tables `profiles` et `staff_directory`, les triggers PostgreSQL et les RLS policies, se référer à :** **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** (mise à jour : 2026-04-24).
+>
+> Zones restant à auditer dans ce doc (non-bloquant) : détails d'implémentation des hooks, composants modaux, workflows shift — probablement conséquents depuis mars 2026.
+
+---
+
 ## Vision Produit
 
 **HospitalityOS** est une plateforme de gestion hôtelière moderne centralisant toutes les opérations de réception pour améliorer l'efficacité opérationnelle et l'expérience client. L'objectif principal est de transformer la gestion quotidienne des tâches de réception en un système intégré, collaboratif et intelligent.
@@ -258,22 +266,41 @@ ALTER TYPE task_status ADD VALUE IF NOT EXISTS 'archived';
 
 ## Enums Supabase
 
+> ⚠️ **Valeurs ci-dessous mises à jour le 2026-04-24** après audit `SELECT unnest(enum_range(...))` sur tous les enums. Les valeurs d'origine (mars 2026) étaient incorrectes pour `priority_level`, `reminder_frequency` et surtout `user_role`. `task_origin` et `task_service` étaient absents.
+
 ```typescript
+// Valeurs RÉELLES en prod (confirmé 2026-04-24)
 export const Constants = {
   public: {
     Enums: {
-      attachment_type: ["image", "document", "audio", "video", "other"],
-      comment_type: ["comment", "system", "escalation"],
-      escalation_method: ["email", "sms", "phone", "internal"],
-      priority_level: ["low", "medium", "high", "urgent"],
-      reminder_frequency: ["once", "daily", "weekly", "monthly"],
-      shift_status: ["active", "completed", "cancelled"],
-      task_status: ["pending", "in_progress", "completed", "cancelled", "archived"],  // ✅ archived ajouté
-      user_role: ["admin", "manager", "staff", "maintenance", "housekeeping"],
+      attachment_type:    ["image", "document", "audio", "video", "other"],
+      comment_type:       ["comment", "system", "escalation"],
+      escalation_method:  ["email", "sms", "phone", "internal"],
+      priority_level:     ["normal", "urgent"],  // ⚠️ 2 valeurs seulement, pas low/medium/high/urgent
+      reminder_frequency: ["once", "daily", "weekly", "monthly", "custom"],  // ⚠️ "custom" en plus
+      shift_status:       ["active", "completed", "cancelled"],
+      task_category:      ["incident", "client_request", "follow_up", "internal_task"],
+      task_origin:        ["client", "team", "maintenance"],  // ✨ absent des docs précédentes
+      task_service:       ["reception", "housekeeping", "maintenance", "direction"],
+      task_status:        ["pending", "in_progress", "completed", "cancelled", "archived"],
+      service_type:       ["reception", "housekeeping", "maintenance", "direction", "ai_team"],  // ⚠️ 5 valeurs, pas 6 ("restaurant" absent)
+      user_role:          [  // ⚠️ enum pollué historiquement, 9 valeurs avec 4 paires de doublons de casse
+        "receptionist", "Receptionist",
+        "restaurant staff", "Restaurant staff",
+        "tech maintenance team", "Tech maintenance team",
+        "Housekeeping Supervisor", "Room Attendant", "Director"
+        // ❌ "AI Engineer" absent de l'enum malgré présence dans le dropdown signup
+      ],
     },
   },
 }
 ```
+
+**🔴 2 bugs actifs connus** dans le trigger `handle_new_user` (confirmé 2026-04-24) :
+- Signup avec `job_role = 'Restaurant staff'` → le trigger écrit `service = 'restaurant'` qui n'existe pas → INSERT plante → signup échoue
+- Signup avec `job_role = 'AI Engineer'` → le trigger écrit `service = 'artificial_intelligence'` qui n'existe pas → INSERT plante → signup échoue
+
+Voir `docs/ARCHITECTURE_USERS_AND_STAFF.md` section 9 (dette technique, lignes 7 et 11) pour détail et chemins de résolution.
 
 ## Routes de l'Application
 
@@ -336,15 +363,34 @@ interface Location {
 ```
 
 ### Profiles (Supabase)
+
+> ⚠️ **Type ci-dessous obsolète (mars 2026), corrigé 2026-04-24.** La vraie table `profiles` n'a pas de `department` ni `is_active`. Sa colonne `role` est `text` nullable et jamais remplie en prod. Voir **[docs/ARCHITECTURE_USERS_AND_STAFF.md](docs/ARCHITECTURE_USERS_AND_STAFF.md)** pour le schéma factuel complet.
+
 ```typescript
-interface Profile {
+// ⛔ TYPE OBSOLÈTE — conservé pour historique
+interface ProfileObsolete {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  department: 'housekeeping' | 'restaurant' | 'management' | string;
-  role: 'admin' | 'manager' | 'staff' | 'maintenance' | 'housekeeping';
-  is_active: boolean;
+  department: 'housekeeping' | 'restaurant' | 'management' | string;  // n'existe pas dans profiles
+  role: 'admin' | 'manager' | 'staff' | 'maintenance' | 'housekeeping';  // colonne morte, toujours NULL
+  is_active: boolean;  // n'existe pas dans profiles (mais existe dans staff_directory)
+}
+
+// ✅ TYPE RÉEL EN PROD (confirmé 2026-04-24)
+interface Profile {
+  id: string;                    // = auth.users.id
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  role: string | null;           // colonne morte, toujours NULL en prod
+  hierarchy: 'Collaborator' | 'Manager' | null;  // 'Normal' (legacy) existe encore pour 1 ligne parasite
+  service: 'reception' | 'housekeeping' | 'maintenance' | 'direction' | 'ai_team' | null;  // enum strict à 5 valeurs
+  staff_directory_id: string | null;
+  permissions: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
