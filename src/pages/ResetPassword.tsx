@@ -16,6 +16,7 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isInviteFlow, setIsInviteFlow] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,7 +33,22 @@ const ResetPassword = () => {
         allParams: Object.fromEntries(searchParams.entries())
       });
       
-      if (!token || type !== 'recovery') {
+      // Flow invite (template par defaut Supabase) : pas de token dans l'URL,
+      // la session est deja etablie par Supabase apres clic sur le lien magique.
+      if (!token) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.log('✅ Invite flow detected — session active');
+          setIsInviteFlow(true);
+          setError('');
+          return;
+        }
+        setError('Invalid reset link. Please request a new password reset.');
+        return;
+      }
+
+      // Flow recovery : token + type=recovery dans l'URL
+      if (type !== 'recovery') {
         setError('Invalid reset link. Please request a new password reset.');
         return;
       }
@@ -119,8 +135,14 @@ const ResetPassword = () => {
             <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
               <Lock className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold">Reset Password Process</CardTitle>
-            <p className="text-muted-foreground">Enter your new password below to erase the previous one</p>
+            <CardTitle className="text-2xl font-bold">
+              {isInviteFlow ? 'Bienvenue sur Sokle' : 'Reset Password Process'}
+            </CardTitle>
+            <p className="text-muted-foreground">
+              {isInviteFlow
+                ? 'Définis ton mot de passe pour finaliser la création de ton compte'
+                : 'Enter your new password below to erase the previous one'}
+            </p>
           </CardHeader>
           
           <CardContent>

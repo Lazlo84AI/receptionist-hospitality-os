@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { UploadTutorialVideo } from '@/components/UploadTutorialVideo';
+import { CreateStaffMember } from '@/components/admin/CreateStaffMember';
 import {
   Users, Video, Target, Shield, Search, Plus, X, ChevronDown,
   CheckCircle2, Calendar, Send, Loader2, User, Layers, Play,
@@ -1820,12 +1821,16 @@ export default function TeamManagement() {
 
       </div>
 
-      {/* Bouton flottant upload vidéo */}
-      <UploadTutorialVideo
-        forceOpen={!!editVideoId}
-        initialVideoId={editVideoId}
-        onForceClose={() => setEditVideoId(null)}
-      />
+      {/* Bouton flottant : selon onglet actif */}
+      {activeTab === 'role-hierarchy' ? (
+        <CreateStaffMember />
+      ) : (
+        <UploadTutorialVideo
+          forceOpen={!!editVideoId}
+          initialVideoId={editVideoId}
+          onForceClose={() => setEditVideoId(null)}
+        />
+      )}
 
     </AdminLayout>
   );
