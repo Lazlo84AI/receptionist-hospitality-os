@@ -373,7 +373,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100%-1rem)] sm:w-full max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <Edit3 className="h-5 w-5" />
@@ -505,7 +505,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
           </div>
 
           {/* Service and Assigned Members */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">
                 Service *
@@ -583,7 +583,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
 
           {/* Custom Description */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
               <label className="text-sm font-medium text-foreground">Custom Description</label>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 💡 Describe precisely for better understanding
@@ -604,7 +604,7 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
           </div>
 
           {/* Task Enhancement Buttons */}
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-2 sm:gap-4">
             <Button
               variant="outline"
               className="flex items-center gap-2"
@@ -722,17 +722,18 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-center gap-3 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4 border-t">
           <Button 
             variant="outline" 
             onClick={handleClose}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
           <Button 
             variant="outline" 
             onClick={handleCreateCard}
-            className="px-8 py-3 min-w-[180px] text-[#BBA57A] bg-[#1E1A37] border-[#BBA57A] hover:bg-[#DEAE35] hover:text-[#1E1A37] hover:border-[#DEAE35] transition-all duration-300 font-medium"
+            className="w-full sm:w-auto px-8 py-3 sm:min-w-[180px] text-[#BBA57A] bg-[#1E1A37] border-[#BBA57A] hover:bg-[#DEAE35] hover:text-[#1E1A37] hover:border-[#DEAE35] transition-all duration-300 font-medium"
           >
             Create Card
           </Button>

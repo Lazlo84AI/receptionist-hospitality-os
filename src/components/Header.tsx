@@ -55,7 +55,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 hotel-header border-b border-hotel-yellow/20 px-4 flex items-center justify-between">
+    <header className="sticky top-0 left-0 right-0 z-50 h-16 hotel-header border-b border-hotel-yellow/20 px-4 flex items-center justify-between">
       {/* Left: Menu Toggle */}
       <Button
         variant="ghost"
