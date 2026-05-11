@@ -1,3 +1,58 @@
+## [2026-05-11] (séance 6 - radar competences debug complet)
+
+### fix: Training Analytics Radar — affichage des scores reel par profil hierarchie
+
+**Symptome**
+Dans Team Analytics > Individual Training, la modal de radar par membre affichait tous les axes a 0, alors que des QCMs avaient bien ete passes et que des scores existaient en base. Drichelle, Juliette, Sokle, Intermaire : radar vide pour tout le monde.
+
+**Causes root (3 bugs empiles)**
+
+1. **Hook `useTrainingAnalytics` interrogeait les mauvaises colonnes** de `competency_scores` : `user_id` et `score` au lieu de `employee_id` et `current_score`. Erreur silencieuse car non capturee dans le destructuring.
+
+2. **Trigger `update_competency_scores` mal concu** :
+   - Overwrite au lieu de faire la moyenne entre passages successifs
+   - Aucun filtre par profil : creait des scores sur toutes les keys touchees par toutes les formations, sans verifier que la key appartient au profil hierarchie de l'user
+   - Aucun skip pour les Director (Thibault recevait des scores qu'il ne devait pas avoir)
+
+3. **RLS activee sur `competency_scores` sans aucune policy** : la table etait ouverte au service role mais bloquee pour les users authentifies. Le hook recevait un array vide silencieusement. Pattern classique "RLS is a silent killer".
+
+**Fixes appliques**
+
+**1. Hook `src/hooks/useTrainingAnalytics.ts`**
+- Correction des noms de colonnes : `employee_id`, `current_score`
+- Ajout du capture d'erreur `if (compErr) throw compErr;` pour ne plus avaler les erreurs RLS
+
+**2. Fonction PostgreSQL `update_competency_scores()` refactoree**
+- Filtre par profil hierarchie : ne cree de score que pour les `competency_key` appartenant au `service_competency_profiles` du user (service + Collaborator pour les Collab, service + Collaborator + Manager transversal pour les Manager)
+- `connaissance_hotel` universel pour Collab et Manager (pas pour Director)
+- Calcul par MOYENNE : `AVG(score_percent * weight / 100.0)` sur tous les `training_results` qui touchent cette key
+- Skip total pour les Director (hierarchy = 'Director')
+- UPSERT idempotent
+
+**3. Rattrapage historique**
+- Recalcul de tous les `competency_scores` avec la nouvelle logique
+- 5 users couverts : Juliette (13 scores), Drichelle (8), Sokle (3), Intermaire (3), Thibault (0 - skip correct)
+
+**4. Modal radar — `src/pages/admin/TeamAnalytics.tsx`**
+- Reecriture du `fetchModalData` : part des keys du profil et cherche le score, au lieu de filtrer les scores existants par les keys du profil
+- Affichage de TOUS les axes du profil (score reel ou 0 si jamais entraine)
+- Recuperation des labels via `service_competency_profiles.label` pour des noms d'axes lisibles
+
+**5. RLS policies sur `competency_scores`**
+- `SELECT` pour authenticated (lecture par la vue Direction)
+- `INSERT` pour authenticated (le trigger SECURITY INVOKER doit pouvoir ecrire au nom de l'user qui passe le QCM)
+- `UPDATE` pour authenticated (UPSERT du trigger)
+
+**Resultat**
+- ✅ Radar Drichelle (Reception/Manager) : 7 axes Reception + 7 axes Management avec scores reels
+- ✅ Radar Juliette (Direction/Collab) : 6 axes Direction avec scores reels
+- ✅ Radar Sokle (Direction/Manager) : axes Direction + Management avec scores reels
+- ✅ Radar Intermaire (Reception/Collab) : 7 axes Reception avec scores reels (1 score existant + 6 a 0)
+- ✅ Thibault : skip correct (Director non evalue)
+- ✅ Futurs QCMs : trigger ecrit correctement grace aux 3 policies RLS
+
+---
+
 ## [2026-05-11] (séance 5 - audit finalisé)
 
 ### fix: Training Status Display — Formation statuts now correctly updated (Started → In Progress → Completed)
