@@ -754,30 +754,45 @@ export default function TeamAnalytics() {
     const fetchModalData = async () => {
       setModalLoading(true);
       try {
-        // Cles metier (service du membre, hierarchy=Collaborator)
+        // Cles metier (service du membre, hierarchy=Collaborator) — TOUTES les keys du profil avec label
         const { data: metierKeys } = await (supabase as any)
           .from('service_competency_profiles')
-          .select('competency_key')
+          .select('competency_key, label')
           .eq('service', member.service)
           .eq('hierarchy', 'Collaborator');
 
-        // Si Manager: cles transversales (service=NULL, hierarchy=Manager)
+        // Si Manager: cles transversales (service=NULL, hierarchy=Manager) avec label
         let managerKeys: any[] = [];
         if (member.hierarchy === 'Manager') {
           const { data } = await (supabase as any)
             .from('service_competency_profiles')
-            .select('competency_key')
+            .select('competency_key, label')
             .is('service', null)
             .eq('hierarchy', 'Manager');
           managerKeys = data || [];
         }
 
+        // Map des scores existants du user (peut etre vide pour certaines keys du profil)
         const userScores = memberCompetencies[modalMemberId] || [];
-        const metierKeySet = new Set((metierKeys || []).map((k: any) => k.competency_key));
-        const managerKeySet = new Set(managerKeys.map((k: any) => k.competency_key));
+        const userScoreMap = new Map<string, number>(
+          userScores.map((s: any) => [s.competency_key, s.score])
+        );
 
-        setModalMetierAxes(userScores.filter(s => metierKeySet.has(s.competency_key)));
-        setModalManagerAxes(userScores.filter(s => managerKeySet.has(s.competency_key)));
+        // Construire les axes en partant des keys du profil : score si existe, sinon 0
+        const metierAxes = (metierKeys || []).map((k: any) => ({
+          competency_key: k.competency_key,
+          subject: k.label || k.competency_key,
+          score: userScoreMap.get(k.competency_key) ?? 0,
+        }));
+
+        const managerAxes = managerKeys.map((k: any) => ({
+          competency_key: k.competency_key,
+          subject: k.label || k.competency_key,
+          score: userScoreMap.get(k.competency_key) ?? 0,
+        }));
+
+        setModalMetierAxes(metierAxes);
+        setModalManagerAxes(managerAxes);
       } catch (err) {
         console.error('Modal radar fetch error:', err);
       } finally {

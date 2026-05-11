@@ -113,9 +113,10 @@ export const useTrainingAnalytics = () => {
       setFormationStats(formations);
 
       // ── Fetch B : compétences ─────────────────────────────────────────
-      const { data: compScores }   = await (supabase as any)
+      const { data: compScores, error: compErr } = await (supabase as any)
         .from('competency_scores')
-        .select('user_id, competency_key, score');
+        .select('employee_id, competency_key, current_score');
+      if (compErr) throw compErr;
       const { data: compProfiles } = await (supabase as any)
         .from('service_competency_profiles')
         .select('service, competency_key, label');
@@ -131,18 +132,18 @@ export const useTrainingAnalytics = () => {
         const byUserComp: Record<string, Record<string, number>> = {};
 
         (compScores || []).forEach((cs: any) => {
-          const svc = staffById[cs.user_id]?.service;
+          const svc = staffById[cs.employee_id]?.service;
 
           // service aggregation
           if (svc) {
             if (!bySvcComp[svc]) bySvcComp[svc] = {};
             if (!bySvcComp[svc][cs.competency_key]) bySvcComp[svc][cs.competency_key] = [];
-            bySvcComp[svc][cs.competency_key].push(Number(cs.score) || 0);
+            bySvcComp[svc][cs.competency_key].push(Number(cs.current_score) || 0);
           }
 
           // individual aggregation (last score per key — table has one row per user+key)
-          if (!byUserComp[cs.user_id]) byUserComp[cs.user_id] = {};
-          byUserComp[cs.user_id][cs.competency_key] = Number(cs.score) || 0;
+          if (!byUserComp[cs.employee_id]) byUserComp[cs.employee_id] = {};
+          byUserComp[cs.employee_id][cs.competency_key] = Number(cs.current_score) || 0;
         });
 
         // Radars par service
