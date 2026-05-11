@@ -557,7 +557,55 @@ function TabAttribution({ items }: { items: KnowledgeItem[] }) {
 
   const addStep = (item: KnowledgeItem) => {
     if (steps.find(s => s.id === item.id)) return;
-    setSteps(prev => [...prev, { id: item.id, item }]);
+
+    // Si c'est un QCM → vérifier que la formation existe
+    if (item.formation_steps === 'qcm') {
+      const relatedFormation = items.find(
+        i => i.document_name === item.document_name && i.formation_steps === 'formation'
+      );
+      
+      if (!relatedFormation) {
+        toast({
+          title: 'Formation manquante',
+          description: `La formation "${item.document_name}" est à charger pour attribuer ce QCM.`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // ✅ Ajoute QCM + Formation
+      setSteps(prev => [
+        ...prev,
+        { id: item.id, item },
+        ...(prev.find(s => s.id === relatedFormation.id) ? [] : [{ id: relatedFormation.id, item: relatedFormation }])
+      ]);
+    }
+    // Si c'est une formation → vérifier que le QCM existe
+    else if (item.formation_steps === 'formation') {
+      const relatedQcm = items.find(
+        i => i.document_name === item.document_name && i.formation_steps === 'qcm'
+      );
+      
+      if (!relatedQcm) {
+        toast({
+          title: 'QCM manquant',
+          description: `Le QCM "${item.document_name}" est à créer pour attribuer cette formation.`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // ✅ Ajoute Formation + QCM
+      setSteps(prev => [
+        ...prev,
+        { id: item.id, item },
+        ...(prev.find(s => s.id === relatedQcm.id) ? [] : [{ id: relatedQcm.id, item: relatedQcm }])
+      ]);
+    }
+    // Autres types (training, practice) → ajouter directement
+    else {
+      setSteps(prev => [...prev, { id: item.id, item }]);
+    }
   };
 
   const removeStep = (id: string) => {
@@ -2019,7 +2067,7 @@ export default function AdminTraining() {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-1">
             <GraduationCap className="h-6 w-6" style={{ color: '#BBA57A' }} />
-            <h1 className="text-2xl font-semibold text-white">Training Management</h1>
+            <h1 className="text-2xl font-semibold text-white">Training Administration</h1>
           </div>
           <p className="text-sm" style={{ color: 'rgba(187,165,122,0.5)' }}>
             Bibliothèque de formations · Attribution · Suivi des équipes

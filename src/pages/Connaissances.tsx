@@ -514,6 +514,15 @@ const Connaissances = () => {
     }
   };
 
+  // Récupère tous les IDs des formations/QCM jumelés via document_name
+  const getRelatedFormationIds = (document: KnowledgeFormation): string[] => {
+    if (!knowledgeFormations) return [];
+    const related = knowledgeFormations
+      .filter(f => f.document_name === document.document_name && f.id !== document.id)
+      .map(f => f.id);
+    return related;
+  };
+
   // Sélection pour l'impact radar (indépendant du modal)
   const handleSelectForRadar = (e: React.MouseEvent, document: KnowledgeFormation) => {
     e.stopPropagation();
@@ -1351,7 +1360,7 @@ const Connaissances = () => {
                               key={training.id} 
                               className={cn(
                                 "hover:shadow-md transition-all rounded-lg border-l-4",
-                                selectedImpactId === training.id
+                                selectedImpactId === training.id || (originalDocument && getRelatedFormationIds(originalDocument).includes(selectedImpactId || ''))
                                   ? "border-l-[#3B82F6] ring-1 ring-[#3B82F6]/30"
                                   : training.type === 'retention'
                                     ? "border-l-[#BBA57A] bg-[#BBA57A] text-white"
@@ -1366,7 +1375,7 @@ const Connaissances = () => {
                                   onClick={(e) => originalDocument ? handleSelectForRadar(e, originalDocument) : undefined}
                                   className={cn(
                                     "flex-shrink-0 w-12 flex items-center justify-center border-r transition-colors",
-                                    selectedImpactId === training.id
+                                    selectedImpactId === training.id || (originalDocument && getRelatedFormationIds(originalDocument).includes(selectedImpactId || ''))
                                       ? "bg-[#3B82F6]/10 border-[#3B82F6]/30"
                                       : training.type === 'retention'
                                         ? "bg-white/10 border-white/20 hover:bg-white/20"
@@ -1376,13 +1385,13 @@ const Connaissances = () => {
                                 >
                                   <div className={cn(
                                     "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-                                    selectedImpactId === training.id
+                                    selectedImpactId === training.id || (originalDocument && getRelatedFormationIds(originalDocument).includes(selectedImpactId || ''))
                                       ? "border-[#3B82F6] bg-[#3B82F6]"
                                       : training.type === 'retention'
                                         ? "border-white/60"
                                         : "border-gray-300"
                                   )}>
-                                    {selectedImpactId === training.id && (
+                                    {(selectedImpactId === training.id || (originalDocument && getRelatedFormationIds(originalDocument).includes(selectedImpactId || ''))) && (
                                       <div className="w-2 h-2 rounded-full bg-white" />
                                     )}
                                   </div>

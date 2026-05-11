@@ -1,3 +1,71 @@
+## [2026-05-11] (séance 5 - audit finalisé)
+
+### fix: Training Status Display — Formation statuts now correctly updated (Started → In Progress → Completed)
+
+**Symptôme**
+Les statuts de formation ne s'affichaient pas correctement après completion des QCMs :
+- Reste "pending" au lieu de "in_progress" quand QCM en cours
+- Reste "in_progress" au lieu de "completed" quand QCM réussi (score >= 80%)
+
+**Cause root**
+Pas de synchronisation `training_results` (QCM) → `training_assignments.status` (formation)
+
+**Fix appliqué**
+- Trigger `AFTER INSERT ON training_results` déclenche update du statut
+- Score >= 80% → status = 'completed' (vert ✓)
+- Score < 80% → status = 'in_progress' (jaune ⟳)
+- Coordonnées (phone, email) synchronisées en parallèle
+
+**Résultat**
+- ✅ Formation affiche "Démarrer" → "En progression" → "Terminé" correctement
+- ✅ Statuts mis à jour instantanément après chaque QCM
+- ✅ Données synchronisées entre `training_results`, `training_assignments`, `staff_directory`
+
+---
+
+## [2026-05-11] (séance 3+4)
+
+### fix: Training Status Sync & Competency Score Recalculation
+
+**Symptôme**
+Après la completion d'un QCM :
+- Le statut de la formation assignée n'était pas mis à jour (restait "pending")
+- Les scores de compétence n'étaient pas recalculés pour impacter les radars individuels
+- Les coordonnées (phone, email) n'étaient pas synchronisées correctement
+
+**Cause root**
+Pas de synchronisation automatique entre `training_results` (QCM complétés) et :
+- `training_assignments.status` (statut de la formation)
+- `competency_scores` (points impactés par la formation)
+- `staff_directory` (coordonnées à jour)
+
+**Fixes appliquées**
+
+**1. Trigger SQL : sync du statut formation**
+- `AFTER INSERT ON training_results` → met à jour `training_assignments.status`
+- Score >= 80% → status = 'completed'
+- Score < 80% → status = 'in_progress'
+- Lookup par `document_name` (clé de jointure Formation ↔ QCM)
+
+**2. Recalcul automatique des competency_scores**
+- Une fois le statut mis à jour → déclenche recalcul des scores de compétence
+- Lookup `formation_criteria_mapping[document_name]` pour les competency_key et weights
+- Applique les poids aux scores
+- UPDATE `competency_scores[user_id][competency_key]` 
+- Les radars Team Analytics se rafraîchissent automatiquement
+
+**3. Synchronisation des coordonnées**
+- Update `staff_directory` (phone, email, service, hierarchy) depuis les changements
+- Reconciliation bidirectionnelle `profiles` ↔ `staff_directory`
+
+**Résultat**
+- ✅ QCM complété → statut formation à jour automatiquement
+- ✅ Statut updated → competency_scores recalculés → radars impactés
+- ✅ Coordonnées synchronisées entre profiles et staff_directory
+- ✅ Chaîne complète : training_results → training_assignments.status → competency_scores → radar
+
+---
+
 ## [2026-05-11]
 
 ### fix: Training Assignments — created_by field now populated
