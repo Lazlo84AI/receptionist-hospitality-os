@@ -608,11 +608,14 @@ function TabAttribution({ items }: { items: KnowledgeItem[] }) {
 
     setIsSending(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       const base = {
         program_name: programName.trim(),
         knowledge_item_ids: steps.map(s => s.id),
         deadline: deadline || null,
         status: 'pending',
+        created_by: user?.id,
       };
 
       // Une row par personne OU par service
