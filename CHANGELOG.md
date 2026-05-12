@@ -1,3 +1,32 @@
+## [2026-05-12] (séance 7 - backfill created_by formations legacy)
+
+### fix: Affichage "Inconnu a assigné" sur les tâches de formation — root cause data
+
+**Symptôme**
+Juliette remontait sans cesse voir "Inconnu" comme auteur d'assignation sur la plupart des cartes de tâches de formation. Le nom de la personne qui avait assigné le programme n'apparaissait jamais côté affichage.
+
+**Cause root**
+Sur 29 `training_assignments` en base, 26 (toutes antérieures au 2026-05-11) avaient `created_by` à NULL. Idem pour les 26 `task` liées (corrélation 1:1 via `training_assignments.task_id`). La colonne `created_by` avait été ajoutée tardivement au code d'insertion (`handleSend` dans `TabAttribution` de `AdminTraining.tsx`) et l'historique n'avait jamais été backfillé. Le frontend résolvait donc `created_by NULL` en "Inconnu" partout.
+
+**Fix appliqué**
+- Audit préalable : 100% des `training_assignments` ont un `task_id`, corrélation 1:1 confirmée
+- Backfill SQL en 2 étapes ordonnées :
+  1. `UPDATE task SET created_by = Juliette WHERE id IN (SELECT task_id FROM training_assignments WHERE created_by IS NULL)`
+  2. `UPDATE training_assignments SET created_by = Juliette WHERE created_by IS NULL`
+- Choix d'imputation : Juliette Gimonet par défaut (décision client). `updated_by` non utilisé comme proxy car non fiable (= dernière personne ayant touché la task, souvent l'assigné lui-même)
+- Garantie future : déjà en place, le code applicatif envoie `created_by = auth.uid()` depuis le 11/05
+
+**Résultat**
+- `training_assignments` : 29/29 avec creator (26 = Juliette, 3 = Sokle Decoeur)
+- `task` (internal_task) : 97/97 avec creator, dont 26 backfillées pour cette correction
+- "Inconnu" disparaît sur toutes les vues qui résolvent l'auteur depuis la base
+
+**Non couvert par ce fix (à traiter en Phase 2 si nécessaire)**
+- Ajout d'une colonne explicite "Assigné par" dans `AdminTraining > Suivi & Retards` (la colonne n'existe pas à date)
+- Correction du bloc "Created by → Assigned to" dans `EnhancedTaskDetailModal.tsx` (le label promet de montrer le créateur mais le code n'affiche que `assignedTo`)
+
+---
+
 ## [2026-05-11] (séance 6 - radar competences debug complet)
 
 ### fix: Training Analytics Radar — affichage des scores reel par profil hierarchie
