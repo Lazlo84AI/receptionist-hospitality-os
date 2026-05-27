@@ -1,3 +1,156 @@
+## [2026-05-27] (séance 8 - audit users/staff + fix dropdown service + badge statut email)
+
+### audit: Architecture profiles / staff_directory / auth.users (read-only)
+
+**Contexte client**
+3 cas remontés par Wilfried/cliente : (1) Mois Dumitrita inscrite mais affichée en "reception/Collaborator" alors qu'elle est Housekeeping Manager, (2) Kyungu Ebongo et Sandra Mangudi affirment ne pas pouvoir accéder à la plateforme malgré leur signup, (3) impossible de supprimer le profil de Remy Gervais (parti de l'hôtel).
+
+**Audit complet effectué en 3 phases**
+- Phase A : formulaire (`Auth.tsx`) → `auth.users` → `profiles` via trigger `handle_new_user`
+- Phase B : `profiles` → `staff_directory` via trigger `sync_profiles_to_staff_directory`
+- Phase C : UI admin (`/admin/onboarding > Rôles & Hiérarchie`)
+
+**Bugs identifiés (14 au total, dont 8 critiques)**
+- A2 : Si `job_role` absent de `raw_user_meta_data`, fallback ELSE 'reception' → explique le cas Mois (signup antérieur à l'enrichissement du CASE)
+- B1 : Trigger 2 matche par `last_name` SEUL avec `LIMIT 1` non déterministe (3 lignes sd 'de Renty' = match aléatoire)
+- B2 : Récursion potentielle du trigger 2 via `UPDATE profiles SET staff_directory_id` qui re-déclenche le trigger
+- B3 : `EXCEPTION WHEN OTHERS THEN RAISE WARNING` masque toute erreur de sync (silent killer)
+- B4 : Trigger 2 fait `UPDATE staff_directory SET id = NEW.id` qui peut violer PK si NEW.id existe déjà
+- B5 : Seules `task.created_by` et `task.assigned_to` sont mises à jour par le trigger ; les autres FK (`shifts.user_id`, `training_results.user_id`, etc.) restent orphelines
+- B7 : Branche INSERT du trigger 2 hardcode `role='receptionist'` quoi que soit le job_role réel
+- C1 : Dropdown SERVICES `['Réception', 'Housekeeping', 'Petit Dejeuner', 'Maintenance', 'Direction']` incompatible avec enum `service_type` (minuscules) → toute modif via UI plante avec "invalid input value for enum"
+- C7 : Bouton "Ajouter un membre" via `inviteUserByEmail` mais aucun indicateur dans l'UI montrant les comptes invités mais non confirmés par email → cas Kyungu/Sandra
+
+**Découvertes annexes**
+- 7 "fantomes" `staff_directory` du seed initial 11/09/2025 ont en réalité des first_name/last_name remplis (Tsira Batsikadze, Patrick Castagne, Monne Leonie Doua, Remy Gervais, Natia Shvirtaridze, Mélanie Tavares, Rachida Zarrouki). Validation client : 5 en arrêt maladie (à conserver), Remy parti (à supprimer), la "fantôme" Mélanie est en réalité un doublon de l'auth Mélanie avec 11 tasks orphelines.
+- 3 profiles sans ligne staff_directory : Leonie (trigger 2 a planté silencieusement), Pierre Test (compte test), Shami Martin (compte test mailinator).
+- Kyungu et Sandra ont `email_confirmed_at = NULL` dans `auth.users` : compte créé le 06/05 mais lien de confirmation jamais cliqué.
+
+---
+
+### chore: Snapshot d'audit des 3 tables critiques
+
+**Action**
+Création de 3 tables d'archive avant toute modification données :
+- `audit_2026_05_27_profiles` (25 lignes)
+- `audit_2026_05_27_staff_directory` (29 lignes)
+- `audit_2026_05_27_auth_users` (25 lignes, colonnes sécurisées uniquement)
+
+RLS activé sur les 3 tables, lecture interdite côté front (`anon` + `authenticated`). Lecture admin via SQL Editor (service_role) uniquement.
+
+**Pourquoi**
+Filet de sécurité avant les fixes data : permettre reconstitution de l'état initial en cas de regression.
+
+---
+
+### fix: Dropdown service de TabRoleHierarchy aligné sur l'enum `service_type`
+
+**Symptome**
+Dans `/admin/onboarding > Rôles & Hiérarchie`, toute tentative de modifier le service d'un user avec compte Sokle déclenchait "invalid input value for enum service_type: 'Réception'". Pour les users sans compte, la valeur polluée (avec capitale et accent) était écrite en text libre dans `staff_directory.service`.
+
+**Cause root**
+Le constant `SERVICES = ['Réception', 'Housekeeping', 'Petit Dejeuner', 'Maintenance', 'Direction']` (ligne 67 de `TeamOnboarding.tsx`) ne correspondait pas aux valeurs acceptées par l'enum (`reception, housekeeping, restaurant, maintenance, direction, ai_team, artificial_intelligence`).
+
+**Fix appliqué**
+Ajout d'un nouveau constant `SERVICE_OPTIONS` aligné sur l'enum (value = valeur stockée, label = affichage UI). Seul le `<select>` Service de `TabRoleHierarchy` est basculé dessus. `TabAttribution` et `TabSuivi` continuent d'utiliser `SERVICES` legacy (évite régression sur l'historique des assignations).
+
+```typescript
+const SERVICE_OPTIONS = [
+  { value: 'reception',    label: 'Réception' },
+  { value: 'housekeeping', label: 'Housekeeping' },
+  { value: 'maintenance',  label: 'Maintenance' },
+  { value: 'direction',    label: 'Direction' },
+];
+```
+
+**Choix métier**
+Périmètre limité à 4 services (vs 7 dans l'enum) : on n'expose pas `restaurant`, `ai_team`, `artificial_intelligence` qui sont des héritages techniques non pertinents pour le client hôtelier.
+
+---
+
+### fix: Mois Dumitrita - profile et staff_directory réalignés sur Housekeeping/Manager
+
+**Avant**
+- `profiles.service` = `'reception'` (snapshot périmé du 18/02/2026)
+- `profiles.hierarchy` = `'Collaborator'`
+- `staff_directory.service` = `'Housekeeping'` (capitale polluée)
+- `staff_directory.hierarchy` = `'Manager'` (corrigé côté sd le 12/05 par l'admin)
+
+**Après**
+- `profiles.service` = `'housekeeping'` (via UI admin, grâce au fix dropdown)
+- `profiles.hierarchy` = `'Manager'`
+- `staff_directory.service` = `'housekeeping'` (UPDATE SQL manuel pour normaliser la casse)
+- `staff_directory.hierarchy` = `'Manager'`
+
+**Validation client**
+Juliette avait déjà confirmé le 12/05 que Mois est Housekeeping Manager. Re-confirmé par Wilfried.
+
+---
+
+### feat: Vue `v_staff_auth_status` + badge statut email à 3 états
+
+**Contexte**
+Le badge actuel "✓ Accès Sokle" mentait : il s'affichait pour Kyungu et Sandra alors qu'elles n'avaient pas confirmé leur email et ne pouvaient donc pas se connecter. Aucun feedback côté admin permettant d'identifier ce cas.
+
+**Architecture**
+- Création d'une vue Supabase `public.v_staff_auth_status` qui joint `staff_directory` à `auth.users.email_confirmed_at`
+- Calcul d'un champ dérivé `access_status` : `'not_registered' | 'pending_email' | 'active'`
+- `GRANT SELECT ... TO authenticated` : la vue est lisible par tout user connecté (info non sensible : juste un statut de confirmation)
+
+```sql
+CREATE OR REPLACE VIEW public.v_staff_auth_status AS
+SELECT sd.id AS staff_id, sd.auth_user_id, au.email_confirmed_at,
+  CASE
+    WHEN sd.auth_user_id IS NULL THEN 'not_registered'
+    WHEN au.email_confirmed_at IS NULL THEN 'pending_email'
+    ELSE 'active'
+  END AS access_status
+FROM public.staff_directory sd
+LEFT JOIN auth.users au ON au.id = sd.auth_user_id;
+GRANT SELECT ON public.v_staff_auth_status TO authenticated;
+```
+
+**Front**
+- Type `StaffRow` étendu avec `auth_email_confirmed_at` et `access_status`
+- Query `staff_directory_all` enrichie avec une 3ème requête sur la vue + merge dans le useMemo de mapping
+- Constant `ACCESS_BADGE` ajouté avec 3 états visuels distincts :
+  - 🟢 vert `#4ade80` : "✓ Inscrit sur Sokle" (active)
+  - 🟠 orange `#fb923c` : "⚠ A créé son compte mais pas validé son mail" (pending_email)
+  - 🔴 rouge `#f87171` : "✘ Pas encore inscrit, doit créer son compte" (not_registered)
+
+**Résultat**
+Kyungu et Sandra apparaissent maintenant en orange dans l'admin, ce qui rend visible le besoin de confirmation email. Mélanie fantome (seed sans auth), Monne Leonie, Natia, Patrick, Tsira, Rachida, Remy apparaissent en rouge (à inscrire / supprimer selon cas).
+
+**Limitation V1**
+Pas de bouton "Valider manuellement" dans l'UI. Pour confirmer Kyungu/Sandra il faudra encore passer un UPDATE SQL manuel via SQL Editor (`UPDATE auth.users SET email_confirmed_at = NOW() WHERE email IN (...)`). Bouton UI à ajouter dans une session dédiée.
+
+---
+
+### TODO (bugs identifiés à traiter en session suivante)
+
+**Refonte trigger 2** (B1, B2, B3, B4, B5, B7) — le trigger `sync_profiles_to_staff_directory` actuel a 7 bugs structurels qui causent les fantômes, doublons et profiles orphelins. Le matching par last_name doit être remplacé par un matching déterministe (auth_user_id ou email canonical), la récursion doit être supprimée via `pg_trigger_depth() = 1`, et les exceptions doivent être logées dans `system_events` au lieu d'être silencées.
+
+**Trigger `profiles.updated_at`** (B-NEW-1) — la colonne `profiles.updated_at` ne se met pas à jour automatiquement quand profile est modifié (pas de trigger BEFORE UPDATE). Conséquence : impossible de se fier à cette colonne pour audit. Ajouter un trigger similaire à celui de `staff_directory`.
+
+**COALESCE garde l'ancien** (B-NEW-2) — le trigger 2 utilise `service = COALESCE(NEW.service, sd.service)` qui préserve l'ancienne valeur polluée au lieu de l'écraser. Logique inverse nécessaire.
+
+**Trim manquant au signup** (B-NEW-3) — espaces parasites dans `profiles.first_name`/`last_name` lors de la création (cas Mois). Ajouter `trim()` dans `handle_new_user`.
+
+**Cleanup données restants** (à traiter après refonte trigger 2)
+- Migration des 11 tasks de la Mélanie fantôme (`70418d66`) vers la vraie Mélanie (`9d20cf22`), puis suppression du fantôme
+- Suppression de Shami Martin (auth + profile + sd, compte test mailinator)
+- Suppression de Remy Gervais (sd seul, sans auth, parti de l'hôtel)
+- Restauration de Leonie Doua : recréer sa ligne sd liée à auth_user_id `70bcf914`, copier les data du fantôme `d2d5ca7c`, supprimer le fantôme
+- Normalisation des `sd.service` polluées (`Réception`, `Petit Dejeuner`, `Housekeeping` capitale) avec adaptation des filtres dans `TabSuivi` et `TabAttribution`
+
+**Bouton "Valider l'email" dans l'UI admin** (complément au badge 3 états) — Edge Function `confirm-staff-email` qui prend un `auth_user_id`, vérifie que l'appelant est Direction/Manager, set `email_confirmed_at = NOW()` sur `auth.users`, logge dans `system_events`. Permettre à Juliette d'auto-résoudre les cas Kyungu/Sandra-like depuis SOCLE sans passer par Wilfried.
+
+**Feature "Bouton supprimer fonctionnel"** — actuellement le bouton corbeille ne supprime que `staff_directory`. Pour supprimer un staff parti (cas Remy), il faut une cascade auth + profiles + sd avec gestion des FK orphelines (SET NULL sur shifts/tasks/training_results historiques, RESTRICT si shifts ouverts).
+
+**UI de rattachement assisté pour les futurs signups** — quand un nouveau user signup avec un last_name matchant une entrée sd existante (cas Léonie/Monne Leonie), présenter à l'admin (Direction/Manager) un panel "à valider" avec choix "rattacher à X" ou "créer nouvelle entrée". Matching robuste via `pg_trgm` (extension déjà disponible).
+
+---
+
 ## [2026-05-12] (séance 7 - backfill created_by formations legacy)
 
 ### fix: Affichage "Inconnu a assigné" sur les tâches de formation — root cause data
