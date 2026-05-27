@@ -43,11 +43,25 @@ interface StaffRow {
   display_email:     string | null;
   display_service:   string | null;
   display_hierarchy: string | null;
+  // Statut auth (depuis la vue v_staff_auth_status)
+  auth_email_confirmed_at: string | null;
+  access_status: 'not_registered' | 'pending_email' | 'active';
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SERVICES = ['Réception', 'Housekeeping', 'Petit Dejeuner', 'Maintenance', 'Direction'];
+
+// Options du <select> Service de l'onglet "Rôles & Hiérarchie".
+// value : ce qui est écrit en base (doit matcher l'enum service_type)
+// label : ce qui s'affiche à l'écran
+const SERVICE_OPTIONS = [
+  { value: 'reception',    label: 'Réception' },
+  { value: 'housekeeping', label: 'Housekeeping' },
+  { value: 'maintenance',  label: 'Maintenance' },
+  { value: 'direction',    label: 'Direction' },
+];
+
 const HIERARCHY_OPTIONS = ['Collaborator', 'Manager'];
 const DURATION_OPTIONS = [7, 14, 21, 30];
 
@@ -1335,6 +1349,13 @@ const HIERARCHY_COLORS: Record<string, { color: string; bg: string }> = {
   'Manager':      { color: '#DEAE35',               bg: 'rgba(222,174,53,0.12)'  },
 };
 
+// Style et libelle du badge d'acces Sokle (3 etats bases sur la vue v_staff_auth_status).
+const ACCESS_BADGE: Record<'active' | 'pending_email' | 'not_registered', { color: string; bg: string; border: string; label: string; title: string }> = {
+  active:         { color: '#4ade80', bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.35)',  label: '✓ Inscrit sur Sokle',                          title: 'Compte Sokle actif (email confirmé). Le collaborateur peut se connecter.' },
+  pending_email:  { color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.45)',  label: '⚠ A créé son compte mais pas validé son mail', title: 'Compte créé mais email non confirmé. Le collaborateur ne peut pas se connecter tant que l email n est pas confirmé.' },
+  not_registered: { color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.4)',  label: '✘ Pas encore inscrit, doit créer son compte',   title: 'Le collaborateur n a pas encore créé son compte Sokle.' },
+};
+
 interface EditValues {
   first_name: string;
   last_name: string;
@@ -1383,9 +1404,27 @@ function TabRoleHierarchy() {
         }
       }
 
+      // 2bis. Lire le statut email/auth depuis la vue v_staff_auth_status
+      const sdIds = (sdRows ?? []).map(r => r.id);
+      let authStatusMap: Record<string, { email_confirmed_at: string | null; access_status: 'not_registered' | 'pending_email' | 'active' }> = {};
+      if (sdIds.length > 0) {
+        const { data: aRows, error: aErr } = await (supabase as any)
+          .from('v_staff_auth_status')
+          .select('staff_id, email_confirmed_at, access_status')
+          .in('staff_id', sdIds);
+        if (aErr) throw aErr;
+        for (const a of (aRows ?? []) as any[]) {
+          authStatusMap[a.staff_id] = {
+            email_confirmed_at: a.email_confirmed_at ?? null,
+            access_status: a.access_status,
+          };
+        }
+      }
+
       // 3. Merger : profiles fait foi quand auth_user_id existe, sinon staff_directory
       return (sdRows ?? []).map(r => {
         const p = r.auth_user_id ? profilesMap[r.auth_user_id] : null;
+        const a = authStatusMap[r.id];
         return {
           ...r,
           profile_email:     p?.email     ?? null,
@@ -1394,6 +1433,8 @@ function TabRoleHierarchy() {
           display_email:     p?.email     ?? r.email,
           display_service:   p?.service   ?? r.service,
           display_hierarchy: p?.hierarchy ?? r.hierarchy,
+          auth_email_confirmed_at: a?.email_confirmed_at ?? null,
+          access_status:           a?.access_status     ?? (r.auth_user_id ? 'active' : 'not_registered'),
         } as StaffRow;
       });
     },
@@ -1572,11 +1613,9 @@ function TabRoleHierarchy() {
                             {p.is_active ? 'Actif' : 'Inactif'}
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                            style={hasSokleAccess
-                              ? { backgroundColor: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }
-                              : { backgroundColor: 'rgba(222,174,53,0.10)', color: '#DEAE35', border: '1px solid rgba(222,174,53,0.3)' }}
-                            title={hasSokleAccess ? 'Le collaborateur a un compte Sokle actif' : 'Le collaborateur n\'a pas encore créé son compte Sokle'}>
-                            {hasSokleAccess ? '✓ Accès Sokle' : 'Pas encore inscrit'}
+                            style={{ backgroundColor: ACCESS_BADGE[p.access_status ?? 'not_registered'].bg, color: ACCESS_BADGE[p.access_status ?? 'not_registered'].color, border: `1px solid ${ACCESS_BADGE[p.access_status ?? 'not_registered'].border}` }}
+                            title={ACCESS_BADGE[p.access_status ?? 'not_registered'].title}>
+                            {ACCESS_BADGE[p.access_status ?? 'not_registered'].label}
                           </span>
                         </div>
                       </div>
@@ -1662,7 +1701,7 @@ function TabRoleHierarchy() {
                           onChange={e => setEditValues(v => ({ ...v, service: e.target.value }))}
                           className="outline-none" style={selectSm}>
                           <option value="">— Aucun —</option>
-                          {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                          {SERVICE_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                       </div>
                       <div>
