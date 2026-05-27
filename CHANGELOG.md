@@ -1,3 +1,47 @@
+## [2026-05-27] (séance 9 - fix triggers sync profiles staff_directory)
+
+### fix: B-07 propagation service et hierarchy
+
+**Problème**
+Modification du service ou de la hiérarchie d'un membre depuis `/admin/onboarding > Rôles & Hiérarchie` : `profiles` était mis à jour mais `staff_directory` gardait l'ancienne valeur. Cas concret : Mois Dumitrita restait à "Housekeeping" majuscule dans staff_directory après modification.
+
+**Cause**
+Fonction `sync_profiles_to_staff_directory()` utilisait `COALESCE(NEW.service, staff_directory.service)` et `COALESCE(NEW.hierarchy, staff_directory.hierarchy)` dans la branche UPDATE — bloquait la propagation.
+
+**Correction**
+Remplacement de `COALESCE(...)` par `NEW.service` et `NEW.hierarchy` directs. `profiles` est source de vérité, sa valeur s'impose toujours.
+
+---
+
+### fix: B-09 trigger updated_at sur profiles
+
+**Problème**
+`profiles.updated_at` restait figé même après modification. Cas Mois : updated_at bloqué au 18/02/2026.
+
+**Cause**
+Aucun trigger `BEFORE UPDATE` sur `profiles` (alors que `staff_directory` en avait un).
+
+**Correction**
+Création du trigger `trigger_update_profiles_updated_at` `BEFORE UPDATE ON public.profiles` appelant la fonction existante `update_updated_at_column()` (déjà utilisée sur staff_directory).
+
+---
+
+### fix: B-10 timeout sur modification membre (fast path)
+
+**Problème**
+Modification d'un membre déjà rattaché (99% des cas après onboarding) déclenchait un timeout PostgreSQL `canceling statement due to statement timeout`. Reproduit sur Miguel Lopez (Manager Collaborator).
+
+**Cause**
+La fonction `sync_profiles_to_staff_directory()` réexécutait à chaque UPDATE la logique de migration initiale (matching par `last_name` + `UPDATE staff_directory SET id = NEW.id` même quand `id == NEW.id`). Le `SET id = NEW.id` déclenchait toutes les `ON UPDATE CASCADE` des FK vers `staff_directory.id` (tasks, training_progress, qcm_responses, etc.) > 8s sur un membre actif.
+
+**Correction**
+Ajout d'un FAST PATH en début de fonction : si `NEW.id` existe déjà dans `staff_directory`, UPDATE simple ciblé sur email/first_name/service/hierarchy/updated_at puis RETURN. La logique de matching/migration historique (SLOW PATH) reste intacte pour le cas onboarding initial.
+
+**Vérification**
+Miguel Lopez : Manager Collaborator passé en moins d'1s. profiles et staff_directory alignés au timestamp microseconde près (2026-05-27 18:41:59.69436).
+
+---
+
 ## [2026-05-27] (séance 8 - audit users/staff + fix dropdown service + badge statut email)
 
 ### audit: Architecture profiles / staff_directory / auth.users (read-only)
