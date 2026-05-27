@@ -1460,21 +1460,58 @@ function TabRoleHierarchy() {
     });
   };
 
-  // ── Suppression : pop-in custom (pas window.confirm) ──
-  const [deleteTarget, setDeleteTarget] = useState<{ p: StaffRow; displayName: string } | null>(null);
+  // ── Suppression : double pop-in (confirmation simple + confirmation par saisie du prénom) ──
+  const [deleteTarget, setDeleteTarget] = useState<
+    { p: StaffRow; displayName: string; expectedConfirmText: string } | null
+  >(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Normalise une chaîne pour comparaison tolérante : minuscules + sans accents + trim.
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+  // Reset complet de l'état de suppression (utilisé pour fermer/annuler).
+  const resetDelete = () => {
+    setDeleteTarget(null);
+    setDeleteStep(1);
+    setConfirmText('');
+  };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    // Garde-fou : la suppression n'est lancée que si le prénom saisi correspond
+    // (normalisation : minuscules + sans accents).
+    if (normalize(confirmText) !== normalize(deleteTarget.expectedConfirmText)) {
+      toast({
+        title: 'Confirmation invalide',
+        description: 'Le prénom saisi ne correspond pas.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsDeleting(true);
     try {
-      // Supprime UNIQUEMENT la ligne staff_directory.
-      // Si la personne a un compte Sokle (auth_user_id), profiles et auth.users restent intacts —
-      // mais le lien est cassé. Pour cette V1 on ne supprime pas le compte Sokle automatiquement.
-      const { error } = await supabase.from('staff_directory').delete().eq('id', deleteTarget.p.id);
+      // Appel de l'Edge Function delete-staff qui orchestre la cascade complète :
+      //   auth.users -> profiles (CASCADE) puis staff_directory.
+      const { data, error } = await supabase.functions.invoke('delete-staff', {
+        body: {
+          auth_user_id: deleteTarget.p.auth_user_id,
+          staff_directory_id: deleteTarget.p.id,
+        },
+      });
       if (error) throw error;
-      toast({ title: '✅ Collaborateur supprimé', description: `« ${deleteTarget.displayName} » a été retiré du staff.` });
-      setDeleteTarget(null);
+      // L'Edge Function peut répondre avec { error, code } en cas de violation FK
+      // (membre lié à des shifts/tâches/etc.) -> on l'expose en toast clair.
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      toast({
+        title: '✅ Collaborateur supprimé',
+        description: `« ${deleteTarget.displayName} » a été totalement retiré (compte + staff).`,
+      });
+      resetDelete();
       queryClient.invalidateQueries({ queryKey: ['staff_directory_all'] });
       queryClient.invalidateQueries({ queryKey: ['staff_directory_active'] });
       queryClient.invalidateQueries({ queryKey: ['staff_directory_count'] });
@@ -1486,7 +1523,15 @@ function TabRoleHierarchy() {
   };
 
   const askDelete = (p: StaffRow, displayName: string) => {
-    setDeleteTarget({ p, displayName });
+    // Fallback en cascade : first_name -> premier mot de full_name -> premier mot de displayName.
+    const expectedConfirmText =
+      (p.first_name && p.first_name.trim()) ||
+      (p.full_name && p.full_name.trim().split(/\s+/)[0]) ||
+      (displayName && displayName.trim().split(/\s+/)[0]) ||
+      '';
+    setDeleteTarget({ p, displayName, expectedConfirmText });
+    setDeleteStep(1);
+    setConfirmText('');
   };
 
   const saveEdit = async (id: string) => {
@@ -1733,56 +1778,179 @@ function TabRoleHierarchy() {
         </div>
       )}
 
-      {/* ── Modal de confirmation de suppression ── */}
-      {deleteTarget && (
+      {/* ── POP-IN 1 : Confirmation initiale (ton doré) ── */}
+      {deleteTarget && deleteStep === 1 && (
         <div
           className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
-          onClick={() => !isDeleting && setDeleteTarget(null)}
+          onClick={() => !isDeleting && resetDelete()}
         >
           <div
             className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl"
-            style={{ background: 'linear-gradient(135deg, #2a1a3a 0%, #1E1A37 100%)', border: '1px solid rgba(248,113,113,0.4)' }}
+            style={{
+              background: 'linear-gradient(135deg, #2a2310 0%, #1E1A37 100%)',
+              border: '1px solid rgba(222,174,53,0.4)',
+            }}
             onClick={e => e.stopPropagation()}
           >
             <div className="px-6 pt-6 pb-3 flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: 'rgba(248,113,113,0.15)' }}>
-                <AlertTriangle className="h-5 w-5" style={{ color: '#f87171' }} />
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(222,174,53,0.15)' }}
+              >
+                <AlertTriangle className="h-5 w-5" style={{ color: '#DEAE35' }} />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-white mb-1">Supprimer ce collaborateur ?</h3>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                  « <span className="font-medium text-white">{deleteTarget.displayName}</span> » sera retiré définitivement du staff_directory.
+                <h3 className="text-base font-semibold text-white mb-1">
+                  Supprimer un membre de l'équipe ?
+                </h3>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  Vous êtes sur le point de supprimer{' '}
+                  <span className="font-medium text-white">{deleteTarget.displayName}</span>.
+                  {' '}Confirmez-vous votre souhait ?
                 </p>
-                {deleteTarget.p.auth_user_id && (
-                  <p className="text-xs mt-2 px-3 py-2 rounded-lg"
-                    style={{ backgroundColor: 'rgba(222,174,53,0.1)', color: '#DEAE35', border: '1px solid rgba(222,174,53,0.3)' }}>
-                    ⚠️ Cette personne a un compte Sokle. Son compte d'authentification reste actif (à supprimer manuellement si besoin via Supabase Auth).
-                  </p>
-                )}
-                <p className="text-xs mt-2" style={{ color: 'rgba(248,113,113,0.7)' }}>Cette action est irréversible.</p>
               </div>
             </div>
             <div className="px-6 pb-5 pt-3 flex items-center justify-end gap-2">
               <button
-                onClick={() => setDeleteTarget(null)}
+                onClick={resetDelete}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
+                style={{
+                  color: 'rgba(187,165,122,0.7)',
+                  border: '1px solid rgba(187,165,122,0.25)',
+                }}
+              >
+                Non, annuler
+              </button>
+              <button
+                onClick={() => setDeleteStep(2)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                style={{
+                  backgroundColor: 'rgba(222,174,53,0.2)',
+                  color: '#DEAE35',
+                  border: '1px solid rgba(222,174,53,0.5)',
+                }}
+              >
+                Oui, continuer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── POP-IN 2 : Confirmation finale par saisie du prénom (ton rouge) ── */}
+      {deleteTarget && deleteStep === 2 && (
+        <div
+          className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}
+          onClick={() => !isDeleting && resetDelete()}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, #3a1010 0%, #1E1A37 100%)',
+              border: '1px solid rgba(248,113,113,0.5)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-3 flex items-start gap-4">
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  backgroundColor: 'rgba(248,113,113,0.18)',
+                  boxShadow: '0 0 24px rgba(248,113,113,0.25)',
+                }}
+              >
+                <AlertTriangle className="h-5 w-5" style={{ color: '#f87171' }} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-white mb-1">
+                  Confirmation finale
+                </h3>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  Cette suppression est{' '}
+                  <span className="font-semibold text-white">irréversible</span>.
+                  {' '}Le compte sera totalement supprimé (login impossible).
+                </p>
+                {deleteTarget.p.auth_user_id && (
+                  <p
+                    className="text-xs mt-2 px-3 py-2 rounded-lg"
+                    style={{
+                      backgroundColor: 'rgba(251,146,60,0.1)',
+                      color: '#fb923c',
+                      border: '1px solid rgba(251,146,60,0.3)',
+                    }}
+                  >
+                    Compte Sokle actif détecté. auth.users + profiles + staff_directory seront supprimés en cascade.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 pb-4">
+              <label
+                className="text-xs block mb-1.5"
+                style={{ color: 'rgba(187,165,122,0.7)' }}
+              >
+                Pour confirmer, tapez le prénom :{' '}
+                <span className="font-semibold" style={{ color: '#DEAE35' }}>
+                  {deleteTarget.expectedConfirmText}
+                </span>
+              </label>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                disabled={isDeleting}
+                autoFocus
+                placeholder={deleteTarget.expectedConfirmText}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none border placeholder:text-white/20"
+                style={{
+                  backgroundColor: 'rgba(15,12,36,0.7)',
+                  borderColor:
+                    normalize(confirmText) === normalize(deleteTarget.expectedConfirmText)
+                      ? 'rgba(74,222,128,0.5)'
+                      : 'rgba(187,165,122,0.25)',
+                  color: 'white',
+                }}
+              />
+            </div>
+
+            <div className="px-6 pb-5 pt-1 flex items-center justify-end gap-2">
+              <button
+                onClick={resetDelete}
                 disabled={isDeleting}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
-                style={{ color: 'rgba(187,165,122,0.7)', border: '1px solid rgba(187,165,122,0.25)' }}
+                style={{
+                  color: 'rgba(187,165,122,0.7)',
+                  border: '1px solid rgba(187,165,122,0.25)',
+                }}
               >
                 Annuler
               </button>
               <button
                 onClick={confirmDelete}
-                disabled={isDeleting}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                style={{ backgroundColor: 'rgba(248,113,113,0.2)', color: '#f87171', border: '1px solid rgba(248,113,113,0.5)' }}
-              >
-                {isDeleting
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Suppression…</>
-                  : <><Trash2 className="h-3.5 w-3.5" /> Supprimer définitivement</>
+                disabled={
+                  isDeleting ||
+                  normalize(confirmText) !== normalize(deleteTarget.expectedConfirmText) ||
+                  !deleteTarget.expectedConfirmText
                 }
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'rgba(248,113,113,0.2)',
+                  color: '#f87171',
+                  border: '1px solid rgba(248,113,113,0.5)',
+                }}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Suppression…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" /> Supprimer définitivement
+                  </>
+                )}
               </button>
             </div>
           </div>

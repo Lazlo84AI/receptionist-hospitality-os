@@ -1,3 +1,43 @@
+## [2026-05-27] (séance 10 - B-13 suppression membre staff cascade complète)
+
+### feat: Edge Function delete-staff + double confirmation UI
+
+**Problème (B-13)**
+Le bouton corbeille dans `/admin/onboarding > Rôles & Hiérarchie` ne supprimait que la ligne `staff_directory`, laissant `auth.users` + `profiles` orphelins. Le compte restait utilisable côté login — faille fonctionnelle pour les comptes parasites ou les départs.
+
+**Solution**
+1. Nouvelle Edge Function `supabase/functions/delete-staff/index.ts` orchestrant la cascade complète :
+   - Vérification JWT + re-check serveur du rôle (Manager OU service='direction')
+   - 3 branches gérées (auth+sd / auth seul / sd seul)
+   - Ordre forcé : `auth.users` d'abord (cascade auto vers `profiles` via FK ON DELETE CASCADE) puis `staff_directory`
+   - Gestion FK violation 23503 → retour 409 avec code 'FK_VIOLATION' (11 FK NO ACTION pointent vers `staff_directory.id`)
+   - Audit dans `system_events` (event_type='staff_deleted' ou 'staff_deleted_partial')
+
+2. Front `TabRoleHierarchy` (`TeamOnboarding.tsx`) — double pop-in de confirmation :
+   - Pop-in 1 ton doré : « Supprimer un membre de l'équipe ? » → boutons Non / Oui
+   - Pop-in 2 ton rouge : « Confirmation finale » + saisie du prénom (normalisation case+accents) + bouton désactivé tant que pas de match
+   - Fallback en cascade pour `expectedConfirmText` : `first_name` → premier mot `full_name` → premier mot `displayName`
+   - Câblage `supabase.functions.invoke('delete-staff', { body: { auth_user_id, staff_directory_id } })`
+   - Gestion erreur FK_VIOLATION → toast clair « Désactivez plutôt via is_active=false »
+
+**Vérifications préalables Supabase (read-only)**
+- `system_events` : colonnes event_type / payload / created_by / created_at confirmées
+- FK `profiles.id → auth.users.id` = CASCADE ✅
+- FK `profiles.staff_directory_id → staff_directory.id` = NO ACTION → impose l'ordre auth puis sd
+- 11 FK pointant vers `staff_directory.id` en NO ACTION (incidents, shifts, comments, checklists, reminders, attachments, escalations×2, task_members×2, profiles)
+
+**Test sur Remy Gervais (sd_id `d61319a6-6e5a-4aff-81f0-f14688806077`, branche C)**
+- Suppression UI complète OK : pop-in 1 → pop-in 2 → saisie « Remy » → bouton activé → suppression
+- `staff_directory` : ligne disparue (count = 0)
+- `system_events` : événement 'staff_deleted' loggé @ 2026-05-27 23:43:32 UTC
+- Toast vert affiché côté UI
+
+**Non testé cette session**
+- Branche B (auth_user_id seul, profile orphelin sans sd, cas Shami Martin) : test non réalisable via l'UI actuelle car `TabRoleHierarchy` n'affiche que les lignes `staff_directory`. À tester via curl / Supabase Dashboard quand besoin (sujet « orphelins profiles » à traiter séparément).
+- Branche A (auth + sd combinés) : à valider lors de la prochaine vraie suppression d'un user authentifié.
+
+---
+
 ## [2026-05-27] (séance 9 - fix triggers sync profiles staff_directory)
 
 ### fix: B-07 propagation service et hierarchy
