@@ -32,7 +32,7 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
     staffAreas: false,
   });
 
-  const handleLocationSelect = (location: string) => {
+  const handleLocationSelect = (location: string, sectionKey?: string, floor?: string) => {
     // Stocker la location sélectionnée dans roomNumber (peu importe le type)
     // roomNumber contient le nom de la location : chambre, common area, staff area
     
@@ -41,6 +41,15 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
       location,
       roomNumber: location // Toujours stocker le nom de la location
     }));
+
+    // UX mobile (B-14) : refermer l'accordéon Floor après sélection pour signaler l'action
+    // La section parente (Rooms / Common Areas...) reste ouverte pour garder le contexte
+    if (sectionKey && floor) {
+      setOpenSections(prev => ({
+        ...prev,
+        [`${sectionKey}-${floor}`]: false,
+      }));
+    }
   };
 
   const toggleSection = (section: string) => {
@@ -155,15 +164,15 @@ export function LocationSection({ formData, setFormData, locations }: LocationSe
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
-              <div className="grid grid-cols-4 gap-2 p-2 border border-border rounded-md">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2 border border-border rounded-md">
                 {locationsByFloor[floor]
                   .sort((a, b) => a.name.localeCompare(b.name))
                   .map((location) => (
                     <Button
                       key={location.id}
                       variant={formData.location === location.name ? "default" : "outline"}
-                      className="h-8 text-xs px-2"
-                      onClick={() => handleLocationSelect(location.name)}
+                      className="h-auto min-h-[2.5rem] py-1 text-xs px-2 whitespace-normal text-center leading-tight"
+                      onClick={() => handleLocationSelect(location.name, sectionKey, floor)}
                     >
                       {location.name}
                     </Button>

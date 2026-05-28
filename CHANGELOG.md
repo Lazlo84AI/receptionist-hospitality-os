@@ -1,3 +1,29 @@
+## [2026-05-28] (séance 11 - B-14 LocationSection mobile responsive et fermeture auto accordéon)
+
+### fix: grille responsive et wrap multi-ligne + fermeture auto Floor après sélection
+
+**Problème (B-14) remonté par Thibault sur mobile**
+1. Affichage : dans la modal de création de carte (TaskCreationModal > LocationSection), les noms longs des common areas (ex. « Couloir étage 1 chambres 1er - 2e (palier 1er included) ») se superposaient visuellement et devenaient illisibles sur un viewport mobile (~380px).
+2. UX : après sélection d'un item de location, l'accordéon du Floor restait ouvert, obligeant l'utilisateur à le refermer manuellement.
+
+**Cause technique**
+1. Grille forcée à `grid-cols-4` sans breakpoint responsive → ~85px par cellule sur mobile, combiné à `h-8` (hauteur fixe 32px) et au `whitespace-nowrap` par défaut du `<Button>` shadcn → débordement et chevauchement entre boutons voisins.
+2. La fonction `handleLocationSelect` ne mettait à jour que `formData`, sans toucher à `openSections`. Aucun feedback visuel de fermeture après sélection.
+
+**Correction (src/components/LocationSection.tsx)**
+1. Grille responsive : `grid-cols-2 sm:grid-cols-3 md:grid-cols-4` (2 colonnes mobile, 3 tablette, 4 desktop). Zéro régression desktop puisque le breakpoint md preserve `grid-cols-4`.
+2. Button passe de `h-8 text-xs px-2` à `h-auto min-h-[2.5rem] py-1 text-xs px-2 whitespace-normal text-center leading-tight` → hauteur adaptative, wrap multi-ligne autorisé, texte centré.
+3. Signature `handleLocationSelect(location: string)` étendue à `handleLocationSelect(location: string, sectionKey?: string, floor?: string)` (params optionnels → rétrocompatible si appelé ailleurs).
+4. Ajout d'un bloc `setOpenSections` qui ferme uniquement `${sectionKey}-${floor}` après sélection. La section parente (Rooms / Common Areas / Public Areas / Staff Areas) reste ouverte pour préserver le contexte de navigation.
+5. `onClick` du Button location passe désormais `(location.name, sectionKey, floor)` au handler.
+
+**Vérification utilisateur**
+- Test mobile DevTools ≈ 380px : noms longs s'affichent proprement sur 2-3 lignes, plus de superposition.
+- Clic sur un item de Common Area : l'accordéon Floor X se referme, Common Areas reste déplié.
+- Test desktop : 4 colonnes inchangées, aucune régression visuelle.
+
+---
+
 ## [2026-05-27] (séance 10 - B-13 suppression membre staff cascade complète)
 
 ### feat: Edge Function delete-staff + double confirmation UI
