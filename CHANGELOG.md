@@ -19,8 +19,8 @@ Mélanie Tavares possédait deux entrées dans `staff_directory` : un compte fan
 - Fantôme : 0 référence `created_by` / `assigned_to`, `is_active=false`.
 - `v_user_task_stats` compte actif : `tasks_created_total` 24 -> 28, `tasks_assigned_total` 4 -> 17.
 
-**Reste à faire**
-- Suppression définitive de la ligne fantôme (`DELETE`) à effectuer manuellement après confirmation de la sauvegarde `audit_2026_05_27_staff_directory`.
+**Fait**
+- Suppression définitive de la ligne fantôme (`DELETE` exécuté le 2026-05-28). Pré-checks OK (0 FK bloquante référençant le fantôme, sauvegarde `audit_2026_05_27_staff_directory` présente). Vérif post-suppression : 0 fantôme restant, compte actif `9d20cf22` intact, 1 seule Mélanie Tavares dans `staff_directory`.
 
 ### feat(analytics): refonte du Classement équipe (onglet Individual Task) - périmètre cohérent + colonnes assignées/résolues
 
