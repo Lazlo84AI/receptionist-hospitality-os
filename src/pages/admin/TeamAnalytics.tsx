@@ -687,22 +687,107 @@ export default function TeamAnalytics() {
     shifts:     Math.round((b.avg_shifts_completed / maxShifts) * 100),
   }));
 
+  // Évolution temporelle — dérivée de rangeTasks (source unique avec les KPIs/classement),
+  // granularité auto selon la période active : heure (day) / jour (week, month, custom<=31j) /
+  // semaine (custom 32-90j) / mois (custom >90j). Plus de plafond 30j (vue v_tasks_timeseries abandonnée).
   const chartTimeseries = useMemo(() => {
-    if (periodFilter === 'custom') {
-      return allTimeseries
-        .filter(t => t.period_type === 'day' && t.period >= appliedStart && t.period <= appliedEnd)
-        .map(t => ({ label: t.period_label, Créées: t.tasks_created, Closes: t.tasks_completed }));
+    const startDate = new Date(`${activeRange.start}T00:00:00`);
+    const endDate   = new Date(`${activeRange.end}T23:59:59`);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) return [];
+
+    type Granularity = 'hour' | 'day' | 'week' | 'month';
+    let granularity: Granularity;
+    if (periodFilter === 'day') {
+      granularity = 'hour';
+    } else if (periodFilter === 'week' || periodFilter === 'month') {
+      granularity = 'day';
+    } else {
+      const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      granularity = days <= 31 ? 'day' : days <= 90 ? 'week' : 'month';
     }
-    return allTimeseries
-      .filter(t => t.period_type === periodFilter)
-      .map(t => ({ label: t.period_label, Créées: t.tasks_created, Closes: t.tasks_completed }));
-  }, [allTimeseries, periodFilter, appliedStart, appliedEnd]);
+
+    const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const pad2 = (n: number) => n.toString().padStart(2, '0');
+
+    const isoMonday = (d: Date) => {
+      const m = new Date(d);
+      const dow = m.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      m.setDate(m.getDate() + diff);
+      m.setHours(0, 0, 0, 0);
+      return m;
+    };
+
+    const keyFor = (d: Date): { key: string; label: string; order: number } => {
+      if (granularity === 'hour') {
+        const h = d.getHours();
+        return { key: `h${h}`, label: `${pad2(h)}h`, order: h };
+      }
+      if (granularity === 'day') {
+        const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+        return { key: `${y}-${pad2(m)}-${pad2(day)}`, label: `${pad2(day)}/${pad2(m)}`, order: new Date(y, m - 1, day).getTime() };
+      }
+      if (granularity === 'week') {
+        const mon = isoMonday(d);
+        const y = mon.getFullYear(), m = mon.getMonth() + 1, day = mon.getDate();
+        return { key: `w${y}-${pad2(m)}-${pad2(day)}`, label: `${pad2(day)}/${pad2(m)}`, order: mon.getTime() };
+      }
+      const y = d.getFullYear(), m = d.getMonth();
+      return { key: `m${y}-${pad2(m + 1)}`, label: `${MONTH_LABELS[m]} ${y.toString().slice(2)}`, order: new Date(y, m, 1).getTime() };
+    };
+
+    const buckets = new Map<string, { label: string; Créées: number; Closes: number; order: number }>();
+
+    if (granularity === 'hour') {
+      for (let h = 0; h < 24; h++) {
+        const d = new Date(startDate); d.setHours(h, 0, 0, 0);
+        const { key, label, order } = keyFor(d);
+        buckets.set(key, { label, Créées: 0, Closes: 0, order });
+      }
+    } else if (granularity === 'day') {
+      const c = new Date(startDate); c.setHours(0, 0, 0, 0);
+      while (c <= endDate) {
+        const { key, label, order } = keyFor(c);
+        buckets.set(key, { label, Créées: 0, Closes: 0, order });
+        c.setDate(c.getDate() + 1);
+      }
+    } else if (granularity === 'week') {
+      const c = isoMonday(startDate);
+      while (c <= endDate) {
+        const { key, label, order } = keyFor(c);
+        buckets.set(key, { label, Créées: 0, Closes: 0, order });
+        c.setDate(c.getDate() + 7);
+      }
+    } else {
+      const c = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (c <= endDate) {
+        const { key, label, order } = keyFor(c);
+        buckets.set(key, { label, Créées: 0, Closes: 0, order });
+        c.setMonth(c.getMonth() + 1);
+      }
+    }
+
+    rangeTasks.forEach((t: any) => {
+      if (!t.created_at) return;
+      const d = new Date(t.created_at);
+      if (isNaN(d.getTime())) return;
+      const { key } = keyFor(d);
+      const bucket = buckets.get(key);
+      if (!bucket) return;
+      bucket.Créées += 1;
+      if (CLOSED_STATUSES.has(t.status)) bucket.Closes += 1;
+    });
+
+    return Array.from(buckets.values())
+      .sort((a, b) => a.order - b.order)
+      .map(b => ({ label: b.label, Créées: b.Créées, Closes: b.Closes }));
+  }, [rangeTasks, activeRange.start, activeRange.end, periodFilter]);
 
   const categories = [
-    { name: 'Incidents',       value: teamStats.reduce((s,m) => s + m.incidents_count, 0),       color: '#f87171' },
-    { name: 'Demandes client', value: teamStats.reduce((s,m) => s + m.client_requests_count, 0), color: GOLD },
-    { name: 'Follow-ups',      value: teamStats.reduce((s,m) => s + m.follow_ups_count, 0),      color: YELLOW },
-    { name: 'Tâches internes', value: teamStats.reduce((s,m) => s + m.internal_tasks_count, 0),  color: '#6B8CBA' },
+    { name: 'Incidents',       value: rangeTasks.filter(t => t.category === 'incident').length,       color: '#f87171' },
+    { name: 'Demandes client', value: rangeTasks.filter(t => t.category === 'client_request').length, color: GOLD },
+    { name: 'Follow-ups',      value: rangeTasks.filter(t => t.category === 'follow_up').length,      color: YELLOW },
+    { name: 'Tâches internes', value: rangeTasks.filter(t => t.category === 'internal_task').length,  color: '#6B8CBA' },
   ].filter(c => c.value > 0);
 
   const periodLabel = periodFilter === 'day'   ? "aujourd'hui"

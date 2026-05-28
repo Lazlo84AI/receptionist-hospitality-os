@@ -1,3 +1,49 @@
+## [2026-05-28] (séance 14 - fix Répartition non scopée à la période + réintégration tâches orphelines)
+
+### fix(analytics): bloc Répartition dérivé de rangeTasks, cohérent avec classement et graphe
+
+**Problème** — Onglet Individual Task : le bloc Répartition (Incidents / Demandes client / Follow-ups / Tâches internes) restait figé sur le cumul all-time quelle que soit la période sélectionnée. Invisible par défaut car la 1re tâche (2026-01-28) tombe dans la fenêtre affichée → all-time = période ; visible dès qu'on bascule sur day/week. Même classe de bug que le classement (séance 12) et le graphe (séance 13).
+
+**Origine** — `categories` sommait `teamStats.reduce(... m.incidents_count ...)`, issu de la vue `v_user_task_stats` (cumul, non filtré par période, jointe sur `auth_user_id`).
+
+**Diagnostic (read-only Supabase, avant correction)**
+- Classement (table `task`, période 01/01 → 28/05) : vérifié exact sur 11/11 membres (créées/closes/assignées/résolues + % dérivés cohérents). Aucun hardcode dans toute la chaîne ; `useMyStatistics` ne lit que 3 vues, sans mock ni fallback.
+- Répartition affichée = somme de la vue = 54 / 7 / 63 / 139.
+- Table `task` réelle = 55 / 7 / 63 / 141. Écart -1 incident / -2 internes = 3 tâches `archived` (févr. 2026) dont `created_by` est orphelin (UUID absent de `staff_directory`), écartées par la jointure auth de la vue.
+
+**Correction (src/pages/admin/TeamAnalytics.tsx, bloc `categories`)** — 4 expressions remplacées : `teamStats.reduce((s,m) => s + m.<cat>_count, 0)` → `rangeTasks.filter(t => t.category === '<cat>').length`. Édits chirurgicaux ASCII-only (libellés accentués et couleurs intacts). Mapping : incidents_count→incident, client_requests_count→client_request, follow_ups_count→follow_up, internal_tasks_count→internal_task. Pas de `useMemo` ajouté (recalcul trivial, aligné sur l'existant).
+
+**Effets** — (1) Répartition désormais 100% scopée à la période, cohérente avec classement + graphe (3 blocs sur la source unique `rangeTasks`). (2) Réintègre les 3 tâches orphelines → 55 / 7 / 63 / 141 sur période full-history. Hausse attendue, pas une régression.
+
+**Vérification** — Validé visuellement par Wilfried (bascule day/week/month recalcule bien le bloc). `teamStats` toujours utilisé ailleurs (classement, shifts) → aucun dead code introduit.
+
+---
+
+## [2026-05-28] (séance 13 - fix graphe Évolution temporelle plafonné 30j)
+
+### fix(analytics): graphe Évolution temporelle débridé, dépend désormais 100% de la période
+
+**Problème** — Onglet Individual Task : courbe Créées/Closes plafonnée à ~30j même en Custom (ex. 01/01 → 28/05 affichait 30 points). Bug acté en séance 12, non corrigé.
+
+**Origine** — `chartTimeseries` lisait la vue SQL `v_tasks_timeseries` (cappée `now() - 30 days` côté DB). Même racine que le bug du classement résolu en séance 12.
+
+**Correction (src/pages/admin/TeamAnalytics.tsx, l. 690-784)** — Réécriture du `useMemo chartTimeseries` pour dériver de `rangeTasks` (source unique avec KPIs + classement). Granularité auto depuis `periodFilter` :
+
+| Filtre | Granularité | Buckets |
+|---|---|---|
+| day | heure | 24 (00h-23h) |
+| week | jour | ≤ 7 |
+| month | jour | ≤ 31 |
+| custom | auto | ≤31j=jour, 32-90j=semaine, >90j=mois |
+
+Pré-génération de la grille complète (pas de trous), lundi ISO pour les buckets semaine, labels FR (`JJ/MM`, `MMM YY`). `Closes` = `status ∈ CLOSED_STATUSES` (même définition que classement/KPIs → cohérence 3 blocs).
+
+**Hors scope (cleanup 2e passe)** — `allTimeseries` / `rawDayRows` deviennent dead code. Le fetch `v_tasks_timeseries` reste branché car il alimente `rawLoading` → `kpiLoading` (spinners KPIs). Suppression complète reportée après validation visuelle pour faciliter rollback.
+
+**Vérification** — TypeScript OK (`tsc --noEmit`). À valider visuellement : Custom 01/01→28/05 doit afficher des buckets mensuels.
+
+---
+
 ## [2026-05-28] (séance 12 - consolidation compte fantôme Mélanie Tavares + refonte classement Team Analytics)
 
 ### fix(data): rattachement du compte fantôme Mélanie Tavares au compte actif
