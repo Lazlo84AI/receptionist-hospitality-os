@@ -40,6 +40,9 @@ const serviceLabel = (s: string | null) =>
 const resolutionRate = (created: number, completed: number) =>
   created > 0 ? Math.round((completed / created) * 100) : 0;
 
+// Statuts considérés comme "terminé" (résolu + enregistré + validé manager)
+const CLOSED_STATUSES = new Set(['completed', 'archived', 'verified']);
+
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -66,10 +69,12 @@ const Row = ({ label, val }: { label: string; val: number }) => (
 );
 
 // ─── Member Row (task management) ────────────────────────────────────────────
-const MemberRow = ({ member, rank }: { member: UserTaskStats; rank: number }) => {
+const MemberRow = ({ member, rank, periodLabel }: { member: any; rank: number; periodLabel: string }) => {
   const [hovered, setHovered] = useState(false);
-  const rate     = resolutionRate(member.tasks_created_total, member.tasks_completed);
+  const rate1    = resolutionRate(member.created, member.closes);
+  const rate2    = resolutionRate(member.assigned, member.resolved);
   const svcColor = SERVICE_COLORS[member.service || ''] || GOLD;
+  const col = (r: number) => (r > 70 ? '#4ade80' : r > 40 ? YELLOW : '#f87171');
   return (
     <div className="relative flex items-center gap-4 rounded-xl px-4 py-3 transition-all duration-200 cursor-default"
       style={{ background: hovered ? 'rgba(187,165,122,0.08)' : 'transparent', border: `1px solid ${hovered ? CARD_BORDER : 'transparent'}` }}
@@ -85,31 +90,30 @@ const MemberRow = ({ member, rank }: { member: UserTaskStats; rank: number }) =>
         <p className="text-sm font-medium text-white truncate">{member.display_name}</p>
         <p className="text-xs" style={{ color: svcColor + '99' }}>{serviceLabel(member.service)}</p>
       </div>
-      <div className="hidden md:flex items-center gap-6 text-xs">
-        <div className="text-center"><p className="font-bold" style={{ color: YELLOW }}>{member.tasks_created_total}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>créées</p></div>
-        <div className="text-center"><p className="font-bold text-green-400">{member.tasks_completed}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>closes</p></div>
-        <div className="text-center"><p className="font-bold" style={{ color: GOLD }}>{member.shifts_completed}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>shifts</p></div>
+      {/* Groupe 1 : creees & closees individuellement */}
+      <div className="hidden md:flex items-center gap-4 text-xs">
+        <div className="text-center w-12"><p className="font-bold" style={{ color: YELLOW }}>{member.created}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>créées</p></div>
+        <div className="text-center w-12"><p className="font-bold text-green-400">{member.closes}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>closes</p></div>
+        <div className="text-center w-12"><p className="font-bold" style={{ color: col(rate1) }}>{rate1}%</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>réso.</p></div>
       </div>
-      <div className="w-24 flex-shrink-0">
-        <div className="flex justify-between text-xs mb-1">
-          <span style={{ color: 'rgba(255,255,255,0.4)' }}>résolution</span>
-          <span style={{ color: rate > 70 ? '#4ade80' : rate > 40 ? YELLOW : '#f87171' }} className="font-bold">{rate}%</span>
-        </div>
-        <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${rate}%`, background: rate > 70 ? '#4ade80' : rate > 40 ? YELLOW : '#f87171' }} />
-        </div>
+      <div className="hidden md:block h-8 w-px flex-shrink-0" style={{ background: CARD_BORDER }} />
+      {/* Groupe 2 : assignees & resolues par elle */}
+      <div className="hidden md:flex items-center gap-4 text-xs">
+        <div className="text-center w-14"><p className="font-bold" style={{ color: GOLD }}>{member.assigned}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>assignées</p></div>
+        <div className="text-center w-14"><p className="font-bold text-green-400">{member.resolved}</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>résolues</p></div>
+        <div className="text-center w-12"><p className="font-bold" style={{ color: col(rate2) }}>{rate2}%</p><p style={{ color: 'rgba(255,255,255,0.35)' }}>taux</p></div>
       </div>
       {hovered && (
-        <div className="absolute right-0 top-full mt-1 z-50 rounded-xl shadow-2xl border p-3 text-xs w-52"
+        <div className="absolute right-0 top-full mt-1 z-50 rounded-xl shadow-2xl border p-3 text-xs w-56"
           style={{ background: '#13102B', borderColor: CARD_BORDER }}>
-          <p className="font-semibold mb-2" style={{ color: GOLD }}>{member.display_name}</p>
+          <p className="font-semibold mb-1" style={{ color: GOLD }}>{member.display_name}</p>
+          <p className="text-[10px] mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>sur {periodLabel}</p>
           <div className="space-y-1">
-            <Row label="Tâches today"   val={member.tasks_created_today} />
-            <Row label="Tâches semaine" val={member.tasks_created_this_week} />
-            <Row label="En cours"       val={member.tasks_in_progress} />
-            <Row label="Incidents"      val={member.incidents_count} />
-            <Row label="Demandes client" val={member.client_requests_count} />
-            <Row label="Shifts actifs"  val={member.shifts_active} />
+            <Row label="En cours"        val={member.in_progress} />
+            <Row label="Incidents"       val={member.incidents} />
+            <Row label="Demandes client" val={member.client_requests} />
+            <Row label="Follow-ups"      val={member.follow_ups} />
+            <Row label="Tâches internes" val={member.internal} />
           </div>
         </div>
       )}
@@ -457,6 +461,7 @@ export default function TeamAnalytics() {
   // ── Shifts state ───────────────────────────────────────────────────────────
   const [periodShifts,       setPeriodShifts]       = useState<{ started: number; completed: number } | null>(null);
   const [periodShiftDetails, setPeriodShiftDetails] = useState<any[]>([]);
+  const [rangeTasks,         setRangeTasks]         = useState<any[]>([]);
 
   // ── Fetch timeseries ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -535,70 +540,51 @@ export default function TeamAnalytics() {
       });
   }, [activeRange.start, activeRange.end]);
 
+  // ── Fetch tasks pour la periode active (source du classement, corrige le plafond 30j) ──
+  useEffect(() => {
+    setRangeTasks([]);
+    supabase
+      .from('task')
+      .select('created_by, assigned_to, status, updated_by, category, created_at')
+      .gte('created_at', `${activeRange.start}T00:00:00`)
+      .lte('created_at', `${activeRange.end}T23:59:59`)
+      .then(({ data }) => setRangeTasks(data || []));
+  }, [activeRange.start, activeRange.end]);
+
   // ── Period KPIs (tasks) ────────────────────────────────────────────────────
   const periodKPIs = useMemo(() => {
-    const filtered  = rawDayRows.filter(r => r.period >= activeRange.start && r.period <= activeRange.end);
-    const created   = filtered.reduce((s, r) => s + r.tasks_created,   0);
-    const completed = filtered.reduce((s, r) => s + r.tasks_completed, 0);
+    const created   = rangeTasks.length;
+    const completed = rangeTasks.filter(t => CLOSED_STATUSES.has(t.status)).length;
     return { created, completed, rate: resolutionRate(created, completed) };
-  }, [rawDayRows, activeRange]);
+  }, [rangeTasks]);
 
   // ── Period ranking ─────────────────────────────────────────────────────────
-  const periodRanking = useMemo((): UserTaskStats[] => {
-    const filtered = rawDayRows.filter(r => r.period >= activeRange.start && r.period <= activeRange.end);
-    const byStaff  = new Map<string, { display_name: string; service: string | null; created: number; completed: number }>();
-    filtered.forEach(r => {
-      if (!r.staff_id) return;
-      const prev = byStaff.get(r.staff_id);
-      if (prev) { prev.created += r.tasks_created; prev.completed += r.tasks_completed; }
-      else byStaff.set(r.staff_id, { display_name: r.display_name, service: r.service, created: r.tasks_created, completed: r.tasks_completed });
-    });
-    teamStats.forEach(m => {
-      if (!byStaff.has(m.staff_id))
-        byStaff.set(m.staff_id, { display_name: m.display_name, service: m.service, created: 0, completed: 0 });
-    });
-    return Array.from(byStaff.entries())
-      .map(([staff_id, d]) => {
-        const orig = teamStats.find(m => m.staff_id === staff_id);
+  const periodRanking = useMemo(() => {
+    return teamStats
+      .filter(m => m.auth_user_id)
+      .map(m => {
+        const uid = m.auth_user_id;
+        const created  = rangeTasks.filter(t => t.created_by === uid);
+        const assigned = rangeTasks.filter(t => Array.isArray(t.assigned_to) && t.assigned_to.includes(uid));
         return {
-          ...(orig ?? {}),
-          staff_id,
-          auth_user_id:             orig?.auth_user_id             ?? '',
-          display_name:             d.display_name,
-          service:                  d.service,
-          first_name:               orig?.first_name               ?? null,
-          last_name:                orig?.last_name                ?? null,
-          role:                     orig?.role                     ?? '',
-          department:               orig?.department               ?? null,
-          hierarchy:                orig?.hierarchy                ?? null,
-          is_active:                orig?.is_active                ?? true,
-          avatar_url:               orig?.avatar_url               ?? null,
-          tasks_created_total:      d.created,
-          tasks_completed:          d.completed,
-          tasks_in_progress:        orig?.tasks_in_progress        ?? 0,
-          tasks_pending:            orig?.tasks_pending            ?? 0,
-          incidents_count:          orig?.incidents_count          ?? 0,
-          client_requests_count:    orig?.client_requests_count    ?? 0,
-          follow_ups_count:         orig?.follow_ups_count         ?? 0,
-          internal_tasks_count:     orig?.internal_tasks_count     ?? 0,
-          tasks_assigned_total:     orig?.tasks_assigned_total     ?? 0,
-          tasks_assigned_completed: orig?.tasks_assigned_completed ?? 0,
-          tasks_created_today:      orig?.tasks_created_today      ?? 0,
-          tasks_created_this_week:  orig?.tasks_created_this_week  ?? 0,
-          tasks_created_this_month: orig?.tasks_created_this_month ?? 0,
-          shifts_total:             orig?.shifts_total             ?? 0,
-          shifts_active:            orig?.shifts_active            ?? 0,
-          shifts_completed:         orig?.shifts_completed         ?? 0,
-          shifts_today:             orig?.shifts_today             ?? 0,
-          shifts_this_week:         orig?.shifts_this_week         ?? 0,
-          shifts_this_month:        orig?.shifts_this_month        ?? 0,
-          last_shift_at:            orig?.last_shift_at            ?? null,
-          last_task_created_at:     orig?.last_task_created_at     ?? null,
-          is_inactive:              orig?.is_inactive              ?? false,
-        } as UserTaskStats;
+          staff_id:        m.staff_id,
+          display_name:    m.display_name,
+          service:         m.service,
+          first_name:      m.first_name,
+          last_name:       m.last_name,
+          created:         created.length,
+          closes:          created.filter(t => CLOSED_STATUSES.has(t.status)).length,
+          assigned:        assigned.length,
+          resolved:        assigned.filter(t => CLOSED_STATUSES.has(t.status) && t.updated_by === uid).length,
+          in_progress:     created.filter(t => t.status === 'in_progress').length,
+          incidents:       created.filter(t => t.category === 'incident').length,
+          client_requests: created.filter(t => t.category === 'client_request').length,
+          follow_ups:      created.filter(t => t.category === 'follow_up').length,
+          internal:        created.filter(t => t.category === 'internal_task').length,
+        };
       })
-      .sort((a, b) => b.tasks_created_total - a.tasks_created_total);
-  }, [rawDayRows, activeRange, teamStats]);
+      .sort((a, b) => b.created - a.created);
+  }, [rangeTasks, teamStats]);
 
   // ── Shifts par service (inclut tous les services de l'equipe) ─────────────
   const shiftsByService = useMemo(() => {
@@ -1263,7 +1249,17 @@ export default function TeamAnalytics() {
             ) : periodRanking.length === 0 ? (
               <div className="p-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.2)' }}>Aucun membre trouvé</div>
             ) : (
-              <div className="p-3 space-y-1">{periodRanking.map((m, i) => <MemberRow key={m.staff_id} member={m} rank={i + 1} />)}</div>
+              <>
+                <div className="hidden md:flex items-center gap-4 px-4 pt-2 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(187,165,122,0.55)' }}>
+                  <span className="w-6 flex-shrink-0" />
+                  <span className="w-8 flex-shrink-0" />
+                  <span className="flex-1" />
+                  <span className="text-center" style={{ width: 176 }}>Tâches créées &amp; closées (individuel)</span>
+                  <span className="w-px" />
+                  <span className="text-center" style={{ width: 192 }}>Tâches assignées &amp; résolues</span>
+                </div>
+                <div className="p-3 space-y-1">{periodRanking.map((m, i) => <MemberRow key={m.staff_id} member={m} rank={i + 1} periodLabel={periodLabel} />)}</div>
+              </>
             )}
           </div>
           <IndividualBubbleChart teamStats={teamStats} loading={loading} />

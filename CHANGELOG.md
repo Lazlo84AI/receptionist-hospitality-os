@@ -1,3 +1,57 @@
+## [2026-05-28] (séance 12 - consolidation compte fantôme Mélanie Tavares + refonte classement Team Analytics)
+
+### fix(data): rattachement du compte fantôme Mélanie Tavares au compte actif
+
+**Problème**
+Mélanie Tavares possédait deux entrées dans `staff_directory` : un compte fantôme historique `70418d66-980c-4b51-acfa-023b7f90b87d` (créé 2025-09-11, `auth_user_id IS NULL`, jamais authentifié) et le compte actif `9d20cf22-078e-4757-9aa7-f0b810c90da7` (= `auth_user_id` = `profiles.id`). Une partie des tâches restait rattachée au fantôme, donc invisible dans le suivi analytique (les vues `v_user_task_stats` et `v_tasks_timeseries` joignent/filtrent sur `auth_user_id`, NULL pour le fantôme).
+
+**Diagnostic (read-only Supabase)**
+- `task.created_by` = fantôme : 4 tâches archivées non migrées.
+- `task.assigned_to` (uuid[]) = fantôme : 15 tâches (dont 2 contenant déjà l'actif).
+- `shifts`, `training_*`, `competency_scores`, tables secondaires : déjà migrés (0 résidu).
+
+**Correction (SQL exécuté dans Supabase SQL Editor)**
+1. `UPDATE staff_directory SET is_active=false WHERE id='70418d66...' AND auth_user_id IS NULL` (retrait des pickers/listes front).
+2. `UPDATE task SET created_by='9d20cf22...' WHERE created_by='70418d66...'` (4 lignes).
+3. `UPDATE task SET assigned_to = array_agg(DISTINCT e) FROM unnest(array_replace(assigned_to, fantôme, actif)) e WHERE fantôme = ANY(assigned_to)` (15 lignes, remplacement + dédoublonnage).
+
+**Vérification**
+- Fantôme : 0 référence `created_by` / `assigned_to`, `is_active=false`.
+- `v_user_task_stats` compte actif : `tasks_created_total` 24 -> 28, `tasks_assigned_total` 4 -> 17.
+
+**Reste à faire**
+- Suppression définitive de la ligne fantôme (`DELETE`) à effectuer manuellement après confirmation de la sauvegarde `audit_2026_05_27_staff_directory`.
+
+### feat(analytics): refonte du Classement équipe (onglet Individual Task) - périmètre cohérent + colonnes assignées/résolues
+
+**Problèmes constatés**
+1. Bug de périmètre majeur : le classement et le KPI Taches {periode} étaient reconstruits en sommant les lignes journalières de `v_tasks_timeseries`, qui ne couvrent que les 30 derniers jours (`created_at >= now() - 30 days`). Toute période > 30 j était silencieusement tronquée (ex. Mélanie : 28 créées réelles sur Jan-Mai, affichées 6).
+2. Incohérence intra-ligne : créées/closes sur la période mais colonne shifts en cumul total (`shifts_completed`), et tooltip entièrement hors période (incidents/demandes en cumul, today/semaine figés).
+3. Angle mort fonctionnel : aucune visibilité sur les tâches assignées ni résolues par le membre.
+
+**Refonte (src/pages/admin/TeamAnalytics.tsx)**
+1. Nouvelle source `rangeTasks` : `useEffect` requêtant directement `task` (created_by, assigned_to, status, updated_by, category, created_at) filtré par `activeRange` (même principe que la requête shifts). Corrige le plafond 30 j.
+2. `periodRanking` reconstruit : map sur `teamStats` (filtré `auth_user_id`), agrégation par membre depuis `rangeTasks`. Plus de dépendance à `v_tasks_timeseries` / `rawDayRows` pour le classement.
+3. `periodKPIs` recalculé depuis `rangeTasks` (cohérent avec le classement).
+4. Définitions métier verrouillées :
+   - Constante `CLOSED_STATUSES = {completed, archived, verified}` (terminé = résolu OU enregistré OU validé manager ; cancelled/pending/in_progress exclus).
+   - Groupe 1 Créées & closées (individuel) : créées (`created_by`=membre, période), closes (+ statut terminé), résolution = closes/créées.
+   - Groupe 2 Assignées & résolues : assignées (`membre = ANY(assigned_to)`, période), résolues (+ statut terminé ET `updated_by`=membre, donc closées par elle), taux = résolues/assignées.
+5. `MemberRow` réécrit : 2 groupes de 3 colonnes + séparateur, colonne Shifts SUPPRIMÉE (doublon avec l'onglet Shift dédié), tooltip recalculé 100% période (En cours, Incidents, Demandes client, Follow-ups, Tâches internes) avec libellé de période.
+6. En-têtes des 2 groupes ajoutés au-dessus de la liste.
+
+**Choix & limites documentés**
+- "par elle" s'appuie sur `updated_by` (seul champ peuplé à 97% ; `task_updates`, `completed_at`, `current_receptionist_id` existent mais sont vides). `shift_id` écarté (corrèle au résolveur seulement 39%). Conséquence : sur les tâches assignées, `updated_by` sous-estime la résolution (Mélanie 5/17 par elle vs 17/17 terminées) car l'archivage final est souvent fait par un tiers.
+- Rétroactivité impossible : un vrai `resolved_by`/`completed_by` nécessiterait d'instrumenter le code de clôture (chantier backend séparé, futur uniquement).
+- Le graphe Evolution temporelle garde le plafond 30 j (bloc non modifié, à traiter ultérieurement).
+- Alignement px des 2 en-têtes (176/192) potentiellement à ajuster selon rendu.
+
+**Vérification**
+- Build OK (`noUnusedLocals: false` -> `rawDayRows` devenu inutilisé sans impact).
+- Mélanie (période 01/01 -> 28/05) : Créées 28 / Closes 27 / Résolution 96% | Assignées 17 / Résolues 5 / Taux 29%.
+
+---
+
 ## [2026-05-28] (séance 11 - B-14 LocationSection mobile responsive et fermeture auto accordéon)
 
 ### fix: grille responsive et wrap multi-ligne + fermeture auto Floor après sélection
