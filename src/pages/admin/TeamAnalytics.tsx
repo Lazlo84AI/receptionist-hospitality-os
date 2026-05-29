@@ -599,14 +599,16 @@ export default function TeamAnalytics() {
     // Remplir avec les données réelles de shifts
     periodShiftDetails.forEach(s => {
       const memberSvc = teamStats.find(m => m.staff_id === s.user_id);
-      const svc = (s.service || memberSvc?.service || 'N/A').toLowerCase().trim();
+      const svc = (memberSvc?.service || 'N/A').toLowerCase().trim();
       if (!acc[svc]) acc[svc] = { started: 0, completed: 0, unclosed: 0 };
       acc[svc].started++;
       if (s.status === 'completed' && s.end_time != null) acc[svc].completed++;
       else acc[svc].unclosed++;
     });
 
+    const validServices = new Set(teamStats.map(m => m.service ? m.service.toLowerCase().trim() : '').filter(Boolean));
     return Object.entries(acc)
+      .filter(([service]) => validServices.has(service))
       .map(([service, d]) => ({
         service,
         started:   d.started,
@@ -788,6 +790,109 @@ export default function TeamAnalytics() {
     { name: 'Demandes client', value: rangeTasks.filter(t => t.category === 'client_request').length, color: GOLD },
     { name: 'Follow-ups',      value: rangeTasks.filter(t => t.category === 'follow_up').length,      color: YELLOW },
     { name: 'Tâches internes', value: rangeTasks.filter(t => t.category === 'internal_task').length,  color: '#6B8CBA' },
+  ].filter(c => c.value > 0);
+
+  // Évolution temporelle (shifts) — miroir de chartTimeseries, source periodShiftDetails, date = start_time.
+  // Démarrés = toutes lignes du bucket ; Clôturés = sous-ensemble status==='completed' && end_time != null.
+  const shiftChartTimeseries = useMemo(() => {
+    const startDate = new Date(`${activeRange.start}T00:00:00`);
+    const endDate   = new Date(`${activeRange.end}T23:59:59`);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) return [];
+
+    type Granularity = 'hour' | 'day' | 'week' | 'month';
+    let granularity: Granularity;
+    if (periodFilter === 'day') {
+      granularity = 'hour';
+    } else if (periodFilter === 'week' || periodFilter === 'month') {
+      granularity = 'day';
+    } else {
+      const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      granularity = days <= 31 ? 'day' : days <= 90 ? 'week' : 'month';
+    }
+
+    const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const pad2 = (n: number) => n.toString().padStart(2, '0');
+
+    const isoMonday = (d: Date) => {
+      const m = new Date(d);
+      const dow = m.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      m.setDate(m.getDate() + diff);
+      m.setHours(0, 0, 0, 0);
+      return m;
+    };
+
+    const keyFor = (d: Date): { key: string; label: string; order: number } => {
+      if (granularity === 'hour') {
+        const h = d.getHours();
+        return { key: `h${h}`, label: `${pad2(h)}h`, order: h };
+      }
+      if (granularity === 'day') {
+        const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+        return { key: `${y}-${pad2(m)}-${pad2(day)}`, label: `${pad2(day)}/${pad2(m)}`, order: new Date(y, m - 1, day).getTime() };
+      }
+      if (granularity === 'week') {
+        const mon = isoMonday(d);
+        const y = mon.getFullYear(), m = mon.getMonth() + 1, day = mon.getDate();
+        return { key: `w${y}-${pad2(m)}-${pad2(day)}`, label: `${pad2(day)}/${pad2(m)}`, order: mon.getTime() };
+      }
+      const y = d.getFullYear(), m = d.getMonth();
+      return { key: `m${y}-${pad2(m + 1)}`, label: `${MONTH_LABELS[m]} ${y.toString().slice(2)}`, order: new Date(y, m, 1).getTime() };
+    };
+
+    const buckets = new Map<string, { label: string; Démarrés: number; Clôturés: number; order: number }>();
+
+    if (granularity === 'hour') {
+      for (let h = 0; h < 24; h++) {
+        const d = new Date(startDate); d.setHours(h, 0, 0, 0);
+        const { key, label, order } = keyFor(d);
+        buckets.set(key, { label, Démarrés: 0, Clôturés: 0, order });
+      }
+    } else if (granularity === 'day') {
+      const c = new Date(startDate); c.setHours(0, 0, 0, 0);
+      while (c <= endDate) {
+        const { key, label, order } = keyFor(c);
+        buckets.set(key, { label, Démarrés: 0, Clôturés: 0, order });
+        c.setDate(c.getDate() + 1);
+      }
+    } else if (granularity === 'week') {
+      const c = isoMonday(startDate);
+      while (c <= endDate) {
+        const { key, label, order } = keyFor(c);
+        buckets.set(key, { label, Démarrés: 0, Clôturés: 0, order });
+        c.setDate(c.getDate() + 7);
+      }
+    } else {
+      const c = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (c <= endDate) {
+        const { key, label, order } = keyFor(c);
+        buckets.set(key, { label, Démarrés: 0, Clôturés: 0, order });
+        c.setMonth(c.getMonth() + 1);
+      }
+    }
+
+    periodShiftDetails.forEach((s: any) => {
+      if (!s.start_time) return;
+      const d = new Date(s.start_time);
+      if (isNaN(d.getTime())) return;
+      const { key } = keyFor(d);
+      const bucket = buckets.get(key);
+      if (!bucket) return;
+      bucket.Démarrés += 1;
+      if (s.status === 'completed' && s.end_time != null) bucket.Clôturés += 1;
+    });
+
+    return Array.from(buckets.values())
+      .sort((a, b) => a.order - b.order)
+      .map(b => ({ label: b.label, Démarrés: b.Démarrés, Clôturés: b.Clôturés }));
+  }, [periodShiftDetails, activeRange.start, activeRange.end, periodFilter]);
+
+  // Répartition (shifts) — miroir de categories, ventilation par service.
+  const shiftCategories = [
+    { name: 'Reception',    value: periodShiftDetails.filter((s: any) => s.service === 'reception').length,    color: SERVICE_COLORS.reception },
+    { name: 'Housekeeping', value: periodShiftDetails.filter((s: any) => s.service === 'housekeeping').length, color: SERVICE_COLORS.housekeeping },
+    { name: 'Maintenance',  value: periodShiftDetails.filter((s: any) => s.service === 'maintenance').length,  color: SERVICE_COLORS.maintenance },
+    { name: 'Direction',    value: periodShiftDetails.filter((s: any) => s.service === 'direction').length,    color: SERVICE_COLORS.direction },
   ].filter(c => c.value > 0);
 
   const periodLabel = periodFilter === 'day'   ? "aujourd'hui"
@@ -1159,6 +1264,65 @@ export default function TeamAnalytics() {
                 </div>
               </div>
             )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+              <div className="lg:col-span-2 rounded-xl border p-5" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp size={14} style={{ color: GOLD }} />
+                  <p className="text-sm font-semibold text-white">Évolution temporelle</p>
+                </div>
+                {!periodShifts || shiftChartTimeseries.length === 0 ? (
+                  <div className="h-48 flex items-center justify-center" style={{ color: 'rgba(255,255,255,0.2)' }}>Pas encore de données</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={shiftChartTimeseries}>
+                      <defs>
+                        <linearGradient id="gradShiftStarted" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4ade80" stopOpacity={0.3} /><stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="gradShiftCompleted" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={GOLD} stopOpacity={0.25} /><stop offset="95%" stopColor={GOLD} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                      <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }} />
+                      <Area type="monotone" dataKey="Démarrés" stroke="#4ade80" strokeWidth={2} fill="url(#gradShiftStarted)" dot={{ fill: '#4ade80', r: 3 }} />
+                      <Area type="monotone" dataKey="Clôturés" stroke={GOLD} strokeWidth={2} fill="url(#gradShiftCompleted)" dot={{ fill: GOLD, r: 3 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+              <div className="rounded-xl border p-5" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle2 size={14} style={{ color: GOLD }} />
+                  <p className="text-sm font-semibold text-white">Répartition</p>
+                </div>
+                {!periodShifts ? (
+                  <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-8 rounded" style={{ background: 'rgba(255,255,255,0.04)' }} />)}</div>
+                ) : (
+                  <div className="space-y-3">
+                    {(() => {
+                      const total = shiftCategories.reduce((s, c) => s + c.value, 0) || 1;
+                      return shiftCategories.map(c => (
+                        <div key={c.name}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span style={{ color: 'rgba(255,255,255,0.55)' }}>{c.name}</span>
+                            <span style={{ color: c.color }} className="font-bold">{c.value}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                            <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${Math.round((c.value/total)*100)}%`, background: c.color }} />
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                    {shiftCategories.length === 0 && <p className="text-xs text-center py-8" style={{ color: 'rgba(255,255,255,0.2)' }}>Aucune donnée</p>}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="rounded-xl border" style={{ background: CARD_BG, borderColor: CARD_BORDER }}>
               <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: CARD_BORDER }}>

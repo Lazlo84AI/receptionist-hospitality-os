@@ -1,3 +1,19 @@
+## [2026-05-29] (séance 16 - auto-archivage cartes completed/verified à la rotation de shift)
+
+### fix(shifts): cartes completed/verified rattachées à un shift clos désormais archivées automatiquement
+
+26 cartes orphelines (17 completed + 9 verified) s'accumulaient dans le Kanban (`useTasks` filtre `status != 'archived'`). Cause : la fonction SQL `rotate_permanent_shifts()` (cron quotidien 01:00 UTC) ne touchait pas la table `task`, et l'archivage front (`ShiftManagement.tsx`) ne couvrait que `completed`, pas `verified`. Fix : (1) SQL — `rotate_permanent_shifts()` étendue avec un UPDATE catch-all qui archive toute carte completed/verified dont le shift est `status='completed'` (idempotent, couvre auto + manuel). (2) Front — `ShiftManagement.tsx` l. 839 : filtre étendu à `completed || verified`. (3) Backfill SQL one-shot exécuté : 26 cartes archivées.
+
+---
+
+## [2026-05-28] (séance 15 - reproduction graphe + Répartition côté Individual Shift)
+
+### feat(analytics): graphe Évolution temporelle et bloc Répartition ajoutés à l'onglet Individual Shift
+
+Miroir de l'onglet Individual Task. `shiftChartTimeseries` (useMemo) dérive de `periodShiftDetails` : séries Démarrés/Clôturés par bucket sur `start_time`, granularité auto identique (day=heure, week/month=jour, custom auto). `shiftCategories` ventile par service (reception/housekeeping/maintenance/direction) avec `SERVICE_COLORS`. JSX inséré entre KPIs et tableau classement. Couleurs Démarrés=vert / Clôturés=gold cohérentes avec KPIs.
+
+---
+
 ## [2026-05-28] (séance 14 - fix Répartition non scopée à la période + réintégration tâches orphelines)
 
 ### fix(analytics): bloc Répartition dérivé de rangeTasks, cohérent avec classement et graphe

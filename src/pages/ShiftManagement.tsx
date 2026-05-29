@@ -835,8 +835,8 @@ const ShiftManagement = () => {
         onShiftEnded={async () => {
           // Appelé SEULEMENT après validation complète du shift
           
-          // ✅ ARCHIVER toutes les tâches 'completed' avant de fermer le shift
-          const completedTasks = tasks.filter(t => t.status === 'completed');
+          // ✅ ARCHIVER toutes les tâches 'completed' + 'verified' avant de fermer le shift
+          const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'verified');
           
           if (completedTasks.length > 0) {
             console.log(`Archiving ${completedTasks.length} completed tasks...`);
