@@ -1,3 +1,11 @@
+## [2026-05-29] (séance 17 - refonte panel notifications : sections non lues / récemment lues + fix Tout lire)
+
+### fix(notifications): panel scindé en 2 sections, « Tout lire » optimiste, historique 30 dernières lues repliable
+
+« Tout lire » ne marchait pas visuellement : `markAllAsRead` mettait à jour l'état local seulement si la requête DB réussissait (gating sur erreur), pattern asymétrique vs `markAsRead`. Et les notifs cliquées restaient dans la liste avec fond neutre, accumulant le bruit visuel. Fix : (1) `useNotifications.ts` refactoré — 2 requêtes parallèles (non lues sans limite + 30 dernières lues sur `read_at` desc), 2 états séparés `unreadNotifications` / `readNotifications`, `markAsRead` et `markAllAsRead` optimistes (état local d'abord, DB en best-effort, log si échec). (2) `NotificationBell.tsx` — section haute non lues toujours visible (empty state « Aucune nouvelle notification »), section basse « Récemment lues » repliable (chevron + compte), clic sur non lue la déplace en tête de la section basse, « Tout lire » bascule en bloc. Footer total supprimé (badge cloche suffit).
+
+---
+
 ## [2026-05-29] (séance 16 - auto-archivage cartes completed/verified à la rotation de shift)
 
 ### fix(shifts): cartes completed/verified rattachées à un shift clos désormais archivées automatiquement

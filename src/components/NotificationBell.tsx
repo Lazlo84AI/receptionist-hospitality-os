@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, X, CheckCheck, BookOpen, ClipboardList, CheckSquare, MessageSquare } from 'lucide-react';
+import { Bell, X, CheckCheck, BookOpen, ClipboardList, CheckSquare, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNotifications, AppNotification, NotificationType } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -95,8 +95,9 @@ function NotificationItem({
 // ─── NotificationBell ─────────────────────────────────────────────────────────
 
 export function NotificationBell() {
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+  const { unreadNotifications, readNotifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [readSectionOpen, setReadSectionOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -194,7 +195,7 @@ export function NotificationBell() {
             </div>
           </div>
 
-          {/* Liste des notifs */}
+          {/* Liste des notifs : section non lues + section repliable lues */}
           <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
             {loading ? (
               <div className="flex items-center justify-center py-8">
@@ -203,33 +204,56 @@ export function NotificationBell() {
                   style={{ borderColor: '#BBA57A', borderTopColor: 'transparent' }}
                 />
               </div>
-            ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2">
-                <Bell className="h-8 w-8 text-gray-300" />
-                <p className="text-sm text-gray-400">Aucune notification</p>
-              </div>
             ) : (
-              notifications.map(notif => (
-                <NotificationItem
-                  key={notif.id}
-                  notif={notif}
-                  onRead={markAsRead}
-                />
-              ))
+              <>
+                {/* Section non lues */}
+                {unreadNotifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-2">
+                    <Bell className="h-8 w-8 text-gray-300" />
+                    <p className="text-sm text-gray-400">Aucune nouvelle notification</p>
+                  </div>
+                ) : (
+                  unreadNotifications.map(notif => (
+                    <NotificationItem
+                      key={notif.id}
+                      notif={notif}
+                      onRead={markAsRead}
+                    />
+                  ))
+                )}
+
+                {/* Section repliable : Récemment lues */}
+                {readNotifications.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => setReadSectionOpen(o => !o)}
+                      className="w-full flex items-center gap-2 px-4 py-2 border-t transition-colors hover:bg-black/5"
+                      style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: '#FAFAFA' }}
+                    >
+                      {readSectionOpen ? (
+                        <ChevronDown className="h-3.5 w-3.5" style={{ color: '#9CA3AF' }} />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5" style={{ color: '#9CA3AF' }} />
+                      )}
+                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>
+                        Récemment lues
+                      </span>
+                      <span className="text-[10px] ml-auto" style={{ color: '#BBA57A' }}>
+                        {readNotifications.length}
+                      </span>
+                    </button>
+                    {readSectionOpen && readNotifications.map(notif => (
+                      <NotificationItem
+                        key={notif.id}
+                        notif={notif}
+                        onRead={markAsRead}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div
-              className="px-4 py-2 text-center border-t"
-              style={{ borderColor: 'rgba(0,0,0,0.06)', backgroundColor: '#FAFAFA' }}
-            >
-              <p className="text-[11px]" style={{ color: '#9CA3AF' }}>
-                {notifications.length} notification{notifications.length > 1 ? 's' : ''} au total
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>
