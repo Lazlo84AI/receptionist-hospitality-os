@@ -1,3 +1,11 @@
+## [2026-06-08] (séance 20 - debug pipeline n8n RAG/QCM : ingestion A.1, vérification Qdrant, génération QCM A.2)
+
+### fix(n8n): déblocage de bout en bout de l'ingestion (A.1) et de la génération de QCM (A.2), + rattrapage de la séance n8n précédente non journalisée
+
+A.1 THE TRAINER'S BRAIN (CORE RAG) : `Search For Existing Point1` passé de `.item` à `.first()` sur `$('Webhook')...document_name` (erreur paired-item qui plantait juste après le Wait et empêchait le PATCH de statut), et `Delete Existing Point` dont le corps JSON est désormais enveloppé dans `JSON.stringify(...)` (le tableau d'UUID était rendu en JSON invalide, bloquant la purge des anciens points lors d'une réingestion). A.2 THE EVALUATOR (QCM Generator) : `HTTP Request2 set vectorized` et `HTTP Request3 set Failed` réécrits pour cibler `ingestion_status` (`vectorisé` / `échec`) au lieu de `status` (varchar(20) trop court et colonne réservée au cycle de vie utilisateur), avec ajout des accolades manquantes au body Failed ; topK du retrieval QCM confirmé à 35. Rattrapage séance n8n précédente (A.1) : branche image/vision fiabilisée (onError=continue + retry 3-5 / wait ~3000 ms + batching 1 item / 2000-3000 ms sur Pixtral Vision et Send Image pour absorber les 429 sur ~39 images), modèle Pixtral à migrer de pixtral-large-latest (EOL 27/02/2026) vers mistral-medium-3.5, Prepare Embedding passé de `.item` à `.first()`, Webhook en Respond Immediately (fix timeout navigateur 4 min), Recursive Character Text Splitter en chunk 1000 / overlap 150, Limit maxItems 3 vers 1 (1 QCM par ingestion), et ajout de la branche de vérification Qdrant post-Wait (Search For Existing Point1, IF Points Présents ?, PATCH ingestion_status vectorisé/échec).
+
+---
+
 ## [2026-06-08] (séance 19 - autocomplétion anti-doublon sur le champ Training Title)
 
 ### feat(admin-training): suggestions de documents existants pendant la saisie du titre de formation
