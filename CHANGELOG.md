@@ -1,3 +1,11 @@
+## [2026-06-08] (séance 18 - statut admin à la place du statut user + panneau Filtres repliable dans la Bibliothèque)
+
+### feat(admin-training): statut d'ingestion affiché à la place du statut kanban + filtres et tri repliables
+
+AdminTraining.tsx : en vue grille et liste, la zone Statut affiche désormais le statut d'ingestion admin (et plus jamais le statut kanban user) ; `en attente` (« Mettre à jour le document dans la base ») passe en rouge, les contenus sans ingestion (QCM/training/practice) affichent `—`, et les variables mortes statusColor/statusLabel sont retirées. Les pills de type sont remplacées par un panneau « Filtres » repliable à 4 menus (Type de contenus, Statut, Ordre alphabétique A-Z / Z-A, Date récent / ancien), avec tri unique actif et filtrage statut restreint aux formations.
+
+---
+
 ## [2026-05-29] (séance 17 - refonte panel notifications : sections non lues / récemment lues + fix Tout lire)
 
 ### fix(notifications): panel scindé en 2 sections, « Tout lire » optimiste, historique 30 dernières lues repliable

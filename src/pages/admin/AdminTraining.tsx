@@ -36,6 +36,7 @@ import {
   Send,
   ChevronDown,
   Phone,
+  Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -63,6 +64,7 @@ interface KnowledgeItem {
   summary: string | null;
   average_score: number | null;
   status: string;
+  ingestion_status: string | null;
   formation_steps: string;
   kanban_status: string;
   related_item_ids: string[] | null;
@@ -70,11 +72,16 @@ interface KnowledgeItem {
   file_name: string | null;
   created_at: string;
   updated_at: string;
+  // Derives QCM : vraies dates issues de training_questions (min = 1re question, max = derniere)
+  qcm_first_at?: string | null;
+  qcm_last_at?: string | null;
 }
 
 type TabId = 'bibliotheque' | 'attribution' | 'suivi' | 'workflows';
 type ViewMode = 'grid' | 'list';
 type StepFilter = 'all' | 'formation' | 'training' | 'qcm' | 'practice';
+type IngestionFilter = 'all' | 'vectorisé' | 'vectorisé partiel' | 'en attente' | 'échec';
+type SortKey = 'date_desc' | 'date_asc' | 'az' | 'za';
 
 // ─── Config par type ──────────────────────────────────────────────────────────
 
@@ -122,6 +129,18 @@ const STEP_CONFIG: Record<string, {
 
 const getStepConfig = (step: string) =>
   STEP_CONFIG[step] ?? STEP_CONFIG['formation'];
+
+// ─── Statut d'ingestion (admin) ────────────────────────────────────
+// Indique si le document source est bien vectorise dans Qdrant.
+// Alimente par le pipeline A.1 via knowledge_queries.ingestion_status.
+const INGESTION_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  'vectorisé':  { label: 'Enregistré dans base de connaissance', color: '#4ade80', bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.35)' },
+  'échec':      { label: "Le document n'est pas enregistré",     color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)' },
+  'en attente': { label: 'Mettre à jour le document dans la base', color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)' },
+  'vectorisé partiel': { label: 'Enregistré partiellement — à compléter', color: '#DEAE35', bg: 'rgba(222,174,53,0.12)', border: 'rgba(222,174,53,0.4)' },
+};
+const getIngestionConfig = (s: string | null | undefined) =>
+  INGESTION_CONFIG[s ?? 'en attente'] ?? INGESTION_CONFIG['en attente'];
 
 // ─── Config thématique → emoji + dégradé ─────────────────────────────────────
 
@@ -230,6 +249,16 @@ function TabButton({
   );
 }
 
+// ─── Date helper ──────────────────────────────────────────────────────────────
+// Formate un timestamp ISO (UTC en base) en JJ/MM/AA HH:MM heure locale.
+const formatDateTime = (iso: string | null | undefined): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${p(d.getFullYear() % 100)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 // ─── Card Grid View ───────────────────────────────────────────────────────────
 
 function ItemCard({
@@ -243,22 +272,14 @@ function ItemCard({
 }) {
   const cfg = getStepConfig(item.formation_steps);
   const Icon = cfg.icon;
-
-  const statusColor =
-    item.kanban_status === 'completed'
-      ? '#4ade80'
-      : item.kanban_status === 'in_progress'
-      ? '#DEAE35'
-      : 'rgba(187,165,122,0.45)';
-
-  const statusLabel =
-    item.kanban_status === 'completed'
-      ? 'Complété'
-      : item.kanban_status === 'in_progress'
-      ? 'En cours'
-      : 'À traiter';
+  const ing = getIngestionConfig(item.ingestion_status);
+  const showIngestion = item.formation_steps === 'formation';
 
   const themCfg = getThematicTrainingConfig(item.thematic);
+
+  const isQcm = item.formation_steps === 'qcm';
+  const createdAt = isQcm ? item.qcm_first_at : item.created_at;
+  const updatedAt = isQcm ? item.qcm_last_at : item.updated_at;
 
   return (
     <div
@@ -323,6 +344,10 @@ function ItemCard({
         <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {item.thematic}
         </p>
+        <div className="flex items-center gap-1.5 mt-2 text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <Clock className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">Créé {formatDateTime(createdAt)} · Maj {formatDateTime(updatedAt)}</span>
+        </div>
       </div>
 
       {/* Badges row — TYPE badge garde sa couleur d'origine */}
@@ -338,10 +363,14 @@ function ItemCard({
           {cfg.label}
         </span>
 
-        <div className="flex items-center gap-1">
-          <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
-          <span className="text-xs" style={{ color: statusColor }}>{statusLabel}</span>
-        </div>
+        {showIngestion ? (
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: ing.color }} />
+            <span className="text-xs" style={{ color: ing.color }}>{ing.label}</span>
+          </div>
+        ) : (
+          <span className="text-xs" style={{ color: 'rgba(187,165,122,0.3)' }}>—</span>
+        )}
       </div>
 
       {/* Score moyen si dispo */}
@@ -376,20 +405,12 @@ function ItemRow({
 }) {
   const cfg = getStepConfig(item.formation_steps);
   const Icon = cfg.icon;
+  const ing = getIngestionConfig(item.ingestion_status);
+  const showIngestion = item.formation_steps === 'formation';
 
-  const statusColor =
-    item.kanban_status === 'completed'
-      ? '#4ade80'
-      : item.kanban_status === 'in_progress'
-      ? '#DEAE35'
-      : 'rgba(187,165,122,0.4)';
-
-  const statusLabel =
-    item.kanban_status === 'completed'
-      ? 'Complété'
-      : item.kanban_status === 'in_progress'
-      ? 'En cours'
-      : 'À traiter';
+  const isQcm = item.formation_steps === 'qcm';
+  const createdAt = isQcm ? item.qcm_first_at : item.created_at;
+  const updatedAt = isQcm ? item.qcm_last_at : item.updated_at;
 
   return (
     <div
@@ -410,7 +431,7 @@ function ItemRow({
 
       {/* Title + thematic */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{item.document_name}</p>
+        <p className="text-sm font-medium text-white truncate">{item.document_title}</p>
         <p className="text-xs truncate mt-0.5" style={{ color: 'rgba(187,165,122,0.5)' }}>
           {item.thematic}
         </p>
@@ -439,11 +460,27 @@ function ItemRow({
         </span>
       )}
 
-      {/* Status */}
+      {/* Statut admin = ingestion */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
-        <span className="text-xs hidden sm:inline" style={{ color: statusColor }}>
-          {statusLabel}
+        {showIngestion ? (
+          <>
+            <div className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: ing.color }} />
+            <span className="text-xs hidden sm:inline" style={{ color: ing.color }}>
+              {ing.label}
+            </span>
+          </>
+        ) : (
+          <span className="text-xs hidden sm:inline" style={{ color: 'rgba(187,165,122,0.3)' }}>—</span>
+        )}
+      </div>
+
+      {/* Dates Créé / Maj */}
+      <div className="hidden lg:flex flex-col flex-shrink-0 w-[150px] leading-tight">
+        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          Créé {formatDateTime(createdAt)}
+        </span>
+        <span className="text-xs" style={{ color: 'rgba(187,165,122,0.4)' }}>
+          Maj {formatDateTime(updatedAt)}
         </span>
       </div>
 
@@ -1965,6 +2002,9 @@ export default function AdminTraining() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
   const [stepFilter, setStepFilter] = useState<StepFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<IngestionFilter>('all');
+  const [sort, setSort] = useState<SortKey>('date_desc');
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [itemToDelete, setItemToDelete] = useState<KnowledgeItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
@@ -1999,10 +2039,35 @@ export default function AdminTraining() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('knowledge_queries')
-        .select('id, document_title, document_name, document_url, thematic, summary, average_score, status, formation_steps, kanban_status, related_item_ids, file_name, created_at, updated_at')
+        .select('id, document_title, document_name, document_url, thematic, summary, average_score, status, ingestion_status, formation_steps, kanban_status, related_item_ids, file_name, created_at, updated_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as KnowledgeItem[];
+      const cards = data as KnowledgeItem[];
+
+      // Pour les cartes QCM, on derive Cree/Maj des vraies dates des questions liees.
+      const qcmIds = Array.from(new Set(
+        cards.filter(c => c.formation_steps === 'qcm')
+             .flatMap(c => c.related_item_ids ?? [])
+      ));
+      if (qcmIds.length > 0) {
+        const { data: qData, error: qErr } = await supabase
+          .from('training_questions')
+          .select('id, created_at')
+          .in('id', qcmIds);
+        if (qErr) throw qErr;
+        const dateById = new Map((qData ?? []).map(q => [q.id as string, q.created_at as string]));
+        for (const c of cards) {
+          if (c.formation_steps !== 'qcm') continue;
+          const ts = (c.related_item_ids ?? [])
+            .map(id => dateById.get(id))
+            .filter((d): d is string => !!d)
+            .map(s => ({ s, t: new Date(s).getTime() }))
+            .sort((a, b) => a.t - b.t);
+          c.qcm_first_at = ts.length ? ts[0].s : null;
+          c.qcm_last_at = ts.length ? ts[ts.length - 1].s : null;
+        }
+      }
+      return cards;
     },
     staleTime: 1000 * 60 * 2,
   });
@@ -2019,15 +2084,32 @@ export default function AdminTraining() {
 
   // ── Filter ──────────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return items.filter(item => {
+    const base = items.filter(item => {
       const matchStep = stepFilter === 'all' || item.formation_steps === stepFilter;
       const matchSearch =
         search === '' ||
         item.document_name.toLowerCase().includes(search.toLowerCase()) ||
         item.thematic.toLowerCase().includes(search.toLowerCase());
-      return matchStep && matchSearch;
+      // Le statut d'ingestion ne concerne que les formations
+      const matchStatus =
+        statusFilter === 'all' ||
+        (item.formation_steps === 'formation' && (item.ingestion_status ?? 'en attente') === statusFilter);
+      return matchStep && matchSearch && matchStatus;
     });
-  }, [items, stepFilter, search]);
+
+    // Date effective : QCM = 1re question, sinon created_at
+    const effDate = (it: KnowledgeItem) =>
+      it.formation_steps === 'qcm' ? (it.qcm_first_at ?? it.created_at) : it.created_at;
+
+    return [...base].sort((a, b) => {
+      switch (sort) {
+        case 'az': return a.document_title.localeCompare(b.document_title, 'fr', { sensitivity: 'base' });
+        case 'za': return b.document_title.localeCompare(a.document_title, 'fr', { sensitivity: 'base' });
+        case 'date_asc': return new Date(effDate(a)).getTime() - new Date(effDate(b)).getTime();
+        default: return new Date(effDate(b)).getTime() - new Date(effDate(a)).getTime();
+      }
+    });
+  }, [items, stepFilter, search, statusFilter, sort]);
 
   // ── Delete ──────────────────────────────────────────────────────────────────
   const handleConfirmDelete = async () => {
@@ -2103,7 +2185,7 @@ export default function AdminTraining() {
         {activeTab === 'bibliotheque' && (
           <>
             {/* Search + Filters + View toggle */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="flex flex-col sm:flex-row gap-3 mb-3">
               {/* Search */}
               <div className="relative flex-1">
                 <Search
@@ -2121,32 +2203,6 @@ export default function AdminTraining() {
                     '--tw-ring-color': '#BBA57A',
                   } as React.CSSProperties}
                 />
-              </div>
-
-              {/* Type filter pills */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {(['all', 'formation', 'training', 'qcm', 'practice'] as StepFilter[]).map(f => {
-                  const isActive = stepFilter === f;
-                  const cfg = f !== 'all' ? getStepConfig(f) : null;
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => setStepFilter(f)}
-                      className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-150"
-                      style={{
-                        backgroundColor: isActive
-                          ? cfg ? cfg.bg : 'rgba(187,165,122,0.18)'
-                          : 'rgba(30,26,55,0.6)',
-                        color: isActive
-                          ? cfg ? cfg.color : '#BBA57A'
-                          : 'rgba(187,165,122,0.45)',
-                        border: `1px solid ${isActive ? (cfg ? cfg.border : 'rgba(187,165,122,0.4)') : 'rgba(187,165,122,0.12)'}`,
-                      }}
-                    >
-                      {f === 'all' ? 'Tous' : getStepConfig(f).label}
-                    </button>
-                  );
-                })}
               </div>
 
               {/* View mode */}
@@ -2170,6 +2226,94 @@ export default function AdminTraining() {
                   ),
                 )}
               </div>
+            </div>
+
+            {/* Filtres repliables */}
+            <div
+              className="rounded-xl border mb-5"
+              style={{ backgroundColor: 'rgba(30,26,55,0.6)', borderColor: 'rgba(187,165,122,0.2)' }}
+            >
+              <button
+                onClick={() => setFiltersOpen(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" style={{ color: '#BBA57A' }} />
+                  <span className="text-sm font-semibold text-white">Filtres</span>
+                </div>
+                <ChevronDown
+                  className={cn('h-4 w-4 transition-transform duration-200', filtersOpen && 'rotate-180')}
+                  style={{ color: 'rgba(187,165,122,0.6)' }}
+                />
+              </button>
+
+              {filtersOpen && (
+                <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Type de contenus */}
+                  <div>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'rgba(187,165,122,0.6)' }}>Type de contenus</label>
+                    <select
+                      value={stepFilter}
+                      onChange={e => setStepFilter(e.target.value as StepFilter)}
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+                      style={{ backgroundColor: 'rgba(15,12,36,0.7)', borderColor: 'rgba(187,165,122,0.25)', color: '#BBA57A' }}
+                    >
+                      <option value="all">Tous</option>
+                      <option value="formation">Formation</option>
+                      <option value="training">Training</option>
+                      <option value="qcm">QCM</option>
+                      <option value="practice">Practice</option>
+                    </select>
+                  </div>
+
+                  {/* Statut (admin = ingestion) */}
+                  <div>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'rgba(187,165,122,0.6)' }}>Statut</label>
+                    <select
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value as IngestionFilter)}
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+                      style={{ backgroundColor: 'rgba(15,12,36,0.7)', borderColor: 'rgba(187,165,122,0.25)', color: '#BBA57A' }}
+                    >
+                      <option value="all">Tous les statuts</option>
+                      <option value="vectorisé">Enregistré dans base de connaissance</option>
+                      <option value="vectorisé partiel">Enregistré partiellement</option>
+                      <option value="en attente">Mettre à jour le document dans la base</option>
+                      <option value="échec">Le document n'est pas enregistré</option>
+                    </select>
+                  </div>
+
+                  {/* Ordre alphabétique */}
+                  <div>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'rgba(187,165,122,0.6)' }}>Ordre alphabétique</label>
+                    <select
+                      value={sort === 'az' || sort === 'za' ? sort : ''}
+                      onChange={e => { if (e.target.value) setSort(e.target.value as SortKey); }}
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+                      style={{ backgroundColor: 'rgba(15,12,36,0.7)', borderColor: 'rgba(187,165,122,0.25)', color: '#BBA57A' }}
+                    >
+                      <option value="">—</option>
+                      <option value="az">De A à Z</option>
+                      <option value="za">De Z à A</option>
+                    </select>
+                  </div>
+
+                  {/* Date */}
+                  <div>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'rgba(187,165,122,0.6)' }}>Date</label>
+                    <select
+                      value={sort === 'date_desc' || sort === 'date_asc' ? sort : ''}
+                      onChange={e => { if (e.target.value) setSort(e.target.value as SortKey); }}
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
+                      style={{ backgroundColor: 'rgba(15,12,36,0.7)', borderColor: 'rgba(187,165,122,0.25)', color: '#BBA57A' }}
+                    >
+                      <option value="">—</option>
+                      <option value="date_desc">Plus récent au plus ancien</option>
+                      <option value="date_asc">Plus ancien au plus récent</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Count */}
@@ -2208,10 +2352,10 @@ export default function AdminTraining() {
               <div className="flex flex-col gap-2">
                 {/* List header */}
                 <div
-                  className="hidden sm:grid grid-cols-[auto_1fr_120px_60px_90px_80px] gap-4 px-4 py-2 rounded-lg"
+                  className="hidden sm:grid grid-cols-[auto_1fr_120px_60px_90px_150px_80px] gap-4 px-4 py-2 rounded-lg"
                   style={{ backgroundColor: 'rgba(15,12,36,0.5)' }}
                 >
-                  {['', 'Titre', 'Type', 'Score', 'Statut', ''].map((h, i) => (
+                  {['', 'Titre', 'Type', 'Score', 'Statut', 'Créé / Maj', ''].map((h, i) => (
                     <span
                       key={i}
                       className="text-xs font-medium"
