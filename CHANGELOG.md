@@ -1,3 +1,11 @@
+## [2026-06-08] (séance 19 - autocomplétion anti-doublon sur le champ Training Title)
+
+### feat(admin-training): suggestions de documents existants pendant la saisie du titre de formation
+
+UploadTraining.tsx : en mode création, le champ Training Title affiche désormais en temps réel la liste des formations existantes dont le nom correspond à la saisie (la liste `knowledge_queries` est maintenant chargée dès l'ouverture, plus seulement en mode update). Cliquer sur une suggestion bascule directement vers l'onglet de mise à jour avec le document présélectionné, ce qui évite de recréer un doublon au lieu de mettre à jour l'ancien.
+
+---
+
 ## [2026-06-08] (séance 18 - statut admin à la place du statut user + panneau Filtres repliable dans la Bibliothèque)
 
 ### feat(admin-training): statut d'ingestion affiché à la place du statut kanban + filtres et tri repliables

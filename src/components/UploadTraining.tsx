@@ -28,6 +28,7 @@ export function UploadTraining() {
     thematic: '',
     file: null as File | null
   });
+  const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -69,7 +70,7 @@ export function UploadTraining() {
   };
 
   useEffect(() => {
-    if (isOpen && mode === 'update') {
+    if (isOpen) {
       fetchTrainingDocs();
     }
   }, [isOpen, mode]);
@@ -77,6 +78,12 @@ export function UploadTraining() {
   const filteredDocs = trainingDocs.filter(doc =>
     doc.document_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const titleSuggestions = formData.title.trim()
+    ? trainingDocs.filter(doc =>
+        doc.document_name.toLowerCase().includes(formData.title.toLowerCase())
+      )
+    : [];
 
   // ── New doc file handlers (unchanged) ──
   const handleFileChange = (file: File) => {
@@ -448,15 +455,48 @@ export function UploadTraining() {
                 <Label htmlFor="title" className="text-sm font-medium text-foreground">
                   Training Title *
                 </Label>
-                <Input
-                  id="title"
-                  type="text"
-                  placeholder="e.g., Guest Reception Procedures"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  disabled={isUploading}
-                  className="transition-all duration-200 hover:border-hotel-yellow focus:border-hotel-yellow focus:ring-2 focus:ring-hotel-yellow/20"
-                />
+                <div className="relative">
+                  <Input
+                    id="title"
+                    type="text"
+                    placeholder="e.g., Guest Reception Procedures"
+                    value={formData.title}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, title: e.target.value }));
+                      setShowTitleSuggestions(true);
+                    }}
+                    onFocus={() => setShowTitleSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowTitleSuggestions(false), 150)}
+                    disabled={isUploading}
+                    autoComplete="off"
+                    className="transition-all duration-200 hover:border-hotel-yellow focus:border-hotel-yellow focus:ring-2 focus:ring-hotel-yellow/20"
+                  />
+
+                  {showTitleSuggestions && titleSuggestions.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                      <p className="px-3 py-2 text-xs text-muted-foreground border-b">
+                        Documents deja existants - cliquez pour mettre a jour au lieu d'en creer un nouveau :
+                      </p>
+                      {titleSuggestions.map((doc) => (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedDoc(doc);
+                            setMode('update');
+                            setShowTitleSuggestions(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-hotel-yellow/10"
+                        >
+                          <FileText className="h-4 w-4 text-hotel-navy flex-shrink-0" />
+                          <span className="font-medium text-gray-900">{doc.document_name}</span>
+                          <span className="ml-auto text-xs text-gray-500">{doc.thematic}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Thematic */}
