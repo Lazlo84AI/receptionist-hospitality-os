@@ -1,3 +1,19 @@
+## [2026-06-16] (séance 22 - record d'architecture : paramétrage actuel du pipeline n8n Mistral RAG/QCM)
+
+### chore(n8n): journalisation rétroactive de la migration du pipeline formateur vers Mistral Cloud + Qdrant (état figé)
+
+Entrée récapitulative consignant le paramétrage actuel des workflows n8n du module formation, dont la migration vers Mistral n'avait jamais été tracée comme décision d'architecture (seulement en filigrane des bugfixes séances 20-21).
+
+**Socle commun** : vector store Qdrant Cloud `RAGMistral2` (1024 dims, Cosine), embeddings `mistral-embed`, Supabase `ypxmzacmwqqvlciwahzw`.
+
+**A.1 THE TRAINER'S BRAIN — CORE RAG** (n8n id `5kapoWXtMBNfuxwa`) : ingestion déclenchée par Webhook `POST /new-training-to-record`. Dédup Qdrant (scroll + delete sur `metadata.document_name`). OCR PDF via `mistral-ocr-latest` ; vision des images de pages PDF via `mistral-medium-3.5` (batch 1, retry 5 / 4000 ms, onError continue) ; image directe via `pixtral-large-latest`. Mapping compétences par AI Agent `mistral-large-latest` (4000 tok / temp 0.2) → table `formation_criteria_mapping`. Chunking 1200 / overlap 150. Après insertion : Wait 3 min → vérification Qdrant → PATCH `knowledge_queries.ingestion_status` (`vectorisé`/`échec`) → appel `/generate-qcm`. Agent de chat (sous-graphe) : `pixtral-large-latest` + retrieve-as-tool topK 50 + mémoire fenêtrée.
+
+**A.2 THE EVALUATOR — QCM Generator** (n8n id `UCnvxBbADJ9s6HKK`) : Webhook `POST /generate-qcm` → vérification points Qdrant → PATCH statut. AI Agent QCM `mistral-large-latest` (8000 tok / temp 0.3) + retrieve-as-tool topK 35 (filtre `metadata.document_name`). Génère 20 QCM FR (5×factual_recall / procedure / application / error_id), parser JS tolérant (strip markdown + récupération question-par-question + skip des invalides) → insert `training_questions` (`Prefer: merge-duplicates`).
+
+**Note sécurité** : les exports n8n embarquent la clé `service_role` Supabase en dur dans les nœuds HTTP — à externaliser en credential n8n (non traité ici).
+
+---
+
 ## [2026-06-16] (séance 21 - fix assistant : parsing JSON tolérant côté n8n)
 
 ### fix(n8n): déblocage des réponses de l'assistant (B.2) cassées par la migration Mistral
