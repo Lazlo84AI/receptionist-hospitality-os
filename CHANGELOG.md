@@ -1,3 +1,11 @@
+## [2026-06-16] (séance 23 - fin de migration vision A.1 : sortie de pixtral-large-latest)
+
+### chore(n8n): bascule des 2 derniers nœuds A.1 de pixtral-large-latest (EOL 27/02/2026) vers mistral-medium-3.5
+
+Suite de la séance 20 qui n'avait migré que la branche vision des images dans les PDF : le nœud `Pixtral Vision` (branche fichier image direct) et le `Mistral Cloud Chat Model` de l'agent de chat passent désormais à `mistral-medium-3.5`, éliminant le dernier recours au modèle pixtral en fin de vie. A.1 utilise maintenant un seul modèle vision partout ; A.2 n'était pas concerné.
+
+---
+
 ## [2026-06-16] (séance 22 - record d'architecture : paramétrage actuel du pipeline n8n Mistral RAG/QCM)
 
 ### chore(n8n): journalisation rétroactive de la migration du pipeline formateur vers Mistral Cloud + Qdrant (état figé)
