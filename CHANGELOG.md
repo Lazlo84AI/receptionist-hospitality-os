@@ -1,3 +1,11 @@
+## [2026-06-16] (séance 21 - fix assistant : parsing JSON tolérant côté n8n)
+
+### fix(n8n): déblocage des réponses de l'assistant (B.2) cassées par la migration Mistral
+
+B.2 THE ASSISTANT - CHAT : le nœud `Code in JavaScript` plantait sur `JSON.parse` (« Bad control character in string literal ») depuis le passage à Mistral, qui renvoie des retours-ligne bruts dans les chaînes JSON — toutes les réponses tombaient sur le fallback « Désolé, je n'ai pas pu récupérer » (confidence bad, sources vides). Ajout d'un parser tolérant `safeJsonParse` qui échappe les caractères de contrôle uniquement à l'intérieur des chaînes, + assouplissement de la validation (seul `answer` requis, `sources` défaut `[]`). Vérifié : « est-ce que la chambre 54 est twinable » renvoie une vraie réponse en High confidence avec sources.
+
+---
+
 ## [2026-06-08] (séance 20 - debug pipeline n8n RAG/QCM : ingestion A.1, vérification Qdrant, génération QCM A.2)
 
 ### fix(n8n): déblocage de bout en bout de l'ingestion (A.1) et de la génération de QCM (A.2), + rattrapage de la séance n8n précédente non journalisée
