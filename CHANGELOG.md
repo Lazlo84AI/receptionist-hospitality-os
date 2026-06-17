@@ -1,3 +1,11 @@
+## [2026-06-17] (séance 25 - carte ouverte depuis une notif affichait un UUID au lieu du nom)
+
+### fix(tasks): résolution des noms dans le chemin openTaskId (ShiftManagement)
+
+Ouvrir une tâche depuis une notification (`/shift` + `openTaskId`) affichait l'UUID brut de l'assigné (ex. `4c509751…`) au lieu du nom, car ce chemin mappait `assignedTo = assigned_to[0]` sans le lookup `staff_directory`/`profiles` que fait `useSupabaseData` partout ailleurs. Données vérifiées saines (0 assigné orphelin sur les tâches non archivées) : c'était purement un défaut d'affichage local. Fix : `fetchAndOpenTask` résout désormais `created_by` + `assigned_to` en noms et construit le format "Créateur → Assigné(s)" cohérent avec le Kanban.
+
+---
+
 ## [2026-06-17] (séance 24 - notifications lues qui réapparaissent à la reconnexion)
 
 ### fix(notifications): ajout de la clé primaire manquante → les notifs lues persistent enfin

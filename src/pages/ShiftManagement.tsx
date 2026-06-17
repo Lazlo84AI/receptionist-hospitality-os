@@ -301,6 +301,44 @@ const ShiftManagement = () => {
           .eq('id', taskId)
           .single();
         if (!error && data) {
+          // Résoudre les UUID (created_by + assigned_to) en noms, comme useSupabaseData
+          // sinon le modal affiche l'UUID brut au lieu du nom de la personne
+          const ids: string[] = [data.created_by, ...(Array.isArray(data.assigned_to) ? data.assigned_to : [])]
+            .filter(Boolean);
+          let staffById = new Map<string, any>();
+          let profileById = new Map<string, any>();
+          if (ids.length) {
+            const [staffRes, profilesRes] = await Promise.all([
+              client.from('staff_directory').select('id, first_name, last_name, full_name, email').in('id', ids),
+              client.from('profiles').select('id, first_name, last_name, email').in('id', ids),
+            ]);
+            staffById = new Map((staffRes.data || []).map((s: any) => [s.id, s]));
+            profileById = new Map((profilesRes.data || []).map((p: any) => [p.id, p]));
+          }
+          const resolveName = (uuid: string | null | undefined): string => {
+            if (!uuid) return '';
+            const s = staffById.get(uuid);
+            if (s) {
+              if (s.full_name) return s.full_name;
+              const n = `${s.first_name || ''} ${s.last_name || ''}`.trim();
+              if (n) return n;
+              if (s.email) return s.email;
+            }
+            const p = profileById.get(uuid);
+            if (p) {
+              const n = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+              if (n) return n;
+              if (p.email) return p.email;
+            }
+            return uuid; // fallback identique au comportement existant
+          };
+          const creatorName = data.created_by ? resolveName(data.created_by) : 'Inconnu';
+          const assignedArr: string[] = Array.isArray(data.assigned_to) ? data.assigned_to : [];
+          const assignedNames = assignedArr.length
+            ? assignedArr.map((id: string) => resolveName(id)).join(', ')
+            : 'Non assigné';
+          const combinedDisplay = `${creatorName} → ${assignedNames}`;
+
           // Mapper vers TaskItem
           const taskItem: TaskItem = {
             id: data.id,
@@ -310,7 +348,7 @@ const ShiftManagement = () => {
             status: data.status || 'pending',
             priority: data.priority || 'medium',
             location: data.location || '',
-            assignedTo: data.assigned_to?.[0] || '',
+            assignedTo: combinedDisplay,
             created_at: data.created_at,
             updated_at: data.updated_at,
             guestName: data.guest_name || '',
