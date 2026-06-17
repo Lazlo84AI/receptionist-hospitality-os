@@ -1,3 +1,11 @@
+## [2026-06-17] (séance 26 - notifs des tâches archivées marquées lues automatiquement)
+
+### fix(notifications): auto-marquage "lu" à l'archivage d'une tâche + backfill
+
+170 notifs non lues (sur 261) pointaient vers des tâches déjà archivées → cloche encombrée et notifs ouvrant des cartes "qui ne ressortent nulle part". Choix non destructif : on marque ces notifs comme lues (pas de suppression). Migration `20260617130000` : trigger `trg_mark_notifications_read_on_task_archive` (AFTER UPDATE OF status, à la transition vers `archived`) + backfill des 170 existantes. Vérifié : 0 non-lue restante sur tâche archivée.
+
+---
+
 ## [2026-06-17] (séance 25 - carte ouverte depuis une notif affichait un UUID au lieu du nom)
 
 ### fix(tasks): résolution des noms dans le chemin openTaskId (ShiftManagement)
