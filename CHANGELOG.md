@@ -1,3 +1,11 @@
+## [2026-06-17] (séance 24 - notifications lues qui réapparaissent à la reconnexion)
+
+### fix(notifications): ajout de la clé primaire manquante → les notifs lues persistent enfin
+
+Cause racine (prouvée en prod) : `public.notifications` est publiée dans `supabase_realtime` mais n'avait **aucune clé primaire**, donc pas de replica identity ; Postgres rejetait alors tout `UPDATE` (SQLSTATE 55000), si bien que `is_read=true` n'était jamais enregistré (261 notifs, 0 lue) et qu'elles réapparaissaient à chaque reconnexion — INSERT/SELECT fonctionnant, le bug était masqué. Fix : migration `20260617120000_notifications_add_primary_key.sql` ajoutant `PRIMARY KEY (id)` (id déjà unique/non-null) ; re-test sous rôle `authenticated` → UPDATE à 1 ligne OK. Ajout aussi de `.select('id')` aux deux `UPDATE` de `useNotifications.ts` pour rendre tout futur échec visible (fini le fire-and-forget).
+
+---
+
 ## [2026-06-16] (séance 23 - fin de migration vision A.1 : sortie de pixtral-large-latest)
 
 ### chore(n8n): bascule des 2 derniers nœuds A.1 de pixtral-large-latest (EOL 27/02/2026) vers mistral-medium-3.5

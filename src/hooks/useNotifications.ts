@@ -112,11 +112,14 @@ export function useNotifications(): UseNotificationsReturn {
       return prevUnread.filter(n => n.id !== id);
     });
     // Persistance DB en arrière-plan (best-effort, log si échec)
-    const { error } = await supabase
+    // .select('id') : permet de détecter un UPDATE à 0 ligne (auth/RLS silencieux)
+    const { data, error } = await supabase
       .from('notifications')
       .update({ is_read: true, read_at: now })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
     if (error) console.error('markAsRead DB error:', error);
+    else if (!data?.length) console.warn('markAsRead: 0 ligne touchée (auth/RLS ?)', id);
   }, []);
 
   // Tout marquer comme lu — optimiste : bascule en bloc unread → tête de read
@@ -133,12 +136,14 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .update({ is_read: true, read_at: now })
         .eq('user_id', user.id)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .select('id');
       if (error) console.error('markAllAsRead DB error:', error);
+      else console.info(`markAllAsRead: ${data?.length ?? 0} ligne(s) touchée(s)`);
     } catch (err) {
       console.error('markAllAsRead unexpected error:', err);
     }
