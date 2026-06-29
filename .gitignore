@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .vercel
 .mcp.json
+
+# Claude Code local settings (contiennent des secrets - ne jamais committer)
+.claude/settings.local.json

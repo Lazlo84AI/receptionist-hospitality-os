@@ -23,6 +23,7 @@ import {
   Upload,
   X,
   ChevronRight,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -171,13 +172,25 @@ function DocumentCard({ doc, onDelete }: { doc: AssistantDocument; onDelete: (do
         >
           {thematic.emoji}
         </div>
-        <button
-          onClick={() => onDelete(doc)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg backdrop-blur-sm"
-          style={{ backgroundColor: 'rgba(0,0,0,0.3)', color: '#fca5a5' }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {doc.document_url && (
+            <button
+              onClick={() => window.open(doc.document_url!, '_blank')}
+              title="Voir le document"
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg backdrop-blur-sm"
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)', color: '#E0D3B4' }}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={() => onDelete(doc)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg backdrop-blur-sm"
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', color: '#fca5a5' }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Nom */}
@@ -243,10 +256,19 @@ function DocumentRow({ doc, onDelete }: { doc: AssistantDocument; onDelete: (doc
       <p className="text-xs flex-shrink-0" style={{ color: 'rgba(187,165,122,0.45)' }}>
         {new Date(doc.uploaded_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
       </p>
-      <button onClick={() => onDelete(doc)}
-        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 hover:text-red-300 flex-shrink-0">
-        <Trash2 className="h-4 w-4" />
-      </button>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {doc.document_url && (
+          <button onClick={() => window.open(doc.document_url!, '_blank')}
+            title="Voir le document"
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#BBA57A]/10 text-[#BBA57A]/70 hover:text-[#BBA57A]">
+            <Eye className="h-4 w-4" />
+          </button>
+        )}
+        <button onClick={() => onDelete(doc)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 hover:text-red-300">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }

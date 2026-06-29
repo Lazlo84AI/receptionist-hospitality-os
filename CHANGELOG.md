@@ -1,3 +1,11 @@
+## [2026-06-17] (séance 27 - attribution des cartes basée sur le mauvais service)
+
+### fix(tasks): filtrage des membres par service/hiérarchie de référence (profiles) au lieu de staff_directory
+
+La modale de création de carte filtrait les membres par service via `staff_directory.department` (colonne morte/polluée), plaçant 7 personnes dans la mauvaise équipe (Sokle/Islem en réception, Euridece/Kyungu/Rebecca/Sandra absentes de housekeeping) et rendant Mélanie invisible. `useProfiles` enrichit désormais chaque membre d'un `effective_service` et d'un `effective_hierarchy` issus de `profiles` (lus sans contrainte RLS via la vue `v_user_task_stats`, "profiles fait foi"), avec repli normalisé sur `staff_directory` pour le staff sans compte ; la modale filtre sur le service, affiche la **hiérarchie** en libellé (au lieu du service redondant), et assigne via `member.id` (fin du re-match fragile par `full_name`). Côté base : `v_user_task_stats.hierarchy` corrigée en `COALESCE(profiles.hierarchy, staff_directory.hierarchy)` (Océane passait à tort en Collaborator) et `profiles.service` d'Amelie Trengan repassé de `restaurant` à `reception`.
+
+---
+
 ## [2026-06-17] (séance 26 - notifs des tâches archivées marquées lues automatiquement)
 
 ### fix(notifications): auto-marquage "lu" à l'archivage d'une tâche + backfill

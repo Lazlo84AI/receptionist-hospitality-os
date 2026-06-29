@@ -305,7 +305,27 @@ export const useFollowUps = () => {
   return { followUps, loading, error, refetch: fetchFollowUps };
 };
 
-// Hook for fetching profiles - Now using staff_directory
+// Normalise un libellé de service (text libre staff_directory.service / department)
+// vers l'enum service_type. Tolère casse, accents et libellés FR pollués
+// (ex: "Réception" → reception, "Petit Dejeuner" → restaurant).
+const normalizeService = (raw?: string | null): string | null => {
+  if (!raw) return null;
+  const v = raw
+    .normalize('NFD')
+    .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '') // retire les accents (combining marks)
+    .toLowerCase()
+    .trim();
+  if (!v) return null;
+  if (v.includes('reception')) return 'reception';
+  if (v.includes('housekeeping') || v.includes('chambre') || v.includes('menage')) return 'housekeeping';
+  if (v.includes('maintenance') || v.includes('technique')) return 'maintenance';
+  if (v.includes('direction')) return 'direction';
+  if (v.includes('restaurant') || v.includes('petit dejeuner') || v.includes('breakfast')) return 'restaurant';
+  if (v.includes('artificial') || v === 'ai_team' || v.includes('ai team') || v.includes('ai engineer')) return 'ai_team';
+  return null;
+};
+
+// Hook for fetching profiles - base = staff_directory, service de référence = profiles
 export const useProfiles = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -315,13 +335,46 @@ export const useProfiles = () => {
     const fetchProfiles = async () => {
       try {
         setLoading(true);
+
+        // Base = annuaire complet (inclut le staff SANS compte Sokle, qui reste assignable)
         const { data, error } = await supabase
           .from('staff_directory')
           .select('*')
           .order('first_name', { ascending: true });
 
         if (error) throw error;
-        setProfiles(data || []);
+
+        // Service de référence ("profiles fait foi") exposé sans contrainte RLS via la vue
+        // v_user_task_stats (SECURITY DEFINER, lisible par tout authenticated) :
+        // sa colonne `service` vaut profiles.service pour chaque compte.
+        // La vue expose service ET hierarchy en "profiles fait foi" (corrigée pour que
+        // hierarchy = COALESCE(profiles.hierarchy, staff_directory.hierarchy)).
+        const { data: stats } = await supabase
+          .from('v_user_task_stats')
+          .select('auth_user_id, service, hierarchy');
+
+        const refByAuthId = new Map(
+          (stats || [])
+            .filter((s: any) => s.auth_user_id)
+            .map((s: any) => [s.auth_user_id, s])
+        );
+
+        // effective_service   = service profiles (via vue) si compte, sinon annuaire normalisé.
+        // effective_hierarchy = hierarchy profiles (via vue) si compte, sinon staff_directory.
+        const enriched = (data || []).map((member: any) => {
+          const ref = member.auth_user_id ? refByAuthId.get(member.auth_user_id) : null;
+          return {
+            ...member,
+            effective_service:
+              normalizeService(ref?.service) ??
+              normalizeService(member.service) ??
+              normalizeService(member.department) ??
+              null,
+            effective_hierarchy: ref?.hierarchy ?? member.hierarchy ?? null,
+          };
+        });
+
+        setProfiles(enriched);
         setError(null);
       } catch (err) {
         console.error('Error fetching staff directory:', err);

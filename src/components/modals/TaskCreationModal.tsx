@@ -214,18 +214,10 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
         throw new Error('Please assign this task to a team member before creating it.');
       }
 
-      // 3. RÉCUPÉRER L'ID DU MEMBRE ASSIGNÉ
-      const { data: memberData, error: memberError } = await supabase
-        .from('staff_directory')
-        .select('id')
-        .or(`full_name.eq.${formData.assignedMember},first_name.eq.${formData.assignedMember.split(' ')[0]}`)
-        .single();
-      
-      if (memberError || !memberData) {
-        throw new Error('Could not find the assigned member. Please select a valid team member.');
-      }
-      
-      const assignedMemberId = memberData.id;
+      // 3. ID DU MEMBRE ASSIGNÉ
+      // La valeur du dropdown est désormais directement staff_directory.id
+      // (plus de re-match texte par full_name → fiable face aux homonymes).
+      const assignedMemberId = formData.assignedMember;
 
 
       // 4. DONNÉES DU FORMULAIRE ADAPTÉES AU FORMAT TABLE TASK UNIFIÉE
@@ -543,23 +535,10 @@ export function TaskCreationModal({ isOpen, onClose, onTaskCreated }: TaskCreati
                   </SelectTrigger>
                   <SelectContent>
                     {hotelMembers
-                      .filter(member => {
-                        switch (formData.service) {
-                          case 'housekeeping':
-                            return member.department === 'Housekeeping';
-                          case 'reception':
-                            return member.department === 'Reception';
-                          case 'maintenance':
-                            return member.department === 'Maintenance';
-                          case 'direction':
-                            return member.service === 'Direction' || member.department === 'Direction';
-                          default:
-                            return false;
-                        }
-                      })
+                      .filter(member => member.effective_service === formData.service)
                       .map((member) => (
-                        <SelectItem key={member.id} value={member.full_name || `${member.first_name} ${member.last_name}`}>
-                          {member.full_name || `${member.first_name} ${member.last_name}`} - {member.job_title || member.role}
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.full_name || `${member.first_name} ${member.last_name}`} - {member.effective_hierarchy || '—'}
                         </SelectItem>
                       ))}
                   </SelectContent>
