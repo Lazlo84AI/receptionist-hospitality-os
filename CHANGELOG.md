@@ -1,3 +1,19 @@
+## [2026-06-29] (séance 29 - accès impossible à recréer après suppression d'un utilisateur)
+
+### fix(team): purge d'un compte auth orphelin bloquant la ré-invitation (email déjà enregistré)
+
+Le compte de Leonie, supprimé via l'ancien chemin front (`staff_directory.delete()`), avait laissé `auth.users` + `profiles` orphelins (sans ligne `staff_directory`) : l'email restait enregistré côté Auth, donc `invite-staff` (`inviteUserByEmail`) refusait la recréation avec « already registered ». Après check pré-vol des FK `NO ACTION` (aucune donnée liée à son UUID), purge de l'orphelin via `DELETE FROM auth.users` (cascade `profiles`) → email libéré, ré-invitation normale possible. À noter : 2 autres orphelins du même type subsistent (Pierre, Shami), non traités à ce stade.
+
+---
+
+## [2026-06-29] (séance 28 - aperçu et affichage des documents dans la base de connaissance admin)
+
+### feat(admin): icône œil d'aperçu et liste des documents de la base de connaissance
+
+Ajout dans la vue admin de la base de connaissance d'une icône œil permettant de prévisualiser un document, et affichage de la liste des documents existants dans cette vue.
+
+---
+
 ## [2026-06-17] (séance 27 - attribution des cartes basée sur le mauvais service)
 
 ### fix(tasks): filtrage des membres par service/hiérarchie de référence (profiles) au lieu de staff_directory
