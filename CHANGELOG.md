@@ -1,3 +1,19 @@
+## [2026-07-22] (séance 31 - tableaux de tickets vides à cause de doublons de prise de poste)
+
+### fix(shifts): verrou "un seul poste actif par personne" + lecture robuste des tickets
+
+Miguel (et Océane depuis mars) ne voyaient aucun ticket sur tous les tableaux : un double-déclenchement de « démarrer une prise de poste » avait créé 2 shifts actifs simultanés, et la lecture des tâches (`useSupabaseData`) plantait silencieusement sur `.maybeSingle()` (>1 ligne) en retombant sur « aucun poste » → écran vide. Correctif racine : retrait des doublons puis index unique partiel `uniq_one_active_shift_per_user` sur `shifts(user_id) WHERE status='active'`, `startShift` traite désormais le rejet `23505` comme un succès (récupère le poste existant), et la lecture du poste actif est rendue tolérante (`order created_at desc + limit 1`).
+
+---
+
+## [2026-06-29] (séance 30 - biais de position de la bonne réponse dans les QCM)
+
+### fix(qcm): shuffle déterministe des réponses + renforcement du prompt agent A.2
+
+La bonne réponse atterrissait systématiquement en position A dans les QCM générés. Ajout d'un shuffle déterministe (Fisher-Yates) des réponses dans le noeud Code JS de A.2, recalcul de `correct_answer`, et renforcement du prompt agent (répartition équilibrée A/B/C/D + explications sans référence de lettre).
+
+---
+
 ## [2026-06-29] (séance 29 - accès impossible à recréer après suppression d'un utilisateur)
 
 ### fix(team): purge d'un compte auth orphelin bloquant la ré-invitation (email déjà enregistré)

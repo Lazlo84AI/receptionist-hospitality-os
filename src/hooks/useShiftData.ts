@@ -160,6 +160,23 @@ export const useStartShift = () => {
         .single();
 
       if (insertError) {
+        // 🛡️ Double-déclenchement : le verrou base (un seul poste actif par
+        // personne) rejette le 2e insert (code 23505). On récupère le poste
+        // actif déjà créé et on renvoie succès, sans erreur visible pour l'employé.
+        if (insertError.code === '23505') {
+          const { data: existingShift } = await supabase
+            .from('shifts')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingShift) {
+            return { success: true, shift_id: existingShift.id };
+          }
+        }
         throw insertError;
       }
 

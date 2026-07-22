@@ -40,6 +40,8 @@ export const useTasks = () => {
         .select('id, service')
         .eq('user_id', user.id)  // ✅ Filter by current user
         .eq('status', 'active')
+        .order('created_at', { ascending: false }) // 🛡️ tolère une donnée sale : prend le plus récent
+        .limit(1)
         .maybeSingle();
       
       // If no active shift, return empty tasks
