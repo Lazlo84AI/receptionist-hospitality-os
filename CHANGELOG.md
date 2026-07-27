@@ -6,7 +6,7 @@ Miguel (et Océane depuis mars) ne voyaient aucun ticket sur tous les tableaux :
 
 ---
 
-## [2026-07-27] (séance 31 - assistant Sokle : réponses trop longues et affichage résumé/détail)
+## [2026-07-27] (séance 32 - assistant Sokle : réponses trop longues et affichage résumé/détail)
 
 ### fix(assistant): format résumé/détail, note de confiance réelle + flag d'hypothèse, rendu front
 
