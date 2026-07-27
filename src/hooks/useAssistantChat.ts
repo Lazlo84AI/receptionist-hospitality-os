@@ -11,6 +11,8 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  summary?: string;
+  assumptions?: string[];
   confidence?: 'high' | 'medium' | 'bad';
   sources?: Source[];
   actionSteps?: string[];
@@ -70,7 +72,10 @@ export function useAssistantChat(userId: string | undefined) {
       const data = await res.json();
       const d = Array.isArray(data) ? data[0] : data;
 
-      const answer = d.answer || d.response || 'Réponse reçue mais format inattendu';
+      let summary: string = d.summary || '';
+      const detail: string = d.answer || d.response || '';
+      if (!summary && !detail) summary = 'Réponse reçue mais format inattendu';
+      const assumptions: string[] = Array.isArray(d.assumptions) ? d.assumptions : [];
       const confidence = d.confidence || null;
       const sources: Source[] = Array.isArray(d.sources) ? d.sources : [];
       const actionSteps: string[] = Array.isArray(d.action_steps) ? d.action_steps : [];
@@ -85,7 +90,7 @@ export function useAssistantChat(userId: string | undefined) {
             session_id: sessionId.current,
             user_id: userId,
             question: question.trim(),
-            answer,
+            answer: detail || summary,
             confidence: confidence || 'medium',
             sources: sources as any,
             history_snapshot: historyForN8N as any,
@@ -100,10 +105,12 @@ export function useAssistantChat(userId: string | undefined) {
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: answer,
+        content: detail,
+        summary,
         confidence,
         sources,
         actionSteps,
+        assumptions,
         conversationId,
         feedbackDone: false,
       }]);

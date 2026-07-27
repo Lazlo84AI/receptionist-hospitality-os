@@ -10,7 +10,42 @@ import { useToast } from '@/hooks/use-toast';
 import { AssistantFloatingRAGUpload } from '@/components/AssistantFloatingRAGUpload';
 import { useAssistantChat, FEEDBACK_REASONS, ChatMessage, Source } from '@/hooks/useAssistantChat';
 
-const cleanText = (t: string) => t.replace(/^[=\-\s]+/, '').trim();
+const cleanText = (t: string) =>
+  t.replace(/^[=\-\s]+/, '')
+   .replace(/\*\*(.+?)\*\*/g, '$1')
+   .replace(/__(.+?)__/g, '$1')
+   .trim();
+
+const AssistantBody = ({ summary, detail, assumptions }: {
+  summary?: string; detail?: string; assumptions?: string[];
+}) => {
+  const s = summary ? cleanText(summary) : '';
+  const d = detail ? cleanText(detail) : '';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {s && (
+        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1E1A37', lineHeight: 1.5 }}>
+          {s}
+        </p>
+      )}
+      {d && (
+        <p style={{ margin: 0, fontSize: '14px', color: '#1f2937', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          {d}
+        </p>
+      )}
+      {assumptions && assumptions.length > 0 && (
+        <div style={{
+          fontSize: '12px', color: '#92400e',
+          background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)',
+          borderRadius: '8px', padding: '6px 10px',
+          display: 'flex', flexDirection: 'column', gap: '2px',
+        }}>
+          {assumptions.map((a, i) => <span key={i}>⚠️ Hypothèse : {a}</span>)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ConfidenceBadge = ({ confidence }: { confidence?: string }) => {
   if (!confidence) return null;
@@ -252,9 +287,11 @@ const Assistant = () => {
                     <span style={{ fontSize: '11px', fontWeight: 600, color: '#1E1A37' }}>Latest Response</span>
                     <ConfidenceBadge confidence={lastAssistantMsg.confidence} />
                   </div>
-                  <p style={{ fontSize: '14px', color: '#1f2937', lineHeight: 1.6, margin: 0 }}>
-                    {cleanText(lastAssistantMsg.content)}
-                  </p>
+                  <AssistantBody
+                    summary={lastAssistantMsg.summary}
+                    detail={lastAssistantMsg.content}
+                    assumptions={lastAssistantMsg.assumptions}
+                  />
                   <SourcesChips sources={lastAssistantMsg.sources || []} />
                 </div>
               ) : (
@@ -315,7 +352,9 @@ const Assistant = () => {
                           border: isUser ? 'none' : '1px solid #f0f0f0',
                           boxShadow: isUser ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
                         }}>
-                          {cleanText(msg.content)}
+                          {isUser
+                            ? cleanText(msg.content)
+                            : <AssistantBody summary={msg.summary} detail={msg.content} assumptions={msg.assumptions} />}
                         </div>
 
                         {!isUser && (
@@ -323,7 +362,7 @@ const Assistant = () => {
                             <ConfidenceBadge confidence={msg.confidence} />
                             {msg.actionSteps && msg.actionSteps.length > 0 && (
                               <ol style={{ fontSize: '11px', color: '#6b7280', paddingLeft: '16px', margin: '4px 0' }}>
-                                {msg.actionSteps.map((s, i) => <li key={i}>{s}</li>)}
+                                {msg.actionSteps.map((s, i) => <li key={i}>{cleanText(s)}</li>)}
                               </ol>
                             )}
                             <SourcesChips sources={msg.sources || []} />

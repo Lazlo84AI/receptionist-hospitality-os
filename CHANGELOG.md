@@ -6,6 +6,14 @@ Miguel (et Océane depuis mars) ne voyaient aucun ticket sur tous les tableaux :
 
 ---
 
+## [2026-07-27] (séance 31 - assistant Sokle : réponses trop longues et affichage résumé/détail)
+
+### fix(assistant): format résumé/détail, note de confiance réelle + flag d'hypothèse, rendu front
+
+Refonte du comportement de l'assistant Sokle, jugé trop verbeux et parfois hallucinant par le client. Côté n8n (appliqué hors repo) : System Message réécrit (réponse courte `summary`/`answer`, `confidence` high/medium/bad, `assumptions` explicites, citations mot-pour-mot, anti-exclusivité sur les énumérations), Code node et nœud Supabase adaptés, `topK` porté à 20. Côté front (ce commit) : champ `summary` séparé rendu en tête, encart « Hypothèse », `white-space: pre-wrap`, et nettoyage des marqueurs Markdown résiduels — corrige aussi le fallback « format inattendu » qui apparaissait quand `answer` est volontairement vide.
+
+---
+
 ## [2026-06-29] (séance 30 - biais de position de la bonne réponse dans les QCM)
 
 ### fix(qcm): shuffle déterministe des réponses + renforcement du prompt agent A.2
